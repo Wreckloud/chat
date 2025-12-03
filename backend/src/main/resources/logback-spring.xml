@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--
+ Logback 日志配置文件（logback-spring.xml）
+ 主要功能：
+ - 控制台输出
+ - 文件输出
+ - 按天并按大小滚动日志文件
+ - 保留历史日志
+ - 从 application.properties 读取动态配置
+-->
+
+<configuration scan="true" scanPeriod="10 minutes">
+    <!--
+     scan="true"       表示 logback 会自动监控文件变化并重新加载（热更新）
+     scanPeriod="10 minutes"  每 10 分钟检查一次文件是否变化
+    -->
+
+    <!-- =======================
+         1. 控制台输出（ConsoleAppender）
+         ======================= -->
+    <appender name="stdot" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- 输出格式 -->
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <!--
+             %d      时间
+             %p      日志等级
+             %c      类名
+             %M      方法名
+             %L      行号
+             %m      内容
+             %n      换行
+            -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%p][%c][%M][%L]-> %m%n</pattern>
+        </layout>
+    </appender>
+
+
+    <!-- =======================
+         2. 从 application.properties 中获取自定义字段
+         ======================= -->
+
+    <!-- log.path = project.folder -->
+    <springProperty scope="context" name="log.path" source="project.folder"/>
+
+    <!-- log.root.level = log.root.level -->
+    <springProperty scope="context" name="log.root.level" source="log.root.level"/>
+
+
+    <!-- =======================
+         3. 自定义 Logback 内部变量
+         ======================= -->
+
+    <!-- logs 文件夹名称 -->
+    <property name="LOG_FOLDER" value="logs"/>
+
+    <!-- 日志文件名称（每天会自动加后缀） -->
+    <property name="LOG_FILE_NAME" value="easychat.log"/>
+
+
+    <!-- =======================
+         4. 文件日志（RollingFileAppender）
+         ======================= -->
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+        <!-- 主日志文件的路径 -->
+        <file>${log.path}/${LOG_FOLDER}/${LOG_FILE_NAME}</file>
+
+        <!-- 滚动策略：按时间 + 文件大小双策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+
+            <!--
+             按日期生成新的日志文件，每天一个；
+             %i 是同一天内按文件大小切分的序号。
+             例如：
+                easychat.log.20250101.0
+                easychat.log.20250101.1
+            -->
+            <FileNamePattern>${log.path}/${LOG_FOLDER}/${LOG_FILE_NAME}.%d{yyyyMMdd}.%i</FileNamePattern>
+
+            <!-- 启动时是否清理旧的历史（不删除 maxHistory 以内的） -->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+
+            <!--
+             基于时间 + 基于大小 的复合触发策略：
+             - 如果一天内日志超过 20MB，就自动切分成下一个文件（.1 .2 .3）
+            -->
+            <TimeBasedFileNamingAndTriggeringPolicy
+                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+
+                <!-- 每个日志文件的最大大小 -->
+                <MaxFileSize>20MB</MaxFileSize>
+
+            </TimeBasedFileNamingAndTriggeringPolicy>
+
+            <!-- 最多保留 30 天的历史日志 -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+
+        <!-- 文件内容编码与输出格式 -->
+        <encoder>
+            <charset>utf-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%p][%c][%M][%L]-> %m%n</pattern>
+        </encoder>
+
+        <!-- append=false：重启日志时是否覆盖旧文件（一般设 true 保留） -->
+        <append>false</append>
+
+        <!-- prudent=false：是否启用安全写模式（一般 dev 不启用） -->
+        <prudent>false</prudent>
+    </appender>
+
+
+    <!-- =======================
+         5. 指定某些 logger 的日志级别（避免刷屏）
+         ======================= -->
+
+    <!-- Spring 自动配置报告，只显示 error -->
+    <logger name="org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener"
+            level="error"/>
+
+    <!-- Redisson DNS 检测，通常会刷一堆 info，这里禁掉 -->
+    <logger name="org.redisson.connection.DNSMonitor" level="error"/>
+
+    <!-- Hikari 数据源 -->
+    <logger name="com.zaxxer.hikari" level="info"/>
+
+    <!-- Redis 客户端（Lettuce） -->
+    <logger name="io.lettuce.core" level="info"/>
+
+    <!-- Spring Data Redis -->
+    <logger name="org.springframework.data.redis" level="info"/>
+
+
+    <!-- =======================
+         6. Root Logger（全局日志级别）
+         ======================= -->
+    <root level="${log.root.level}">
+        <!-- 输出到控制台 -->
+        <appender-ref ref="stdot"/>
+        <!-- 输出到文件 -->
+        <appender-ref ref="file"/>
+    </root>
+
+</configuration>
