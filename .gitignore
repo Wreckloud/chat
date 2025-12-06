@@ -1,7 +1,40 @@
+# Maven
 backend/target/
+backend/.mvn/
+backend/.classpath
+backend/.project
+backend/.settings/
 
-front/node_modules/
-
-dist/
+# IDE
 .idea/
 .vscode/
+*.iml
+*.iws
+*.ipr
+
+# Frontend
+front/node_modules/
+front/dist/
+front/build/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Database
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.local

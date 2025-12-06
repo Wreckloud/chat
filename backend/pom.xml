@@ -53,11 +53,11 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- MyBatis -->
+		<!-- MyBatis-Plus -->
 		<dependency>
-			<groupId>org.mybatis.spring.boot</groupId>
-			<artifactId>mybatis-spring-boot-starter</artifactId>
-			<version>${mybatis.version}</version>
+			<groupId>com.baomidou</groupId>
+			<artifactId>mybatis-plus-boot-starter</artifactId>
+			<version>3.5.6</version>
 		</dependency>
 
 		<!-- MySQL 驱动 -->
@@ -131,6 +131,13 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
+		<!-- Knife4j API文档（基于springdoc-openapi） -->
+		<dependency>
+			<groupId>com.github.xiaoymin</groupId>
+			<artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
+			<version>4.4.0</version>
 		</dependency>
 
 		<!-- 测试 -->

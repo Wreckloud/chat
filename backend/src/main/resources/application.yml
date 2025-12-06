@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: wolf-chat-server
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: root
+    password: 1677
+
+  redis:
+    host: localhost
+    port: 6379
+    password: 1677
+    database: 0
+    timeout: 3000
+
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfiguration
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+# Knife4j 配置
+knife4j:
+  enable: true
+  openapi:
+    title: WolfChat API 文档
+    description: WolfChat 聊天系统 API 接口文档
+    version: 1.0.0
+    contact:
+      name: Wreckloud
+    license: Apache 2.0
+    license-url: https://www.apache.org/licenses/LICENSE-2.0.html
+    servers:
+      - url: http://localhost:8080/api
+        description: 本地环境
+
+# \u81EA\u5B9A\u4E49\u65E5\u5FD7\u76F8\u5173\u914D\u7F6E
+project:
+  folder: D:/Temp/log
+
+log:
+  root:
+    level: info

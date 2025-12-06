@@ -7,7 +7,7 @@
  - 文件输出
  - 按天并按大小滚动日志文件
  - 保留历史日志
- - 从 application.properties 读取动态配置
+ - 从 application.yml 读取动态配置
 -->
 
 <configuration scan="true" scanPeriod="10 minutes">
@@ -37,7 +37,7 @@
 
 
     <!-- =======================
-         2. 从 application.properties 中获取自定义字段
+         2. 从 application.yml 中获取自定义字段
          ======================= -->
 
     <!-- log.path = project.folder -->
