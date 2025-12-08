@@ -5,10 +5,9 @@ import com.wreckloud.wolfchat.account.api.dto.MobileLoginDTO;
 import com.wreckloud.wolfchat.account.api.dto.MobileRegisterDTO;
 import com.wreckloud.wolfchat.account.api.dto.WechatLoginDTO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
-import com.wreckloud.wolfchat.account.application.service.AccountService;
-import com.wreckloud.wolfchat.account.application.service.CaptchaService;
+import com.wreckloud.wolfchat.account.application.service.AuthService;
 import com.wreckloud.wolfchat.account.application.service.NoPoolService;
-import com.wreckloud.wolfchat.account.application.service.SmsService;
+import com.wreckloud.wolfchat.account.application.service.VerificationService;
 import com.wreckloud.wolfchat.account.domain.entity.WfNoPool;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
@@ -28,13 +27,13 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 
 /**
- * @Description 账户服务实现类
+ * @Description 认证服务实现类（专门处理登录/注册逻辑）
  * @Author Wreckloud
  * @Date 2025-12-07
  */
 @Slf4j
 @Service
-public class AccountServiceImpl implements AccountService {
+public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private WfUserMapper wfUserMapper;
@@ -43,13 +42,10 @@ public class AccountServiceImpl implements AccountService {
     private WfNoPoolMapper wfNoPoolMapper;
 
     @Autowired
-    private CaptchaService captchaService;
+    private VerificationService verificationService;
 
     @Autowired
     private NoPoolService noPoolService;
-
-    @Autowired
-    private SmsService smsService;
 
     /**
      * 号码池可用数量阈值
@@ -76,11 +72,11 @@ public class AccountServiceImpl implements AccountService {
         if (!StringUtils.hasText(request.getCaptchaKey()) || !StringUtils.hasText(request.getCaptchaCode())) {
             throw new BaseException(ErrorCode.CAPTCHA_EMPTY);
         }
-        boolean captchaValid = captchaService.verifyCaptcha(request.getCaptchaKey(), request.getCaptchaCode());
+        boolean captchaValid = verificationService.verifyCaptcha(request.getCaptchaKey(), request.getCaptchaCode());
         if (!captchaValid) {
             throw new BaseException(ErrorCode.CAPTCHA_ERROR);
         }
-        if (StringUtils.hasText(request.getConfirmPassword()) 
+        if (StringUtils.hasText(request.getConfirmPassword())
                 && !request.getPassword().equals(request.getConfirmPassword())) {
             throw new BaseException(ErrorCode.PASSWORD_MISMATCH);
         }
@@ -130,10 +126,83 @@ public class AccountServiceImpl implements AccountService {
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserVO loginByWechat(WechatLoginDTO request) {
+        // 1. 保底机制：检查号码池可用数量，低于阈值自动补充
+        ensurePoolHasEnoughNumbers();
+
+        // 2. 查询用户（优先通过unionid，其次openid）
+        WfUser user = null;
+        if (StringUtils.hasText(request.getWxUnionid())) {
+            LambdaQueryWrapper<WfUser> unionQuery = new LambdaQueryWrapper<>();
+            unionQuery.eq(WfUser::getWxUnionid, request.getWxUnionid());
+            user = wfUserMapper.selectOne(unionQuery);
+        }
+
+        if (user == null && StringUtils.hasText(request.getWxOpenid())) {
+            LambdaQueryWrapper<WfUser> openidQuery = new LambdaQueryWrapper<>();
+            openidQuery.eq(WfUser::getWxOpenid, request.getWxOpenid());
+            user = wfUserMapper.selectOne(openidQuery);
+        }
+
+        // 3. 如果用户不存在，自动注册
+        if (user == null) {
+            user = registerByWechat(request);
+        } else {
+            // 4. 用户已存在，检查状态
+            if (!UserStatus.NORMAL.getCode().equals(user.getStatus())) {
+                throw new BaseException(ErrorCode.USER_DISABLED);
+            }
+
+            // 5. 更新登录信息和微信信息
+            updateWechatInfo(user, request);
+            updateLoginInfo(user);
+            wfUserMapper.updateById(user);
+        }
+
+        // 6. 转换为VO返回
+        return convertToVO(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserVO loginByMobile(MobileLoginDTO request) {
+        // 1. 验证短信验证码
+        boolean smsCodeValid = verificationService.verifySmsCode(request.getMobile(), request.getSmsCodeKey(), request.getSmsCode());
+        if (!smsCodeValid) {
+            throw new BaseException(ErrorCode.SMS_CODE_ERROR);
+        }
+
+        // 2. 保底机制：检查号码池可用数量，低于阈值自动补充
+        ensurePoolHasEnoughNumbers();
+
+        // 3. 查询用户
+        LambdaQueryWrapper<WfUser> userQuery = new LambdaQueryWrapper<>();
+        userQuery.eq(WfUser::getMobile, request.getMobile());
+        WfUser user = wfUserMapper.selectOne(userQuery);
+
+        // 4. 如果用户不存在，自动注册
+        if (user == null) {
+            user = registerByMobileAndSms(request);
+        } else {
+            // 5. 用户已存在，检查状态
+            if (!UserStatus.NORMAL.getCode().equals(user.getStatus())) {
+                throw new BaseException(ErrorCode.USER_DISABLED);
+            }
+            // 6. 更新登录信息
+            updateLoginInfo(user);
+            wfUserMapper.updateById(user);
+        }
+
+        // 7. 转换为VO返回
+        return convertToVO(user);
+    }
+
     /**
      * 使用乐观锁分配号码（带重试机制）
      * 如果号码被其他线程抢走，会重新选择下一个可用号码
-     * 
+     *
      * 使用 UPDATE ... WHERE status = 0 的乐观锁模式：
      * - updateCount == 1：分配成功
      * - updateCount == 0：号码被抢走，重试下一个
@@ -179,7 +248,7 @@ public class AccountServiceImpl implements AccountService {
     /**
      * 保底机制：确保号码池有足够的可用号码
      * 如果可用号码数量低于阈值，自动生成一批号码
-     * 
+     *
      * 注意：生成号码失败不会影响注册流程，只记录日志
      */
     private void ensurePoolHasEnoughNumbers() {
@@ -190,13 +259,13 @@ public class AccountServiceImpl implements AccountService {
         Long availableCount = wfNoPoolMapper.selectCount(poolQuery);
 
         if (availableCount < poolThreshold) {
-            log.warn("号码池可用数量不足，当前：{}，阈值：{}，开始自动补充 {} 个号码", 
+            log.warn("号码池可用数量不足，当前：{}，阈值：{}，开始自动补充 {} 个号码",
                     availableCount, poolThreshold, autoGenerateCount);
             try {
                 // 自动生成号码
                 // 注意：generateNumbers 有独立事务，即使失败也不会影响当前注册事务
                 int generatedCount = noPoolService.generateNumbers(autoGenerateCount);
-                log.info("号码池自动补充完成，生成数量：{}，当前可用数量：{}", 
+                log.info("号码池自动补充完成，生成数量：{}，当前可用数量：{}",
                         generatedCount, availableCount + generatedCount);
             } catch (Exception e) {
                 // 生成失败不影响注册流程，记录日志即可
@@ -204,45 +273,6 @@ public class AccountServiceImpl implements AccountService {
                 log.error("号码池自动补充失败，将继续尝试分配现有号码", e);
             }
         }
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public UserVO loginByWechat(WechatLoginDTO request) {
-        // 1. 保底机制：检查号码池可用数量，低于阈值自动补充
-        ensurePoolHasEnoughNumbers();
-
-        // 2. 查询用户（优先通过unionid，其次openid）
-        WfUser user = null;
-        if (StringUtils.hasText(request.getWxUnionid())) {
-            LambdaQueryWrapper<WfUser> unionQuery = new LambdaQueryWrapper<>();
-            unionQuery.eq(WfUser::getWxUnionid, request.getWxUnionid());
-            user = wfUserMapper.selectOne(unionQuery);
-        }
-
-        if (user == null) {
-            LambdaQueryWrapper<WfUser> openidQuery = new LambdaQueryWrapper<>();
-            openidQuery.eq(WfUser::getWxOpenid, request.getWxOpenid());
-            user = wfUserMapper.selectOne(openidQuery);
-        }
-
-        // 3. 如果用户不存在，自动注册
-        if (user == null) {
-            user = registerByWechat(request);
-        } else {
-            // 4. 用户已存在，检查状态
-            if (!UserStatus.NORMAL.getCode().equals(user.getStatus())) {
-                throw new BaseException(ErrorCode.USER_DISABLED);
-            }
-            
-            // 5. 更新登录信息和微信信息
-            updateWechatInfo(user, request);
-            updateLoginInfo(user);
-            wfUserMapper.updateById(user);
-        }
-
-        // 5. 转换为VO返回
-        return convertToVO(user);
     }
 
     /**
@@ -263,26 +293,63 @@ public class AccountServiceImpl implements AccountService {
         user.setWfNo(allocatedWfNo);
         user.setWxOpenid(request.getWxOpenid());
         user.setWxUnionid(request.getWxUnionid());
-        
+
         // 设置昵称（优先使用微信昵称）
         if (StringUtils.hasText(request.getNickname())) {
             user.setUsername(request.getNickname());
         } else {
             user.setUsername("用户" + allocatedWfNo);
         }
-        
+
         // 设置头像（优先使用微信头像）
         if (StringUtils.hasText(request.getAvatar())) {
             user.setAvatar(request.getAvatar());
         }
-        
+
         // 设置性别
         if (request.getGender() != null) {
             user.setGender(request.getGender());
         }
-        
+
         // 微信登录不需要密码
         user.setPasswordHash("");
+        user.setSalt(null);
+        user.setStatus(UserStatus.NORMAL.getCode());
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        wfUserMapper.insert(user);
+
+        // 更新号码池的userId
+        LambdaQueryWrapper<WfNoPool> poolQuery = new LambdaQueryWrapper<>();
+        poolQuery.eq(WfNoPool::getWfNo, allocatedWfNo);
+        WfNoPool noPool = wfNoPoolMapper.selectOne(poolQuery);
+        if (noPool != null) {
+            noPool.setUserId(user.getId());
+            wfNoPoolMapper.updateById(noPool);
+        }
+
+        return user;
+    }
+
+    /**
+     * 手机号自动注册（通过短信验证码）
+     *
+     * @param request 手机号登录请求
+     * @return 创建的用户
+     */
+    private WfUser registerByMobileAndSms(MobileLoginDTO request) {
+        // 分配号码
+        Long allocatedWfNo = allocateNumberWithRetry();
+        if (allocatedWfNo == null) {
+            throw new BaseException(ErrorCode.NO_AVAILABLE_NUMBER);
+        }
+
+        // 创建用户
+        WfUser user = new WfUser();
+        user.setWfNo(allocatedWfNo);
+        user.setMobile(request.getMobile());
+        user.setUsername("用户" + allocatedWfNo); // 默认昵称
+        user.setPasswordHash(""); // 手机号验证码登录不需要密码
         user.setSalt(null);
         user.setStatus(UserStatus.NORMAL.getCode());
         user.setCreateTime(LocalDateTime.now());
@@ -322,7 +389,7 @@ public class AccountServiceImpl implements AccountService {
             needUpdate = true;
         }
 
-        // 更新昵称（优先使用微信昵称）
+        // 更新昵称（如果提供了新昵称）
         if (StringUtils.hasText(request.getNickname()) && !request.getNickname().equals(user.getUsername())) {
             user.setUsername(request.getNickname());
             needUpdate = true;
@@ -356,80 +423,6 @@ public class AccountServiceImpl implements AccountService {
         user.setUpdateTime(LocalDateTime.now());
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public UserVO loginByMobile(MobileLoginDTO request) {
-        // 1. 验证短信验证码
-        boolean smsCodeValid = smsService.verifySmsCode(request.getMobile(), request.getSmsCodeKey(), request.getSmsCode());
-        if (!smsCodeValid) {
-            throw new BaseException(ErrorCode.SMS_CODE_ERROR);
-        }
-
-        // 2. 保底机制：检查号码池可用数量，低于阈值自动补充
-        ensurePoolHasEnoughNumbers();
-
-        // 3. 查询用户（通过手机号）
-        LambdaQueryWrapper<WfUser> userQuery = new LambdaQueryWrapper<>();
-        userQuery.eq(WfUser::getMobile, request.getMobile());
-        WfUser user = wfUserMapper.selectOne(userQuery);
-
-        // 4. 如果用户不存在，自动注册
-        if (user == null) {
-            user = registerByMobileCode(request);
-        } else {
-            // 5. 用户已存在，检查状态
-            if (!UserStatus.NORMAL.getCode().equals(user.getStatus())) {
-                throw new BaseException(ErrorCode.USER_DISABLED);
-            }
-
-            // 6. 更新登录信息
-            updateLoginInfo(user);
-            wfUserMapper.updateById(user);
-        }
-
-        // 7. 转换为VO返回
-        return convertToVO(user);
-    }
-
-    /**
-     * 手机号验证码自动注册
-     *
-     * @param request 手机号登录请求
-     * @return 创建的用户
-     */
-    private WfUser registerByMobileCode(MobileLoginDTO request) {
-        // 分配号码
-        Long allocatedWfNo = allocateNumberWithRetry();
-        if (allocatedWfNo == null) {
-            throw new BaseException(ErrorCode.NO_AVAILABLE_NUMBER);
-        }
-
-        // 创建用户
-        WfUser user = new WfUser();
-        user.setWfNo(allocatedWfNo);
-        user.setMobile(request.getMobile());
-        user.setUsername("用户" + allocatedWfNo);
-        
-        // 验证码登录不需要密码（可以后续绑定密码）
-        user.setPasswordHash("");
-        user.setSalt(null);
-        user.setStatus(UserStatus.NORMAL.getCode());
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-        wfUserMapper.insert(user);
-
-        // 更新号码池的userId
-        LambdaQueryWrapper<WfNoPool> poolQuery = new LambdaQueryWrapper<>();
-        poolQuery.eq(WfNoPool::getWfNo, allocatedWfNo);
-        WfNoPool noPool = wfNoPoolMapper.selectOne(poolQuery);
-        if (noPool != null) {
-            noPool.setUserId(user.getId());
-            wfNoPoolMapper.updateById(noPool);
-        }
-
-        return user;
-    }
-
     /**
      * 转换为VO
      *
@@ -442,3 +435,4 @@ public class AccountServiceImpl implements AccountService {
         return vo;
     }
 }
+

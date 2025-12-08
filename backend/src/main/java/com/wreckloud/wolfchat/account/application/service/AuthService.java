@@ -6,11 +6,11 @@ import com.wreckloud.wolfchat.account.api.dto.WechatLoginDTO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 
 /**
- * @Description 账户服务接口
+ * @Description 认证服务接口（专门处理登录/注册逻辑）
  * @Author Wreckloud
  * @Date 2025-12-07
  */
-public interface AccountService {
+public interface AuthService {
 
     /**
      * 手机号注册
@@ -37,3 +37,4 @@ public interface AccountService {
      */
     UserVO loginByMobile(MobileLoginDTO request);
 }
+

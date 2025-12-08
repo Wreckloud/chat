@@ -6,9 +6,8 @@ import com.wreckloud.wolfchat.account.api.dto.WechatLoginDTO;
 import com.wreckloud.wolfchat.account.api.vo.CaptchaVO;
 import com.wreckloud.wolfchat.account.api.vo.SmsCodeVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
-import com.wreckloud.wolfchat.account.application.service.AccountService;
-import com.wreckloud.wolfchat.account.application.service.CaptchaService;
-import com.wreckloud.wolfchat.account.application.service.SmsService;
+import com.wreckloud.wolfchat.account.application.service.AuthService;
+import com.wreckloud.wolfchat.account.application.service.VerificationService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.web.Result;
@@ -41,13 +40,10 @@ public class AccountController {
     private WfUserMapper wfUserMapper;
 
     @Autowired
-    private CaptchaService captchaService;
+    private VerificationService verificationService;
 
     @Autowired
-    private AccountService accountService;
-
-    @Autowired
-    private SmsService smsService;
+    private AuthService authService;
 
     @Operation(
             summary = "获取验证码",
@@ -59,7 +55,7 @@ public class AccountController {
     })
     @GetMapping("/captcha")
     public Result<CaptchaVO> generateCaptcha() {
-        CaptchaVO captchaVO = captchaService.generateCaptcha();
+        CaptchaVO captchaVO = verificationService.generateCaptcha();
         return Result.ok(captchaVO);
     }
 
@@ -84,7 +80,7 @@ public class AccountController {
                     content = @Content(schema = @Schema(implementation = MobileRegisterDTO.class))
             )
             @RequestBody @Validated MobileRegisterDTO request) {
-        accountService.registerByMobile(request);
+        authService.registerByMobile(request);
         return Result.ok();
     }
 
@@ -101,7 +97,7 @@ public class AccountController {
     public Result<SmsCodeVO> sendSmsCode(
             @Parameter(description = "手机号", required = true, example = "13800138000")
             @RequestParam @NotBlank(message = "手机号不能为空") @Pattern(regexp = "^1\\d{10}$", message = "手机号格式不正确") String mobile) {
-        String smsCodeKey = smsService.sendSmsCode(mobile);
+        String smsCodeKey = verificationService.sendSmsCode(mobile);
         SmsCodeVO vo = new SmsCodeVO(smsCodeKey, "验证码已发送，请查收短信（开发环境请查看日志）");
         return Result.ok(vo);
     }
@@ -125,7 +121,7 @@ public class AccountController {
                     content = @Content(schema = @Schema(implementation = MobileLoginDTO.class))
             )
             @RequestBody @Validated MobileLoginDTO request) {
-        UserVO userVO = accountService.loginByMobile(request);
+        UserVO userVO = authService.loginByMobile(request);
         return Result.ok(userVO);
     }
 
@@ -147,7 +143,7 @@ public class AccountController {
                     content = @Content(schema = @Schema(implementation = WechatLoginDTO.class))
             )
             @RequestBody @Validated WechatLoginDTO request) {
-        UserVO userVO = accountService.loginByWechat(request);
+        UserVO userVO = authService.loginByWechat(request);
         return Result.ok(userVO);
     }
 
