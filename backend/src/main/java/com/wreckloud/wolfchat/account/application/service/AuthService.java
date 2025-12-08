@@ -3,7 +3,7 @@ package com.wreckloud.wolfchat.account.application.service;
 import com.wreckloud.wolfchat.account.api.dto.MobileLoginDTO;
 import com.wreckloud.wolfchat.account.api.dto.MobileRegisterDTO;
 import com.wreckloud.wolfchat.account.api.dto.WechatLoginDTO;
-import com.wreckloud.wolfchat.account.api.vo.UserVO;
+import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 
 /**
  * @Description 认证服务接口（专门处理登录/注册逻辑）
@@ -24,17 +24,17 @@ public interface AuthService {
      * 如果用户已存在则登录，不存在则自动注册
      *
      * @param request 微信登录请求
-     * @return 用户信息
+     * @return 登录响应（包含token和用户信息）
      */
-    UserVO loginByWechat(WechatLoginDTO request);
+    LoginVO loginByWechat(WechatLoginDTO request);
 
     /**
      * 手机号验证码登录/注册
      * 如果用户已存在则登录，不存在则自动注册
      *
      * @param request 手机号登录请求
-     * @return 用户信息
+     * @return 登录响应（包含token和用户信息）
      */
-    UserVO loginByMobile(MobileLoginDTO request);
+    LoginVO loginByMobile(MobileLoginDTO request);
 }
 

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wreckloud.wolfchat.account.api.dto.MobileLoginDTO;
 import com.wreckloud.wolfchat.account.api.dto.MobileRegisterDTO;
 import com.wreckloud.wolfchat.account.api.dto.WechatLoginDTO;
+import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
 import com.wreckloud.wolfchat.account.application.service.NoPoolService;
@@ -15,6 +16,7 @@ import com.wreckloud.wolfchat.account.infra.mapper.WfNoPoolMapper;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.util.JwtUtil;
 import com.wreckloud.wolfchat.common.util.PasswordUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -46,6 +48,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private NoPoolService noPoolService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     /**
      * 号码池可用数量阈值
@@ -128,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public UserVO loginByWechat(WechatLoginDTO request) {
+    public LoginVO loginByWechat(WechatLoginDTO request) {
         // 1. 保底机制：检查号码池可用数量，低于阈值自动补充
         ensurePoolHasEnoughNumbers();
 
@@ -161,13 +166,17 @@ public class AuthServiceImpl implements AuthService {
             wfUserMapper.updateById(user);
         }
 
-        // 6. 转换为VO返回
-        return convertToVO(user);
+        // 6. 生成JWT Token
+        String token = jwtUtil.generateToken(user.getId());
+
+        // 7. 转换为VO并返回
+        UserVO userVO = convertToVO(user);
+        return new LoginVO(token, userVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public UserVO loginByMobile(MobileLoginDTO request) {
+    public LoginVO loginByMobile(MobileLoginDTO request) {
         // 1. 验证短信验证码
         boolean smsCodeValid = verificationService.verifySmsCode(request.getMobile(), request.getSmsCodeKey(), request.getSmsCode());
         if (!smsCodeValid) {
@@ -195,8 +204,12 @@ public class AuthServiceImpl implements AuthService {
             wfUserMapper.updateById(user);
         }
 
-        // 7. 转换为VO返回
-        return convertToVO(user);
+        // 7. 生成JWT Token
+        String token = jwtUtil.generateToken(user.getId());
+
+        // 8. 转换为VO并返回
+        UserVO userVO = convertToVO(user);
+        return new LoginVO(token, userVO);
     }
 
     /**

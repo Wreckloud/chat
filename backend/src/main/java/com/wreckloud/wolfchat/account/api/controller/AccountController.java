@@ -4,6 +4,7 @@ import com.wreckloud.wolfchat.account.api.dto.MobileLoginDTO;
 import com.wreckloud.wolfchat.account.api.dto.MobileRegisterDTO;
 import com.wreckloud.wolfchat.account.api.dto.WechatLoginDTO;
 import com.wreckloud.wolfchat.account.api.vo.CaptchaVO;
+import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.SmsCodeVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
@@ -104,47 +105,47 @@ public class AccountController {
 
     @Operation(
             summary = "手机号验证码登录/注册",
-            description = "通过手机号和验证码登录。如果用户已存在则直接登录，不存在则自动注册。验证码验证通过后自动删除。"
+            description = "通过手机号和验证码登录。如果用户已存在则直接登录，不存在则自动注册。验证码验证通过后自动删除。登录成功后返回JWT Token。"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "登录成功", content = @Content(schema = @Schema(implementation = UserVO.class))),
+            @ApiResponse(responseCode = "200", description = "登录成功", content = @Content(schema = @Schema(implementation = LoginVO.class))),
             @ApiResponse(responseCode = "-1013", description = "短信验证码错误或已过期"),
             @ApiResponse(responseCode = "-1004", description = "暂无可用号码，请稍后再试"),
             @ApiResponse(responseCode = "-1012", description = "用户已被禁用或注销"),
             @ApiResponse(responseCode = "-1000", description = "参数校验失败")
     })
     @PostMapping("/login/mobile")
-    public Result<UserVO> loginByMobile(
+    public Result<LoginVO> loginByMobile(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "手机号登录请求参数",
                     required = true,
                     content = @Content(schema = @Schema(implementation = MobileLoginDTO.class))
             )
             @RequestBody @Validated MobileLoginDTO request) {
-        UserVO userVO = authService.loginByMobile(request);
-        return Result.ok(userVO);
+        LoginVO loginVO = authService.loginByMobile(request);
+        return Result.ok(loginVO);
     }
 
     @Operation(
             summary = "微信一键登录/注册",
-            description = "通过微信openid和unionid登录。如果用户已存在则直接登录，不存在则自动注册。支持更新用户昵称、头像等信息。"
+            description = "通过微信openid和unionid登录。如果用户已存在则直接登录，不存在则自动注册。支持更新用户昵称、头像等信息。登录成功后返回JWT Token。"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "登录成功", content = @Content(schema = @Schema(implementation = UserVO.class))),
+            @ApiResponse(responseCode = "200", description = "登录成功", content = @Content(schema = @Schema(implementation = LoginVO.class))),
             @ApiResponse(responseCode = "-1004", description = "暂无可用号码，请稍后再试"),
             @ApiResponse(responseCode = "-1012", description = "用户已被禁用或注销"),
             @ApiResponse(responseCode = "-1000", description = "参数校验失败")
     })
     @PostMapping("/login/wechat")
-    public Result<UserVO> loginByWechat(
+    public Result<LoginVO> loginByWechat(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "微信登录请求参数",
                     required = true,
                     content = @Content(schema = @Schema(implementation = WechatLoginDTO.class))
             )
             @RequestBody @Validated WechatLoginDTO request) {
-        UserVO userVO = authService.loginByWechat(request);
-        return Result.ok(userVO);
+        LoginVO loginVO = authService.loginByWechat(request);
+        return Result.ok(loginVO);
     }
 
     @Operation(
