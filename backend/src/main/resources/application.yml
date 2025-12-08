@@ -50,6 +50,24 @@ knife4j:
 project:
   folder: D:/Temp/log
 
+# 号码池配置
+nopool:
+  # 可用号码数量阈值，低于此值自动补充
+  threshold: 10
+  # 自动补充时生成的号码数量
+  auto-generate-count: 50
+
+# 短信服务配置
+sms:
+  # 是否启用真实短信发送（false=模拟发送，打印到日志；true=真实发送，需要配置短信服务）
+  enabled: false
+  # TODO: 接入真实短信服务后，在此配置相关参数
+  # provider: aliyun  # 短信服务提供商：aliyun、tencent、yunpian等
+  # access-key: your-access-key
+  # secret-key: your-secret-key
+  # sign-name: 您的签名
+  # template-code: SMS_123456789
+
 log:
   root:
     level: info

@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 @TableName("wf_no_pool")
 public class WfNoPool implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @TableId(type = IdType.AUTO)

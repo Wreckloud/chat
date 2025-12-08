@@ -13,4 +13,8 @@ public class BaseException extends RuntimeException {
         super(errorCode.msg());
         this.code = errorCode.code();
     }
+
+    public Integer getCode() {
+        return code;
+    }
 }
