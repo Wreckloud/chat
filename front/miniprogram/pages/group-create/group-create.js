@@ -5,6 +5,7 @@
  */
 
 const groupApi = require('../../api/group.js');
+const logger = require('../../utils/logger.js');
 
 Page({
   data: {
@@ -88,8 +89,11 @@ Page({
   createGroup() {
     const { groupName, groupIntro, memberIds } = this.data;
 
+    logger.action('GroupCreatePage', 'createGroup', { groupName, memberCount: memberIds.length });
+
     // 验证
     if (!groupName) {
+      logger.warn('GroupCreatePage', '群名称为空');
       wx.showToast({
         title: '请输入群名称',
         icon: 'none'
@@ -98,6 +102,7 @@ Page({
     }
 
     if (groupName.length < 2) {
+      logger.warn('GroupCreatePage', '群名称长度不足', { length: groupName.length });
       wx.showToast({
         title: '群名称至少2个字符',
         icon: 'none'
@@ -108,13 +113,19 @@ Page({
     // 显示加载
     this.setData({ createLoading: true });
 
-    // 调用创建接口
-    groupApi.createGroup({
+    const requestData = {
       groupName,
       groupIntro: groupIntro || null,
       memberIds: memberIds.length > 0 ? memberIds : null
-    })
+    };
+
+    logger.info('GroupCreatePage', '开始创建群组', requestData);
+
+    // 调用创建接口
+    groupApi.createGroup(requestData)
       .then(group => {
+        logger.info('GroupCreatePage', '创建群组成功', { groupId: group.groupId });
+        
         wx.showToast({
           title: '创建成功',
           icon: 'success',
@@ -129,8 +140,17 @@ Page({
         }, 1500);
       })
       .catch(err => {
-        console.error('创建群组失败:', err);
+        logger.error('GroupCreatePage', '创建群组失败', err);
         this.setData({ createLoading: false });
+        
+        // 显示错误信息（如果后端返回了message）
+        if (err && err.message) {
+          wx.showToast({
+            title: err.message,
+            icon: 'none',
+            duration: 3000
+          });
+        }
       });
   }
 });

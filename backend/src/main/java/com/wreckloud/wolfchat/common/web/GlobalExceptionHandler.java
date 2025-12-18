@@ -72,7 +72,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("系统异常", e);
-        return Result.fail(-9999, "系统繁忙，请稍后重试");
+        
+        // 开发环境返回详细错误信息，生产环境返回通用提示
+        // TODO: 根据配置判断环境
+        String message = "系统繁忙，请稍后重试";
+        
+        // 对于常见的空指针等异常，给出更友好的提示
+        if (e instanceof NullPointerException) {
+            message = "数据处理异常，请检查请求参数";
+            log.error("空指针异常详情: ", e);
+        } else if (e instanceof IllegalArgumentException) {
+            message = "参数异常: " + e.getMessage();
+        }
+        
+        return Result.fail(-9999, message);
     }
 }
 

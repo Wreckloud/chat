@@ -6,6 +6,7 @@
 
 const groupApi = require('../../api/group.js');
 const auth = require('../../utils/auth.js');
+const logger = require('../../utils/logger.js');
 
 Page({
   data: {
@@ -59,6 +60,7 @@ Page({
    */
   loadUserInfo() {
     const userInfo = auth.getUser();
+    logger.debug('TabsPage', '加载用户信息', { userId: userInfo?.userId });
     this.setData({ userInfo });
   },
 
@@ -66,12 +68,15 @@ Page({
    * 加载群组列表
    */
   loadGroupList() {
+    logger.info('TabsPage', '开始加载群组列表');
+    
     groupApi.getMyGroups()
       .then(groups => {
+        logger.info('TabsPage', '群组列表加载成功', { count: groups ? groups.length : 0 });
         this.setData({ groups });
       })
       .catch(err => {
-        console.error('加载群组列表失败:', err);
+        logger.error('TabsPage', '加载群组列表失败', err);
       });
   },
 
@@ -89,6 +94,7 @@ Page({
    * 跳转到创建群组
    */
   gotoCreateGroup() {
+    logger.action('TabsPage', 'gotoCreateGroup', '点击创建群组');
     wx.navigateTo({
       url: '/pages/group-create/group-create'
     });
@@ -98,11 +104,14 @@ Page({
    * 退出登录
    */
   logout() {
+    logger.action('TabsPage', 'logout', '点击退出登录');
+    
     wx.showModal({
       title: '提示',
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
+          logger.info('TabsPage', '用户确认退出登录');
           auth.logout();
         }
       }

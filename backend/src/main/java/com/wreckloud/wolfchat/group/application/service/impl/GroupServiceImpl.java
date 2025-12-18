@@ -49,7 +49,13 @@ public class GroupServiceImpl implements GroupService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public GroupVO createGroup(GroupCreateDTO dto, Long creatorId) {
-        log.info("创建群组，创建者ID: {}, 群名称: {}, 成员数: {}", creatorId, dto.getGroupName(), dto.getMemberIds().size());
+        // 处理memberIds为null的情况（允许一个人创建群聊）
+        List<Long> memberIds = dto.getMemberIds();
+        if (memberIds == null) {
+            memberIds = new ArrayList<>();
+        }
+        
+        log.info("创建群组，创建者ID: {}, 群名称: {}, 邀请成员数: {}", creatorId, dto.getGroupName(), memberIds.size());
 
         // 1. 校验创建者是否存在
         WfUser creator = userMapper.selectById(creatorId);
@@ -58,7 +64,7 @@ public class GroupServiceImpl implements GroupService {
         }
 
         // 2. 校验成员数量是否超过上限
-        int totalMembers = dto.getMemberIds().size() + 1; // +1 是创建者自己
+        int totalMembers = memberIds.size() + 1; // +1 是创建者自己
         if (totalMembers > dto.getMaxMembers()) {
             throw new BaseException(ErrorCode.GROUP_MEMBER_FULL);
         }
@@ -87,7 +93,7 @@ public class GroupServiceImpl implements GroupService {
         groupMemberMapper.insert(ownerMember);
 
         // 5. 批量添加其他成员
-        for (Long memberId : dto.getMemberIds()) {
+        for (Long memberId : memberIds) {
             // 校验成员是否存在
             WfUser member = userMapper.selectById(memberId);
             if (member == null) {
