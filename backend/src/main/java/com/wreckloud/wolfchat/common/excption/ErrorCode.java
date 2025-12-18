@@ -32,7 +32,19 @@ public enum ErrorCode {
 
     SMS_CODE_ERROR(-1013, "短信验证码错误或已过期"),
 
-    SMS_SEND_TOO_FREQUENT(-1014, "发送过于频繁，请稍后再试");
+    SMS_SEND_TOO_FREQUENT(-1014, "发送过于频繁，请稍后再试"),
+
+    // 群组相关错误码 (2000-2999)
+    GROUP_NOT_FOUND(-2001, "群组不存在"),
+    GROUP_MEMBER_FULL(-2002, "群成员已满"),
+    GROUP_ALREADY_JOINED(-2003, "已经在群内"),
+    NO_GROUP_PERMISSION(-2004, "无权限操作"),
+    GROUP_OWNER_CANNOT_QUIT(-2005, "群主不能退出群组，请先转让群主或解散群组"),
+    GROUP_DISBANDED(-2006, "群组已解散"),
+    GROUP_MEMBER_NOT_FOUND(-2007, "该用户不在群内"),
+    CANNOT_KICK_OWNER(-2008, "不能踢出群主"),
+    CANNOT_KICK_ADMIN(-2009, "管理员不能踢出其他管理员"),
+    USER_NOT_FOUND(-2010, "用户不存在");
 
     private final int code;
     private final String msg;
