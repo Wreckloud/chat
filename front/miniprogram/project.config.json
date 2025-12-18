@@ -1,13 +1,17 @@
 {
+  "description": "WolfChat 微信小程序",
+  "miniprogramRoot": "./",
   "simulatorType": "wechat",
   "simulatorPluginLibVersion": {
     "wxext14566970e7e9f62": "3.6.5-41"
   },
   "projectArchitecture": "multiPlatform",
   "setting": {
+    "useCompilerPlugins": ["typescript", "sass"],
     "condition": true,
-    "es6": false,
-    "postcss": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
     "compileWorklet": false,
     "minified": false,
     "uglifyFileName": false,
@@ -26,13 +30,21 @@
       "outputPath": ""
     },
     "disableUseStrict": false,
-    "useCompilerPlugins": false
+    "useCompilerPlugins": false,
+    "ignoreDevUnusedFiles": false,
+    "ignoreUploadUnusedFiles": false
   },
   "compileType": "miniprogram",
   "packOptions": {
     "ignore": [],
     "include": []
   },
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  },
   "appid": "wxabe22929a5ca9473",
-  "editorSetting": {}
+  "editorSetting": {},
+  "libVersion": "3.12.0"
 }

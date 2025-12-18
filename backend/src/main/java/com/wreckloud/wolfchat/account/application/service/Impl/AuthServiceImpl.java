@@ -35,6 +35,7 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Service
+
 public class AuthServiceImpl implements AuthService {
 
     @Autowired

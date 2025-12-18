@@ -1,0 +1,104 @@
+<!--Tab主页-->
+<van-tabs 
+  active="{{ active }}" 
+  bind:change="onChange"
+  color="#667eea"
+  title-active-color="#667eea"
+>
+  <van-tab title="消息">
+    <view class="tab-content">
+      <van-empty description="消息功能开发中..." image="search" />
+    </view>
+  </van-tab>
+  
+  <van-tab title="群聊🐺">
+    <view class="tab-content">
+      <!-- 群组列表 -->
+      <view class="group-list" wx:if="{{ groups.length > 0 }}">
+        <van-cell-group>
+          <van-cell
+            wx:for="{{ groups }}"
+            wx:key="groupId"
+            title="{{ item.groupName }}"
+            label="成员: {{ item.memberCount }}人"
+            is-link
+            bind:click="gotoGroupDetail"
+            data-id="{{ item.groupId }}"
+          >
+            <view slot="icon" class="group-avatar">
+              <image 
+                class="avatar-img" 
+                src="{{ item.groupAvatar || '/images/default-group.png' }}" 
+                mode="aspectFill"
+              ></image>
+            </view>
+            <view slot="right-icon" class="role-badge" wx:if="{{ item.myRole === 'OWNER' || item.myRole === 'ADMIN' }}">
+              <van-tag type="primary" size="medium" wx:if="{{ item.myRole === 'OWNER' }}">群主</van-tag>
+              <van-tag type="success" size="medium" wx:if="{{ item.myRole === 'ADMIN' }}">管理</van-tag>
+            </view>
+          </van-cell>
+        </van-cell-group>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:else class="empty-state">
+        <van-empty description="暂无群组">
+          <van-button 
+            round 
+            type="primary" 
+            custom-class="empty-button"
+            bind:click="gotoCreateGroup"
+          >
+            创建第一个群组
+          </van-button>
+        </van-empty>
+      </view>
+
+      <!-- 创建群组按钮 -->
+      <view class="fab-button">
+        <van-button 
+          icon="plus" 
+          type="info" 
+          round
+          custom-class="create-button"
+          bind:click="gotoCreateGroup"
+        >
+          创建群组
+        </van-button>
+      </view>
+    </view>
+  </van-tab>
+  
+  <van-tab title="我的">
+    <view class="tab-content">
+      <view class="user-section">
+        <!-- 用户信息 -->
+        <view class="user-card">
+          <view class="user-avatar">
+            <image 
+              src="{{ userInfo.avatar || '/images/default-avatar.png' }}" 
+              mode="aspectFill"
+            ></image>
+          </view>
+          <view class="user-info">
+            <text class="username">{{ userInfo.username || '狼友' }}</text>
+            <text class="wf-no">WF号: {{ userInfo.wfNo }}</text>
+          </view>
+        </view>
+
+        <!-- 功能列表 -->
+        <van-cell-group custom-class="function-list">
+          <van-cell title="个人资料" is-link icon="user-o" />
+          <van-cell title="设置" is-link icon="setting-o" />
+          <van-cell title="关于" is-link icon="info-o" />
+          <van-cell 
+            title="退出登录" 
+            icon="sign-o"
+            bind:click="logout"
+          />
+        </van-cell-group>
+      </view>
+    </view>
+  </van-tab>
+</van-tabs>
+

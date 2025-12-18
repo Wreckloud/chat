@@ -1,0 +1,136 @@
+/* 群组详情页面样式 */
+.container {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding-bottom: 40rpx;
+}
+
+/* 群信息卡片 */
+.group-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40rpx;
+  margin-bottom: 20rpx;
+}
+
+.group-header {
+  display: flex;
+  align-items: flex-start;
+}
+
+.group-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 20rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  margin-right: 30rpx;
+}
+
+.group-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.group-name-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.group-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: white;
+  margin-right: 15rpx;
+}
+
+.group-desc {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 10rpx;
+  line-height: 1.5;
+}
+
+.member-count {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 成员区域 */
+.member-section {
+  background: white;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #323233;
+}
+
+/* 成员列表 */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  transition: all 0.3s;
+}
+
+.member-item:active {
+  background: #ebedf0;
+}
+
+.member-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 40rpx;
+  margin-right: 24rpx;
+}
+
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.member-name-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.member-name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #323233;
+  margin-right: 12rpx;
+}
+
+.member-wf-no {
+  font-size: 24rpx;
+  color: #969799;
+}
+
+/* 操作区域 */
+.action-section {
+  margin: 0 30rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
