@@ -1,5 +1,7 @@
 package com.wreckloud.wolfchat.group.api.controller;
 
+import com.wreckloud.wolfchat.common.security.annotation.RequireLogin;
+import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.group.api.dto.GroupMuteDTO;
 import com.wreckloud.wolfchat.group.api.dto.GroupNoticePublishDTO;
@@ -70,12 +72,12 @@ public class GroupSettingController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @GetMapping("/{groupId}/notices")
     public Result<List<GroupNoticeVO>> getNotices(
             @Parameter(description = "群组ID", required = true, example = "1")
-            @PathVariable Long groupId,
-            @Parameter(description = "用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @PathVariable Long groupId) {
+        Long userId = UserContext.getUserId();
         List<GroupNoticeVO> notices = groupSettingService.getNotices(groupId, userId);
         return Result.ok(notices);
     }
@@ -89,14 +91,14 @@ public class GroupSettingController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2004", description = "无权限操作（仅群主/管理员可删除）")
     })
+    @RequireLogin
     @DeleteMapping("/{groupId}/notice/{noticeId}")
     public Result<Void> deleteNotice(
             @Parameter(description = "群组ID", required = true, example = "1")
             @PathVariable Long groupId,
             @Parameter(description = "公告ID", required = true, example = "1")
-            @PathVariable Long noticeId,
-            @Parameter(description = "用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @PathVariable Long noticeId) {
+        Long userId = UserContext.getUserId();
         groupSettingService.deleteNotice(groupId, noticeId, userId);
         return Result.ok();
     }
@@ -110,14 +112,14 @@ public class GroupSettingController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2004", description = "无权限操作（仅群主可设置）")
     })
+    @RequireLogin
     @PutMapping("/{groupId}/mute-all")
     public Result<Void> muteAll(
             @Parameter(description = "群组ID", required = true, example = "1")
             @PathVariable Long groupId,
             @Parameter(description = "是否全员禁言", required = true, example = "true")
-            @RequestParam Boolean isMuted,
-            @Parameter(description = "用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestParam Boolean isMuted) {
+        Long userId = UserContext.getUserId();
         groupSettingService.muteAll(groupId, isMuted, userId);
         return Result.ok();
     }
@@ -132,6 +134,7 @@ public class GroupSettingController {
             @ApiResponse(responseCode = "-2004", description = "无权限操作"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @PutMapping("/{groupId}/member/{targetUserId}/mute")
     public Result<Void> muteMember(
             @Parameter(description = "群组ID", required = true, example = "1")
@@ -143,9 +146,8 @@ public class GroupSettingController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = GroupMuteDTO.class))
             )
-            @RequestBody @Validated GroupMuteDTO dto,
-            @Parameter(description = "操作人用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestBody @Validated GroupMuteDTO dto) {
+        Long userId = UserContext.getUserId();
         groupSettingService.muteMember(groupId, targetUserId, dto.getIsMuted(), dto.getMuteDuration(), userId);
         return Result.ok();
     }
@@ -160,6 +162,7 @@ public class GroupSettingController {
             @ApiResponse(responseCode = "-2004", description = "无权限操作（仅群主可转让）"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @PostMapping("/{groupId}/transfer")
     public Result<Void> transferOwner(
             @Parameter(description = "群组ID", required = true, example = "1")
@@ -169,9 +172,8 @@ public class GroupSettingController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = GroupTransferDTO.class))
             )
-            @RequestBody @Validated GroupTransferDTO dto,
-            @Parameter(description = "当前群主用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestBody @Validated GroupTransferDTO dto) {
+        Long userId = UserContext.getUserId();
         groupSettingService.transferOwner(groupId, dto.getNewOwnerId(), userId);
         return Result.ok();
     }

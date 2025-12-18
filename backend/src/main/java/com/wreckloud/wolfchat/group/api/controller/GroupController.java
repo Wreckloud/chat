@@ -1,5 +1,7 @@
 package com.wreckloud.wolfchat.group.api.controller;
 
+import com.wreckloud.wolfchat.common.security.annotation.RequireLogin;
+import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.group.api.dto.GroupCreateDTO;
 import com.wreckloud.wolfchat.group.api.dto.GroupUpdateDTO;
@@ -44,6 +46,7 @@ public class GroupController {
             @ApiResponse(responseCode = "-2010", description = "用户不存在"),
             @ApiResponse(responseCode = "-1000", description = "参数校验失败")
     })
+    @RequireLogin
     @PostMapping("/create")
     public Result<GroupVO> createGroup(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -51,9 +54,8 @@ public class GroupController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = GroupCreateDTO.class))
             )
-            @RequestBody @Validated GroupCreateDTO dto,
-            @Parameter(description = "创建者用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestBody @Validated GroupCreateDTO dto) {
+        Long userId = UserContext.getUserId();
         GroupVO groupVO = groupService.createGroup(dto, userId);
         return Result.ok(groupVO);
     }
@@ -68,12 +70,12 @@ public class GroupController {
             @ApiResponse(responseCode = "-2006", description = "群组已解散"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @GetMapping("/{groupId}")
     public Result<GroupDetailVO> getGroupDetail(
             @Parameter(description = "群组ID", required = true, example = "1")
-            @PathVariable Long groupId,
-            @Parameter(description = "当前用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @PathVariable Long groupId) {
+        Long userId = UserContext.getUserId();
         GroupDetailVO groupDetail = groupService.getGroupDetail(groupId, userId);
         return Result.ok(groupDetail);
     }
@@ -85,10 +87,10 @@ public class GroupController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "查询成功")
     })
+    @RequireLogin
     @GetMapping("/my-groups")
-    public Result<List<GroupVO>> getMyGroups(
-            @Parameter(description = "当前用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+    public Result<List<GroupVO>> getMyGroups() {
+        Long userId = UserContext.getUserId();
         List<GroupVO> groups = groupService.getMyGroups(userId);
         return Result.ok(groups);
     }
@@ -102,6 +104,7 @@ public class GroupController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2004", description = "无权限操作（仅群主可修改）")
     })
+    @RequireLogin
     @PutMapping("/{groupId}")
     public Result<Void> updateGroup(
             @Parameter(description = "群组ID", required = true, example = "1")
@@ -111,9 +114,8 @@ public class GroupController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = GroupUpdateDTO.class))
             )
-            @RequestBody @Validated GroupUpdateDTO dto,
-            @Parameter(description = "当前用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestBody @Validated GroupUpdateDTO dto) {
+        Long userId = UserContext.getUserId();
         groupService.updateGroup(groupId, dto, userId);
         return Result.ok();
     }
@@ -127,12 +129,12 @@ public class GroupController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2004", description = "无权限操作（仅群主可解散）")
     })
+    @RequireLogin
     @DeleteMapping("/{groupId}")
     public Result<Void> disbandGroup(
             @Parameter(description = "群组ID", required = true, example = "1")
-            @PathVariable Long groupId,
-            @Parameter(description = "当前用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @PathVariable Long groupId) {
+        Long userId = UserContext.getUserId();
         groupService.disbandGroup(groupId, userId);
         return Result.ok();
     }

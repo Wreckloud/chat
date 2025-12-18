@@ -1,5 +1,7 @@
 package com.wreckloud.wolfchat.group.api.controller;
 
+import com.wreckloud.wolfchat.common.security.annotation.RequireLogin;
+import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.group.api.dto.GroupMemberInviteDTO;
 import com.wreckloud.wolfchat.group.api.dto.GroupMemberRoleDTO;
@@ -47,6 +49,7 @@ public class GroupMemberController {
             @ApiResponse(responseCode = "-2006", description = "群组已解散"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @PostMapping("/{groupId}/invite")
     public Result<Void> inviteMembers(
             @Parameter(description = "群组ID", required = true, example = "1")
@@ -56,9 +59,8 @@ public class GroupMemberController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = GroupMemberInviteDTO.class))
             )
-            @RequestBody @Validated GroupMemberInviteDTO dto,
-            @Parameter(description = "邀请人用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestBody @Validated GroupMemberInviteDTO dto) {
+        Long userId = UserContext.getUserId();
         groupMemberService.inviteMembers(groupId, dto.getUserIds(), userId);
         return Result.ok();
     }
@@ -75,14 +77,14 @@ public class GroupMemberController {
             @ApiResponse(responseCode = "-2008", description = "不能踢出群主"),
             @ApiResponse(responseCode = "-2009", description = "管理员不能踢出其他管理员")
     })
+    @RequireLogin
     @DeleteMapping("/{groupId}/member/{targetUserId}")
     public Result<Void> kickMember(
             @Parameter(description = "群组ID", required = true, example = "1")
             @PathVariable Long groupId,
             @Parameter(description = "被踢出用户ID", required = true, example = "2")
-            @PathVariable Long targetUserId,
-            @Parameter(description = "操作人用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @PathVariable Long targetUserId) {
+        Long userId = UserContext.getUserId();
         groupMemberService.kickMember(groupId, targetUserId, userId);
         return Result.ok();
     }
@@ -97,12 +99,12 @@ public class GroupMemberController {
             @ApiResponse(responseCode = "-2005", description = "群主不能退出群组"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @PostMapping("/{groupId}/quit")
     public Result<Void> quitGroup(
             @Parameter(description = "群组ID", required = true, example = "1")
-            @PathVariable Long groupId,
-            @Parameter(description = "用户ID（实际应从Token中获取）", example = "2")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "2") Long userId) {
+            @PathVariable Long groupId) {
+        Long userId = UserContext.getUserId();
         groupMemberService.quitGroup(groupId, userId);
         return Result.ok();
     }
@@ -117,6 +119,7 @@ public class GroupMemberController {
             @ApiResponse(responseCode = "-2004", description = "无权限操作（仅群主可设置）"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @PostMapping("/{groupId}/set-admin")
     public Result<Void> setAdmin(
             @Parameter(description = "群组ID", required = true, example = "1")
@@ -126,9 +129,8 @@ public class GroupMemberController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = GroupMemberRoleDTO.class))
             )
-            @RequestBody @Validated GroupMemberRoleDTO dto,
-            @Parameter(description = "操作人用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestBody @Validated GroupMemberRoleDTO dto) {
+        Long userId = UserContext.getUserId();
         groupMemberService.setAdmin(groupId, dto.getUserId(), dto.getIsAdmin(), userId);
         return Result.ok();
     }
@@ -142,12 +144,12 @@ public class GroupMemberController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内（无权查看）")
     })
+    @RequireLogin
     @GetMapping("/{groupId}/members")
     public Result<List<GroupMemberVO>> getMembers(
             @Parameter(description = "群组ID", required = true, example = "1")
-            @PathVariable Long groupId,
-            @Parameter(description = "用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @PathVariable Long groupId) {
+        Long userId = UserContext.getUserId();
         List<GroupMemberVO> members = groupMemberService.getMembers(groupId, userId);
         return Result.ok(members);
     }
@@ -161,14 +163,14 @@ public class GroupMemberController {
             @ApiResponse(responseCode = "-2001", description = "群组不存在"),
             @ApiResponse(responseCode = "-2007", description = "该用户不在群内")
     })
+    @RequireLogin
     @PutMapping("/{groupId}/nickname")
     public Result<Void> updateNickname(
             @Parameter(description = "群组ID", required = true, example = "1")
             @PathVariable Long groupId,
             @Parameter(description = "新的群昵称", required = true, example = "班长")
-            @RequestParam @NotBlank(message = "群昵称不能为空") @Size(max = 50, message = "群昵称不能超过50个字符") String nickname,
-            @Parameter(description = "用户ID（实际应从Token中获取）", example = "1")
-            @RequestHeader(value = "User-Id", required = false, defaultValue = "1") Long userId) {
+            @RequestParam @NotBlank(message = "群昵称不能为空") @Size(max = 50, message = "群昵称不能超过50个字符") String nickname) {
+        Long userId = UserContext.getUserId();
         groupMemberService.updateNickname(groupId, userId, nickname);
         return Result.ok();
     }

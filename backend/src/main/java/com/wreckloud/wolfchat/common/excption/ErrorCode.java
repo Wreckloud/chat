@@ -34,6 +34,11 @@ public enum ErrorCode {
 
     SMS_SEND_TOO_FREQUENT(-1014, "发送过于频繁，请稍后再试"),
 
+    // 认证相关错误码 (1000-1999)
+    UNAUTHORIZED(-1001, "未登录或登录已过期"),
+    TOKEN_INVALID(-1002, "Token无效"),
+    TOKEN_EXPIRED(-1003, "Token已过期"),
+
     // 群组相关错误码 (2000-2999)
     GROUP_NOT_FOUND(-2001, "群组不存在"),
     GROUP_MEMBER_FULL(-2002, "群成员已满"),
