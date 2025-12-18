@@ -7,34 +7,20 @@
 import request from '@/utils/request'
 
 /**
- * 获取系统统计数据
- * 注意：此接口暂未实现，会返回404
+ * 获取系统统计数据（所有统计数据）
+ * 返回数据包括：
+ * - totalUsers: 总用户数
+ * - todayNewUsers: 今日新增用户数
+ * - activeUsers: 活跃用户数（7天内登录）
+ * - disabledUsers: 禁用用户数
+ * - totalGroups: 总群组数
+ * - todayNewGroups: 今日新增群组数
+ * - activeGroups: 活跃群组数（7天内有消息）
+ * - disbandedGroups: 已解散群组数
  */
 export const getSystemStats = () => {
   return request({
     url: '/admin/statistics',
-    method: 'GET'
-  })
-}
-
-/**
- * 获取用户统计
- * 注意：此接口暂未实现，会返回404
- */
-export const getUserStats = () => {
-  return request({
-    url: '/admin/statistics/users',
-    method: 'GET'
-  })
-}
-
-/**
- * 获取群组统计
- * 注意：此接口暂未实现，会返回404
- */
-export const getGroupStats = () => {
-  return request({
-    url: '/admin/statistics/groups',
     method: 'GET'
   })
 }

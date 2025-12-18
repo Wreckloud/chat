@@ -53,6 +53,11 @@ public class WfUser implements Serializable {
     private String signature;
 
     private Integer status;
+    
+    /**
+     * 角色：1=普通用户 2=管理员
+     */
+    private Integer role;
 
     private String lastLoginIp;
 

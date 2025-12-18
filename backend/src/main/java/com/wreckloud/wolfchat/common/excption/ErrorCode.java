@@ -38,6 +38,7 @@ public enum ErrorCode {
     UNAUTHORIZED(-1001, "未登录或登录已过期"),
     TOKEN_INVALID(-1002, "Token无效"),
     TOKEN_EXPIRED(-1003, "Token已过期"),
+    NO_PERMISSION(-1004, "无权限访问"),
 
     // 群组相关错误码 (2000-2999)
     GROUP_NOT_FOUND(-2001, "群组不存在"),

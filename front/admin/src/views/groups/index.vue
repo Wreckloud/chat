@@ -40,7 +40,7 @@
         stripe
         style="width: 100%"
       >
-        <el-table-column prop="groupId" label="群组ID" width="80" />
+        <el-table-column prop="id" label="群组ID" width="80" />
         <el-table-column label="群名称" width="200">
           <template #default="{ row }">
             <div class="group-info">
@@ -109,7 +109,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { getMyGroups, dismissGroup } from '@/api/group'
+import { getAdminGroupList, adminDismissGroup } from '@/api/admin'
 import logger from '@/utils/logger'
 
 const router = useRouter()
@@ -137,41 +137,25 @@ const pagination = reactive({
  * 加载群组列表
  */
 const loadGroupList = async () => {
-  logger.info('GroupsPage', '加载我的群组列表')
+  logger.info('GroupsPage', '加载群组列表', { page: pagination.page })
   
   loading.value = true
   
   try {
-    // 使用实际的 getMyGroups 接口（不支持分页和搜索）
-    const groups = await getMyGroups()
-    
-    // 前端过滤（后端接口暂不支持搜索和分页）
-    let filteredGroups = groups || []
-    
-    // 按群名称过滤
-    if (searchForm.groupName) {
-      filteredGroups = filteredGroups.filter(g => 
-        g.groupName.includes(searchForm.groupName)
-      )
-    }
-    
-    // 按状态过滤
-    if (searchForm.status !== null && searchForm.status !== '') {
-      filteredGroups = filteredGroups.filter(g => g.status === searchForm.status)
-    }
-    
-    // 前端分页
-    const start = (pagination.page - 1) * pagination.size
-    const end = start + pagination.size
-    groupList.value = filteredGroups.slice(start, end)
-    pagination.total = filteredGroups.length
-    
-    logger.info('GroupsPage', '群组列表加载成功', { 
-      total: filteredGroups.length,
-      current: groupList.value.length 
+    const res = await getAdminGroupList({
+      current: pagination.page,
+      size: pagination.size,
+      keyword: searchForm.groupName || undefined,
+      status: searchForm.status
     })
+    
+    groupList.value = res.records || []
+    pagination.total = res.total || 0
+    
+    logger.info('GroupsPage', '群组列表加载成功', { count: groupList.value.length })
   } catch (error) {
     logger.error('GroupsPage', '加载群组列表失败', error)
+    ElMessage.error('加载群组列表失败：' + (error.message || '未知错误'))
     groupList.value = []
     pagination.total = 0
   } finally {
@@ -203,8 +187,8 @@ const handleReset = () => {
  * 查看群组详情
  */
 const handleView = (row) => {
-  logger.action('GroupsPage', 'viewGroup', { groupId: row.groupId })
-  router.push(`/groups/${row.groupId}`)
+  logger.action('GroupsPage', 'viewGroup', { groupId: row.id })
+  router.push(`/groups/${row.id}`)
 }
 
 /**
@@ -216,14 +200,18 @@ const handleDismiss = (row) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    logger.action('GroupsPage', 'dismissGroup', { groupId: row.groupId })
+    logger.action('GroupsPage', 'dismissGroup', { groupId: row.id })
     
     try {
-      await dismissGroup(row.groupId)
+      await adminDismissGroup({ 
+        groupId: row.id, 
+        reason: '管理员操作' 
+      })
       ElMessage.success('解散成功')
       loadGroupList()
     } catch (error) {
       logger.error('GroupsPage', '解散群组失败', error)
+      ElMessage.error('解散群组失败：' + (error.message || '未知错误'))
     }
   })
 }

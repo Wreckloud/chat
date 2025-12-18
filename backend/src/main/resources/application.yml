@@ -78,3 +78,10 @@ jwt:
 log:
   root:
     level: info
+
+# WolfChat 自定义配置
+wolfchat:
+  admin:
+    # 超级管理员WF号列表（逗号分隔）
+    # 这些用户拥有所有管理权限，无需修改数据库role字段
+    super-admin-wf-numbers: 1677820334

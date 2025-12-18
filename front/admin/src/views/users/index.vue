@@ -41,7 +41,7 @@
         stripe
         style="width: 100%"
       >
-        <el-table-column prop="userId" label="用户ID" width="80" />
+        <el-table-column prop="id" label="用户ID" width="80" />
         <el-table-column prop="wfNo" label="WF号" width="120" />
         <el-table-column label="用户名" width="150">
           <template #default="{ row }">
@@ -137,19 +137,23 @@ const loadUserList = async () => {
   loading.value = true
   
   try {
+    // 构建搜索关键词（用户名或WF号）
+    const keyword = searchForm.username || searchForm.wfNo || undefined
+    
     const res = await getUserList({
-      page: pagination.page,
+      current: pagination.page,
       size: pagination.size,
-      ...searchForm
+      keyword: keyword,
+      status: undefined // 可选：状态筛选
     })
     
-    userList.value = res.list || []
+    userList.value = res.records || []
     pagination.total = res.total || 0
     
     logger.info('UsersPage', '用户列表加载成功', { count: userList.value.length })
   } catch (error) {
     logger.error('UsersPage', '加载用户列表失败', error)
-    // 接口不存在时会报404，不使用假数据
+    ElMessage.error('加载用户列表失败：' + (error.message || '未知错误'))
   } finally {
     loading.value = false
   }
@@ -184,14 +188,15 @@ const handleDisable = (row) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    logger.action('UsersPage', 'disableUser', { userId: row.userId })
+    logger.action('UsersPage', 'disableUser', { userId: row.id })
     
     try {
-      await disableUser(row.userId)
+      await disableUser(row.id, '管理员操作')
       ElMessage.success('禁用成功')
       loadUserList()
     } catch (error) {
       logger.error('UsersPage', '禁用用户失败', error)
+      ElMessage.error('禁用用户失败：' + (error.message || '未知错误'))
     }
   })
 }
@@ -200,13 +205,14 @@ const handleDisable = (row) => {
  * 启用用户
  */
 const handleEnable = (row) => {
-  logger.action('UsersPage', 'enableUser', { userId: row.userId })
+  logger.action('UsersPage', 'enableUser', { userId: row.id })
   
-  enableUser(row.userId).then(() => {
+  enableUser(row.id, '管理员操作').then(() => {
     ElMessage.success('启用成功')
     loadUserList()
   }).catch((error) => {
     logger.error('UsersPage', '启用用户失败', error)
+    ElMessage.error('启用用户失败：' + (error.message || '未知错误'))
   })
 }
 

@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.common.security.config;
 
+import com.wreckloud.wolfchat.common.security.interceptor.AdminInterceptor;
 import com.wreckloud.wolfchat.common.security.interceptor.JwtInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -17,16 +18,21 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private JwtInterceptor jwtInterceptor;
+    
+    @Autowired
+    private AdminInterceptor adminInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // JWT认证拦截器（优先级1）
         registry.addInterceptor(jwtInterceptor)
                 // 拦截所有需要登录的接口
                 .addPathPatterns(
                         "/group/**",
                         "/message/**",
                         "/friend/**",
-                        "/conversation/**"
+                        "/conversation/**",
+                        "/admin/**"  // 管理员接口也需要先登录
                 )
                 // 排除不需要登录的接口
                 .excludePathPatterns(
@@ -40,7 +46,13 @@ public class WebConfig implements WebMvcConfigurer {
                         "/v3/api-docs/**",
                         "/webjars/**",
                         "/favicon.ico"
-                );
+                )
+                .order(1);
+        
+        // 管理员权限拦截器（优先级2，在JWT之后）
+        registry.addInterceptor(adminInterceptor)
+                .addPathPatterns("/admin/**")
+                .order(2);
     }
 }
 

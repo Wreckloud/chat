@@ -6,8 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @MapperScan({
-		"com.wreckloud.wolfchat.account.infra.mapper",
-		"com.wreckloud.wolfchat.group.infra.mapper"
+    "com.wreckloud.wolfchat.account.infra.mapper",
+    "com.wreckloud.wolfchat.group.infra.mapper",
+    "com.wreckloud.wolfchat.admin.infra.mapper"
 })
 public class WolfChatApplication {
 

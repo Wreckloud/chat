@@ -8,11 +8,15 @@ import request from '@/utils/request'
 
 /**
  * 获取用户列表（分页）
- * 注意：此接口为管理员专用，暂未实现，会返回404
+ * @param {Object} params - 查询参数
+ * @param {Number} params.current - 当前页
+ * @param {Number} params.size - 每页大小
+ * @param {String} params.keyword - 搜索关键词（用户名/手机号/WF号）
+ * @param {Number} params.status - 状态筛选：1正常 2禁用 3注销
  */
 export const getUserList = (params) => {
   return request({
-    url: '/admin/users',
+    url: '/admin/users/list',
     method: 'GET',
     params
   })
@@ -30,7 +34,7 @@ export const getUserById = (userId) => {
 
 /**
  * 获取用户详情
- * 注意：此接口为管理员专用，暂未实现，会返回404
+ * @param {Number} userId - 用户ID
  */
 export const getUserDetail = (userId) => {
   return request({
@@ -40,24 +44,35 @@ export const getUserDetail = (userId) => {
 }
 
 /**
- * 禁用用户
- * 注意：此接口为管理员专用，暂未实现，会返回404
+ * 更新用户状态
+ * @param {Object} data - 请求数据
+ * @param {Number} data.userId - 用户ID
+ * @param {Number} data.status - 状态：1正常 2禁用 3注销
+ * @param {String} data.reason - 操作原因
  */
-export const disableUser = (userId) => {
+export const updateUserStatus = (data) => {
   return request({
-    url: `/admin/users/${userId}/disable`,
-    method: 'PUT'
+    url: '/admin/users/status',
+    method: 'PUT',
+    data
   })
 }
 
 /**
- * 启用用户
- * 注意：此接口为管理员专用，暂未实现，会返回404
+ * 禁用用户（快捷方法）
+ * @param {Number} userId - 用户ID
+ * @param {String} reason - 禁用原因
  */
-export const enableUser = (userId) => {
-  return request({
-    url: `/admin/users/${userId}/enable`,
-    method: 'PUT'
-  })
+export const disableUser = (userId, reason = '') => {
+  return updateUserStatus({ userId, status: 2, reason })
+}
+
+/**
+ * 启用用户（快捷方法）
+ * @param {Number} userId - 用户ID
+ * @param {String} reason - 启用原因
+ */
+export const enableUser = (userId, reason = '') => {
+  return updateUserStatus({ userId, status: 1, reason })
 }
 

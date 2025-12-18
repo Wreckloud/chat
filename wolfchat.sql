@@ -54,6 +54,7 @@ CREATE TABLE `wf_user` (
   `signature` VARCHAR(255) DEFAULT NULL COMMENT '个性签名',
 
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1正常 2禁用 3注销',
+  `role` TINYINT NOT NULL DEFAULT 1 COMMENT '角色：1=普通用户 2=管理员',
 
   `last_login_ip` VARCHAR(64) DEFAULT NULL COMMENT '最后登录IP',
   `last_login_time` DATETIME DEFAULT NULL COMMENT '最后登录时间',
@@ -68,7 +69,8 @@ CREATE TABLE `wf_user` (
   UNIQUE KEY `uk_wf_no` (`wf_no`),
   UNIQUE KEY `uk_mobile` (`mobile`),
   UNIQUE KEY `uk_email` (`email`),
-  UNIQUE KEY `uk_wx_unionid` (`wx_unionid`)
+  UNIQUE KEY `uk_wx_unionid` (`wx_unionid`),
+  KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
 -- 4. 群组表：wf_group
@@ -155,3 +157,52 @@ CREATE TABLE `wf_group_notice` (
   KEY `idx_group_id` (`group_id`),
   KEY `idx_publish_time` (`publish_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='群公告表';
+
+-- 7. 管理员操作日志表：wf_admin_log
+--   - 记录管理员的所有操作
+--   - 管理员信息：admin_id + admin_name + admin_wf_no
+--   - 操作详情：action（操作类型）+ target（目标）
+--   - 请求信息：ip_address + user_agent
+--   - 操作结果：result（成功/失败）+ error_message
+
+CREATE TABLE `wf_admin_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+  `admin_id` BIGINT NOT NULL COMMENT '管理员用户ID',
+  `admin_name` VARCHAR(32) NOT NULL COMMENT '管理员用户名',
+  `admin_wf_no` BIGINT NOT NULL COMMENT '管理员WF号',
+  
+  `action` VARCHAR(50) NOT NULL COMMENT '操作类型：disable_user/enable_user/dismiss_group等',
+  `target_type` VARCHAR(20) NOT NULL COMMENT '目标类型：user/group/system',
+  `target_id` BIGINT COMMENT '目标ID',
+  `target_name` VARCHAR(100) COMMENT '目标名称',
+  
+  `details` TEXT COMMENT '操作详情JSON',
+  `ip_address` VARCHAR(50) COMMENT 'IP地址',
+  `user_agent` VARCHAR(255) COMMENT '用户代理',
+  
+  `result` TINYINT NOT NULL DEFAULT 1 COMMENT '操作结果：1成功 0失败',
+  `error_message` VARCHAR(255) COMMENT '错误信息（失败时）',
+  
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+  
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_id` (`admin_id`),
+  KEY `idx_action` (`action`),
+  KEY `idx_target` (`target_type`, `target_id`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员操作日志表';
+
+-- ==========================================
+-- 超级管理员配置说明
+-- ==========================================
+-- 超级管理员通过配置文件指定，不需要数据库初始化
+-- 配置位置：application.yml
+-- 配置示例：
+-- wolfchat:
+--   admin:
+--     super-admin-wf-numbers: 1000001,1000002
+-- 
+-- 角色说明：
+-- role = 1: 普通用户
+-- role = 2: 管理员
+-- 超级管理员: 通过配置文件WF号指定，无需修改role字段

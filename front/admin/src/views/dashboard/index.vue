@@ -92,7 +92,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
-import { getMyGroups } from '@/api/group'
+import { getStatistics } from '@/api/admin'
 import logger from '@/utils/logger'
 
 const router = useRouter()
@@ -114,20 +114,19 @@ const loadStats = async () => {
   logger.info('Dashboard', '加载统计数据')
   
   try {
-    // 获取我的群组数量（使用现有接口）
-    const groups = await getMyGroups()
-    stats.value.groupCount = groups ? groups.length : 0
+    const data = await getStatistics()
+    
+    stats.value.userCount = data.totalUsers || 0
+    stats.value.groupCount = data.totalGroups || 0
+    stats.value.activeUserCount = data.activeUsers || 0
+    // messageCount 暂时使用0，等待后续实现消息统计
+    stats.value.messageCount = 0
     
     logger.info('Dashboard', '统计数据加载成功', stats.value)
   } catch (error) {
     logger.error('Dashboard', '加载统计数据失败', error)
     // 接口失败时保持为0
   }
-  
-  // TODO: 其他统计数据需要后端实现专门的统计接口
-  // stats.value.userCount - 需要 /admin/statistics/users
-  // stats.value.messageCount - 需要 /admin/statistics/messages
-  // stats.value.activeUserCount - 需要 /admin/statistics/active-users
 }
 
 // 跳转到用户管理
