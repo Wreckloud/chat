@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.common.config.AdminProperties;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -26,13 +27,11 @@ import javax.servlet.http.HttpServletResponse;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class AdminInterceptor implements HandlerInterceptor {
     
-    @Autowired
-    private AdminProperties adminProperties;
-    
-    @Autowired
-    private WfUserMapper userMapper;
+    private final AdminProperties adminProperties;
+    private final WfUserMapper userMapper;
     
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

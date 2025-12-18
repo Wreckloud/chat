@@ -34,13 +34,11 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminUserServiceImpl implements AdminUserService {
     
-    @Autowired
-    private WfUserMapper userMapper;
-    
-    @Autowired
-    private AdminLogService adminLogService;
+    private final WfUserMapper userMapper;
+    private final AdminLogService adminLogService;
     
     @Override
     public Page<AdminUserVO> getUserList(Long current, Long size, String keyword, Integer status) {

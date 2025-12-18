@@ -18,6 +18,7 @@ import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import com.wreckloud.wolfchat.common.util.PasswordUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,22 +36,14 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    @Autowired
-    private WfUserMapper wfUserMapper;
-
-    @Autowired
-    private WfNoPoolMapper wfNoPoolMapper;
-
-    @Autowired
-    private VerificationService verificationService;
-
-    @Autowired
-    private NoPoolService noPoolService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final WfUserMapper wfUserMapper;
+    private final WfNoPoolMapper wfNoPoolMapper;
+    private final VerificationService verificationService;
+    private final NoPoolService noPoolService;
+    private final JwtUtil jwtUtil;
 
     /**
      * 号码池可用数量阈值

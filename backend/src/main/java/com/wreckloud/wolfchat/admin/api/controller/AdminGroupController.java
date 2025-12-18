@@ -9,6 +9,7 @@ import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -22,11 +23,11 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/admin/groups")
+@RequiredArgsConstructor
 @Tag(name = "管理员-群组管理", description = "管理员对群组的管理操作")
 public class AdminGroupController {
     
-    @Autowired
-    private AdminGroupService adminGroupService;
+    private final AdminGroupService adminGroupService;
     
     @GetMapping("/list")
     @Operation(summary = "分页查询群组列表", description = "管理员查询所有群组列表，支持关键词搜索和状态筛选")

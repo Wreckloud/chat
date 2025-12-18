@@ -7,6 +7,7 @@ import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,11 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping("/admin/logs")
+@RequiredArgsConstructor
 @Tag(name = "管理员-操作日志", description = "管理员查看操作日志")
 public class AdminLogController {
     
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
     
     @GetMapping("/list")
     @Operation(summary = "分页查询操作日志", description = "管理员查询操作日志，支持管理员和操作类型筛选")

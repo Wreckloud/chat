@@ -5,6 +5,7 @@ import com.wreckloud.wolfchat.account.api.vo.CaptchaVO;
 import com.wreckloud.wolfchat.account.application.service.VerificationService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,13 +28,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class VerificationServiceImpl implements VerificationService {
 
-    @Autowired
-    private DefaultKaptcha defaultKaptcha;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
+    private final DefaultKaptcha defaultKaptcha;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * 是否启用真实短信发送（默认false，使用模拟发送）

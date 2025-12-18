@@ -15,6 +15,7 @@ import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.group.domain.entity.WfGroup;
 import com.wreckloud.wolfchat.group.domain.enums.GroupStatus;
 import com.wreckloud.wolfchat.group.infra.mapper.WfGroupMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -35,16 +36,12 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminGroupServiceImpl implements AdminGroupService {
     
-    @Autowired
-    private WfGroupMapper groupMapper;
-    
-    @Autowired
-    private WfUserMapper userMapper;
-    
-    @Autowired
-    private AdminLogService adminLogService;
+    private final WfGroupMapper groupMapper;
+    private final WfUserMapper userMapper;
+    private final AdminLogService adminLogService;
     
     @Override
     public Page<AdminGroupVO> getGroupList(Long current, Long size, String keyword, Integer status) {

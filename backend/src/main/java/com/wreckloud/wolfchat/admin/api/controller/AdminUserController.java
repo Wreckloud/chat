@@ -9,6 +9,7 @@ import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -22,11 +23,11 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/admin/users")
+@RequiredArgsConstructor
 @Tag(name = "管理员-用户管理", description = "管理员对用户的管理操作")
 public class AdminUserController {
     
-    @Autowired
-    private AdminUserService adminUserService;
+    private final AdminUserService adminUserService;
     
     @GetMapping("/list")
     @Operation(summary = "分页查询用户列表", description = "管理员查询所有用户列表，支持关键词搜索和状态筛选")

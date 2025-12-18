@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.admin.api.vo.AdminLogVO;
 import com.wreckloud.wolfchat.admin.application.service.AdminLogService;
 import com.wreckloud.wolfchat.admin.domain.entity.WfAdminLog;
 import com.wreckloud.wolfchat.admin.infra.mapper.WfAdminLogMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -22,10 +23,10 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminLogServiceImpl implements AdminLogService {
     
-    @Autowired
-    private WfAdminLogMapper adminLogMapper;
+    private final WfAdminLogMapper adminLogMapper;
     
     @Override
     public void saveLog(WfAdminLog adminLog) {

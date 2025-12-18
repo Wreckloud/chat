@@ -10,7 +10,7 @@ import com.wreckloud.wolfchat.account.infra.mapper.WfNoPoolMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.web.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,10 +24,10 @@ import java.util.Random;
  * @Date 2025-12-07
  */
 @Service
+@RequiredArgsConstructor
 public class NoPoolServiceImpl implements NoPoolService {
 
-    @Autowired
-    private WfNoPoolMapper wfNoPoolMapper;
+    private final WfNoPoolMapper wfNoPoolMapper;
 
     /**
      * 号码最小位数（6位）

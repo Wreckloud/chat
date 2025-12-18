@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -27,10 +28,10 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "号码池管理", description = "号码池相关接口，包括增删改查、自动生成等")
 @RestController
 @RequestMapping("/account/nopool")
+@RequiredArgsConstructor
 public class NoPoolController {
 
-    @Autowired
-    private NoPoolService noPoolService;
+    private final NoPoolService noPoolService;
 
     @Operation(
             summary = "自动生成普通号码",

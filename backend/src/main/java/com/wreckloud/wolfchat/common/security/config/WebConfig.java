@@ -2,7 +2,7 @@ package com.wreckloud.wolfchat.common.security.config;
 
 import com.wreckloud.wolfchat.common.security.interceptor.AdminInterceptor;
 import com.wreckloud.wolfchat.common.security.interceptor.JwtInterceptor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -14,13 +14,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @date 2024-12-18
  */
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
-    @Autowired
-    private JwtInterceptor jwtInterceptor;
-    
-    @Autowired
-    private AdminInterceptor adminInterceptor;
+    private final JwtInterceptor jwtInterceptor;
+    private final AdminInterceptor adminInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

@@ -15,6 +15,7 @@ import com.wreckloud.wolfchat.group.domain.enums.GroupMemberRole;
 import com.wreckloud.wolfchat.group.infra.mapper.WfGroupMapper;
 import com.wreckloud.wolfchat.group.infra.mapper.WfGroupMemberMapper;
 import com.wreckloud.wolfchat.group.infra.mapper.WfGroupNoticeMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,19 +35,13 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class GroupSettingServiceImpl implements GroupSettingService {
 
-    @Autowired
-    private WfGroupMapper groupMapper;
-
-    @Autowired
-    private WfGroupMemberMapper groupMemberMapper;
-
-    @Autowired
-    private WfGroupNoticeMapper groupNoticeMapper;
-
-    @Autowired
-    private WfUserMapper userMapper;
+    private final WfGroupMapper groupMapper;
+    private final WfGroupMemberMapper groupMemberMapper;
+    private final WfGroupNoticeMapper groupNoticeMapper;
+    private final WfUserMapper userMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)

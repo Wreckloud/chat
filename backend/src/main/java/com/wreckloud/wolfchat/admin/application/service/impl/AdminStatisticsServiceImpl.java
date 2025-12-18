@@ -8,6 +8,7 @@ import com.wreckloud.wolfchat.admin.application.service.AdminStatisticsService;
 import com.wreckloud.wolfchat.group.domain.entity.WfGroup;
 import com.wreckloud.wolfchat.group.domain.enums.GroupStatus;
 import com.wreckloud.wolfchat.group.infra.mapper.WfGroupMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,13 +22,11 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminStatisticsServiceImpl implements AdminStatisticsService {
     
-    @Autowired
-    private WfUserMapper userMapper;
-    
-    @Autowired
-    private WfGroupMapper groupMapper;
+    private final WfUserMapper userMapper;
+    private final WfGroupMapper groupMapper;
     
     @Override
     public AdminStatisticsVO getStatistics() {

@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -35,16 +36,12 @@ import javax.validation.constraints.Pattern;
 @RestController
 @RequestMapping("/account")
 @Validated
+@RequiredArgsConstructor
 public class AccountController {
 
-    @Autowired
-    private WfUserMapper wfUserMapper;
-
-    @Autowired
-    private VerificationService verificationService;
-
-    @Autowired
-    private AuthService authService;
+    private final WfUserMapper wfUserMapper;
+    private final VerificationService verificationService;
+    private final AuthService authService;
 
     @Operation(
             summary = "获取验证码",
