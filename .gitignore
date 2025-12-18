@@ -1,9 +1,11 @@
 # Maven
 backend/target/
+backend/test/
 backend/.mvn/
 backend/.classpath
 backend/.project
 backend/.settings/
+backend/src/test/
 
 # IDE
 .idea/

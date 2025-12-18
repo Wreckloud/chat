@@ -70,3 +70,88 @@ CREATE TABLE `wf_user` (
   UNIQUE KEY `uk_email` (`email`),
   UNIQUE KEY `uk_wx_unionid` (`wx_unionid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+-- 4. 群组表：wf_group
+--   - 群基本信息：群名、群头像、群简介
+--   - 群主信息：owner_id
+--   - 成员统计：member_count、max_members
+--   - 群设置：is_all_muted（全员禁言）、is_need_approval（入群审核）
+--   - 状态：1正常 2已解散
+
+CREATE TABLE `wf_group` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '群组ID',
+  `group_name` VARCHAR(50) NOT NULL COMMENT '群名称',
+  `group_avatar` VARCHAR(255) DEFAULT NULL COMMENT '群头像URL',
+  `group_intro` VARCHAR(500) DEFAULT NULL COMMENT '群简介',
+  
+  `owner_id` BIGINT NOT NULL COMMENT '群主用户ID',
+  
+  `member_count` INT NOT NULL DEFAULT 0 COMMENT '当前成员数',
+  `max_members` INT NOT NULL DEFAULT 200 COMMENT '最大成员数',
+  
+  `is_all_muted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否全员禁言：0否 1是',
+  `is_need_approval` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否需要入群审批：0否 1是',
+  
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1正常 2已解散',
+  
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0否 1是',
+  
+  PRIMARY KEY (`id`),
+  KEY `idx_owner_id` (`owner_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='群组表';
+
+-- 5. 群成员表：wf_group_member
+--   - 群成员关系：group_id + user_id
+--   - 群内昵称：group_nickname（可选）
+--   - 角色：1群主 2管理员 3成员
+--   - 禁言：is_muted（是否被禁言）、mute_until（禁言截止时间）
+--   - 加入时间：join_time
+
+CREATE TABLE `wf_group_member` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `group_id` BIGINT NOT NULL COMMENT '群组ID',
+  `user_id` BIGINT NOT NULL COMMENT '用户ID',
+  
+  `group_nickname` VARCHAR(50) DEFAULT NULL COMMENT '群昵称（群名片）',
+  
+  `role` TINYINT NOT NULL DEFAULT 3 COMMENT '角色：1群主 2管理员 3普通成员',
+  
+  `is_muted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否被禁言：0否 1是',
+  `mute_until` DATETIME DEFAULT NULL COMMENT '禁言截止时间（NULL表示永久禁言）',
+  
+  `join_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除（退群）：0否 1是',
+  
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_group_user` (`group_id`, `user_id`),
+  KEY `idx_group_id` (`group_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_role` (`role`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='群成员表';
+
+-- 6. 群公告表：wf_group_notice
+--   - 群公告内容：title + content
+--   - 发布者：publisher_id
+--   - 是否置顶：is_pinned
+
+CREATE TABLE `wf_group_notice` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '公告ID',
+  `group_id` BIGINT NOT NULL COMMENT '群组ID',
+  `publisher_id` BIGINT NOT NULL COMMENT '发布者用户ID',
+  
+  `title` VARCHAR(100) DEFAULT NULL COMMENT '公告标题（可选）',
+  `content` TEXT NOT NULL COMMENT '公告内容',
+  
+  `is_pinned` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否置顶：0否 1是',
+  
+  `publish_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0否 1是',
+  
+  PRIMARY KEY (`id`),
+  KEY `idx_group_id` (`group_id`),
+  KEY `idx_publish_time` (`publish_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='群公告表';
