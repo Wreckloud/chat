@@ -1,0 +1,58 @@
+/**
+ * 我的页面样式
+ */
+
+.container {
+  padding: 40rpx;
+}
+
+.content {
+  width: 100%;
+}
+
+.user-card {
+  padding: 40rpx;
+  margin-bottom: 40rpx;
+}
+
+.card-header {
+  padding: 20rpx 0;
+}
+
+.header-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.card-content {
+  padding: 20rpx 0;
+}
+
+.avatar-section {
+  text-align: center;
+  padding: 40rpx 0;
+  margin-bottom: 20rpx;
+}
+
+.info-group {
+  margin-top: 20rpx;
+}
+
+.info-cell {
+  padding: 20rpx 0;
+}
+
+.actions {
+  margin-top: 40rpx;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.loading-text {
+  font-size: 28rpx;
+}
