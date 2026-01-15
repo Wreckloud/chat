@@ -1,16 +1,14 @@
 {
   "pages": [
     "pages/login/login",
-    "pages/tabs/tabs",
-    "pages/group-create/group-create",
-    "pages/group-detail/group-detail"
+    "pages/me/me"
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#667eea",
+    "navigationBarBackgroundColor": "#0a3e1e",
     "navigationBarTitleText": "WolfChat",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#f7f8fa"
+    "backgroundColor": "#0d0d0d"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",

@@ -15,7 +15,7 @@
   "author": "Wreckloud",
   "license": "MIT",
   "dependencies": {
-    "@vant/weapp": "^1.11.6"
+    "tdesign-miniprogram": "^1.4.0"
   }
 }
 
