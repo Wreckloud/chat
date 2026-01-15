@@ -14,7 +14,7 @@ App({
     console.info('[App] WolfChat 小程序启动', options);
     
     // 检查登录状态
-    const isLogin = auth.isLogin();
+    const isLogin = auth.isLoggedIn();
     console.info('[App] 登录状态:', isLogin);
     
     // 获取系统信息

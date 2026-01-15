@@ -48,11 +48,11 @@ Page({
       const res = await request.get('/users/me')
       
       if (res.code === 0 && res.data) {
-        this.setData({
-          userInfo: res.data
-        })
-        // 更新本地存储
+        // 更新本地存储（会自动补默认头像/昵称）
         auth.setUserInfo(res.data)
+        this.setData({
+          userInfo: auth.getUserInfo()
+        })
       }
     } catch (error) {
       wx.showToast({

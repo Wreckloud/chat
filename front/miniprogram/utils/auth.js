@@ -3,6 +3,7 @@
  */
 const TOKEN_KEY = 'wolfchat_token'
 const USER_INFO_KEY = 'wolfchat_user_info'
+const DEFAULT_AVATAR = '/images/default-avatar.png'
 
 const auth = {
   /**
@@ -30,7 +31,19 @@ const auth = {
    * 保存用户信息
    */
   setUserInfo(userInfo) {
-    wx.setStorageSync(USER_INFO_KEY, userInfo)
+    if (!userInfo) {
+      wx.removeStorageSync(USER_INFO_KEY)
+      return
+    }
+
+    const normalized = { ...userInfo }
+    if (!normalized.avatar) {
+      normalized.avatar = DEFAULT_AVATAR
+    }
+    if (!normalized.nickname && normalized.wolfNo) {
+      normalized.nickname = normalized.wolfNo
+    }
+    wx.setStorageSync(USER_INFO_KEY, normalized)
   },
 
   /**
