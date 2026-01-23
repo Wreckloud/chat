@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.enums.FollowStatus;
 import com.wreckloud.wolfchat.follow.api.vo.FollowUserVO;
 import com.wreckloud.wolfchat.follow.domain.entity.WfFollow;
 import com.wreckloud.wolfchat.follow.infra.mapper.WfFollowMapper;
@@ -28,9 +29,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FollowService {
-    private static final String STATUS_FOLLOWING = "FOLLOWING";
-    private static final String STATUS_UNFOLLOWED = "UNFOLLOWED";
-
     private final WfFollowMapper wfFollowMapper;
     private final WfUserMapper wfUserMapper;
 
@@ -54,12 +52,12 @@ public class FollowService {
         WfFollow follow = wfFollowMapper.selectOne(queryWrapper);
 
         if (follow != null) {
-            if (STATUS_FOLLOWING.equals(follow.getStatus())) {
+            if (FollowStatus.FOLLOWING.equals(follow.getStatus())) {
                 throw new BaseException(ErrorCode.FOLLOW_ALREADY);
             }
             LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(WfFollow::getId, follow.getId())
-                    .set(WfFollow::getStatus, STATUS_FOLLOWING);
+                    .set(WfFollow::getStatus, FollowStatus.FOLLOWING);
             wfFollowMapper.update(null, updateWrapper);
             return;
         }
@@ -67,7 +65,7 @@ public class FollowService {
         WfFollow newFollow = new WfFollow();
         newFollow.setFollowerId(followerId);
         newFollow.setFolloweeId(followeeId);
-        newFollow.setStatus(STATUS_FOLLOWING);
+        newFollow.setStatus(FollowStatus.FOLLOWING);
         wfFollowMapper.insert(newFollow);
     }
 
@@ -79,7 +77,7 @@ public class FollowService {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFollowerId, followerId)
                 .eq(WfFollow::getFolloweeId, followeeId)
-                .eq(WfFollow::getStatus, STATUS_FOLLOWING);
+                .eq(WfFollow::getStatus, FollowStatus.FOLLOWING);
         WfFollow follow = wfFollowMapper.selectOne(queryWrapper);
         if (follow == null) {
             throw new BaseException(ErrorCode.FOLLOW_NOT_FOUND);
@@ -87,7 +85,7 @@ public class FollowService {
 
         LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfFollow::getId, follow.getId())
-                .set(WfFollow::getStatus, STATUS_UNFOLLOWED);
+                .set(WfFollow::getStatus, FollowStatus.UNFOLLOWED);
         wfFollowMapper.update(null, updateWrapper);
     }
 
@@ -144,7 +142,7 @@ public class FollowService {
     private List<WfFollow> getFollowingRecords(Long userId) {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFollowerId, userId)
-                .eq(WfFollow::getStatus, STATUS_FOLLOWING)
+                .eq(WfFollow::getStatus, FollowStatus.FOLLOWING)
                 .orderByDesc(WfFollow::getCreateTime);
         return wfFollowMapper.selectList(queryWrapper);
     }
@@ -152,7 +150,7 @@ public class FollowService {
     private List<WfFollow> getFollowerRecords(Long userId) {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFolloweeId, userId)
-                .eq(WfFollow::getStatus, STATUS_FOLLOWING)
+                .eq(WfFollow::getStatus, FollowStatus.FOLLOWING)
                 .orderByDesc(WfFollow::getCreateTime);
         return wfFollowMapper.selectList(queryWrapper);
     }
@@ -197,7 +195,7 @@ public class FollowService {
         vo.setWolfNo(user.getWolfNo());
         vo.setNickname(user.getNickname());
         vo.setAvatar(user.getAvatar());
-        vo.setStatus(user.getStatus());
+        vo.setStatus(user.getStatus() != null ? user.getStatus().getValue() : null);
         vo.setMutual(mutual);
         return vo;
     }

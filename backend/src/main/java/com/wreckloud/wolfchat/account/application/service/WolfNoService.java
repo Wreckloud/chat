@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.domain.entity.WfNoPool;
 import com.wreckloud.wolfchat.account.infra.mapper.WfNoPoolMapper;
+import com.wreckloud.wolfchat.common.enums.NoPoolStatus;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -46,8 +47,8 @@ public class WolfNoService {
         // 3. 更新状态为 USED 并绑定 user_id
         LambdaUpdateWrapper<WfNoPool> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfNoPool::getId, noPool.getId())
-                .eq(WfNoPool::getStatus, "UNUSED")
-                .set(WfNoPool::getStatus, "USED")
+                .eq(WfNoPool::getStatus, NoPoolStatus.UNUSED)
+                .set(WfNoPool::getStatus, NoPoolStatus.USED)
                 .set(WfNoPool::getUserId, userId);
 
         int updateCount = wfNoPoolMapper.update(null, updateWrapper);
@@ -67,7 +68,7 @@ public class WolfNoService {
     private WfNoPool getRandomUnusedWolfNo() {
         // 查询所有 UNUSED 状态的号码
         LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfNoPool::getStatus, "UNUSED");
+        queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED);
         List<WfNoPool> unusedList = wfNoPoolMapper.selectList(queryWrapper);
 
         if (unusedList.isEmpty()) {
@@ -86,7 +87,7 @@ public class WolfNoService {
      */
     private void checkAndReplenishPool() {
         LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfNoPool::getStatus, "UNUSED");
+        queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED);
         long unusedCount = wfNoPoolMapper.selectCount(queryWrapper);
 
         if (unusedCount < 10) {
@@ -123,7 +124,7 @@ public class WolfNoService {
                 // 插入新号码
                 WfNoPool newNo = new WfNoPool();
                 newNo.setWolfNo(wolfNo);
-                newNo.setStatus("UNUSED");
+                newNo.setStatus(NoPoolStatus.UNUSED);
                 wfNoPoolMapper.insert(newNo);
                 added++;
             }

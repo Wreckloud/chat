@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.community.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.wreckloud.wolfchat.common.enums.CommentStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -39,7 +40,7 @@ public class WfComment {
     /**
      * 状态：NORMAL/DELETED
      */
-    private String status;
+    private CommentStatus status;
 
     /**
      * 创建时间

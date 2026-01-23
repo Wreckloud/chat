@@ -5,6 +5,7 @@ import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
+import com.wreckloud.wolfchat.common.enums.UserStatus;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
@@ -45,7 +46,7 @@ public class AuthService {
         user.setWolfNo(wolfNo);
         user.setLoginKey(password); // TODO:阶段1简化存储，后续升级为哈希存储
         user.setNickname(nickname);
-        user.setStatus("NORMAL");
+        user.setStatus(UserStatus.NORMAL);
         wfUserMapper.insert(user);
 
         // 3. 更新号码池中的 userId（分配时userId为null，现在更新为实际userId）
@@ -75,7 +76,7 @@ public class AuthService {
         }
 
         // 2. 检查状态
-        if ("DISABLED".equals(user.getStatus())) {
+        if (UserStatus.DISABLED.equals(user.getStatus())) {
             throw new BaseException(ErrorCode.USER_DISABLED);
         }
 
@@ -108,7 +109,7 @@ public class AuthService {
         userVO.setWolfNo(user.getWolfNo());
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
-        userVO.setStatus(user.getStatus());
+        userVO.setStatus(user.getStatus() != null ? user.getStatus().getValue() : null);
         loginVO.setUserInfo(userVO);
 
         return loginVO;

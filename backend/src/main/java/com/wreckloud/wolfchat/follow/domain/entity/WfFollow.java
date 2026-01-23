@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.follow.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.wreckloud.wolfchat.follow.domain.enums.FollowStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -34,7 +35,7 @@ public class WfFollow {
     /**
      * 状态：FOLLOWING/UNFOLLOWED
      */
-    private String status;
+    private FollowStatus status;
 
     /**
      * 创建时间

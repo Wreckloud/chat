@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.account.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -44,7 +45,7 @@ public class WfUser {
     /**
      * 状态：NORMAL-正常，DISABLED-禁用
      */
-    private String status;
+    private UserStatus status;
 
     private LocalDateTime createTime;
 

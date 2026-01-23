@@ -10,6 +10,8 @@ import com.wreckloud.wolfchat.community.api.dto.CreateCommentDTO;
 import com.wreckloud.wolfchat.community.api.dto.CreatePostDTO;
 import com.wreckloud.wolfchat.community.api.vo.CommentVO;
 import com.wreckloud.wolfchat.community.api.vo.PostDetailVO;
+import com.wreckloud.wolfchat.common.enums.CommentStatus;
+import com.wreckloud.wolfchat.common.enums.PostStatus;
 import com.wreckloud.wolfchat.community.api.vo.PostPageVO;
 import com.wreckloud.wolfchat.community.api.vo.PostVO;
 import com.wreckloud.wolfchat.community.api.vo.UserBriefVO;
@@ -35,9 +37,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PostService {
-    private static final String STATUS_NORMAL = "NORMAL";
-    private static final String STATUS_DELETED = "DELETED";
-
     private final WfPostMapper wfPostMapper;
     private final WfCommentMapper wfCommentMapper;
     private final WfUserMapper wfUserMapper;
@@ -51,7 +50,7 @@ public class PostService {
         post.setUserId(userId);
         post.setContent(dto.getContent());
         post.setRoomId(dto.getRoomId());
-        post.setStatus(STATUS_NORMAL);
+        post.setStatus(PostStatus.NORMAL);
         wfPostMapper.insert(post);
 
         WfUser user = wfUserMapper.selectById(userId);
@@ -64,7 +63,7 @@ public class PostService {
     public PostPageVO listPosts(long page, long size) {
         Page<WfPost> pageReq = new Page<>(page, size);
         LambdaQueryWrapper<WfPost> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfPost::getStatus, STATUS_NORMAL)
+        queryWrapper.eq(WfPost::getStatus, PostStatus.NORMAL)
                 .orderByDesc(WfPost::getCreateTime);
         Page<WfPost> result = wfPostMapper.selectPage(pageReq, queryWrapper);
 
@@ -92,7 +91,7 @@ public class PostService {
      */
     public PostDetailVO getPostDetail(Long postId) {
         WfPost post = wfPostMapper.selectById(postId);
-        if (post == null || STATUS_DELETED.equals(post.getStatus())) {
+        if (post == null || PostStatus.DELETED.equals(post.getStatus())) {
             throw new BaseException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -112,7 +111,7 @@ public class PostService {
     @Transactional(rollbackFor = Exception.class)
     public void addComment(Long userId, Long postId, CreateCommentDTO dto) {
         WfPost post = wfPostMapper.selectById(postId);
-        if (post == null || STATUS_DELETED.equals(post.getStatus())) {
+        if (post == null || PostStatus.DELETED.equals(post.getStatus())) {
             throw new BaseException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -120,7 +119,7 @@ public class PostService {
         comment.setPostId(postId);
         comment.setUserId(userId);
         comment.setContent(dto.getContent());
-        comment.setStatus(STATUS_NORMAL);
+        comment.setStatus(CommentStatus.NORMAL);
         wfCommentMapper.insert(comment);
     }
 
@@ -130,7 +129,7 @@ public class PostService {
     public List<CommentVO> getComments(Long postId) {
         LambdaQueryWrapper<WfComment> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfComment::getPostId, postId)
-                .eq(WfComment::getStatus, STATUS_NORMAL)
+                .eq(WfComment::getStatus, CommentStatus.NORMAL)
                 .orderByAsc(WfComment::getCreateTime);
         List<WfComment> comments = wfCommentMapper.selectList(queryWrapper);
 

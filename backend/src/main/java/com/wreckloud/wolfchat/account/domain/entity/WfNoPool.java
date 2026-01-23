@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.account.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.wreckloud.wolfchat.account.domain.enums.NoPoolStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -29,7 +30,7 @@ public class WfNoPool {
     /**
      * 状态：UNUSED-未使用，USED-已使用，RESERVED-预留
      */
-    private String status;
+    private NoPoolStatus status;
 
     /**
      * 已使用时绑定的行者ID

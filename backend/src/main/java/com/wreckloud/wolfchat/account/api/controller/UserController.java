@@ -46,7 +46,7 @@ public class UserController {
         userVO.setWolfNo(user.getWolfNo());
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
-        userVO.setStatus(user.getStatus());
+        userVO.setStatus(user.getStatus() != null ? user.getStatus().getValue() : null);
 
         return Result.success(userVO);
     }
