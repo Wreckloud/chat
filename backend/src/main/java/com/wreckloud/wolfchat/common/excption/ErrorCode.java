@@ -28,7 +28,12 @@ public enum ErrorCode {
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),
     WOLF_NO_POOL_EMPTY(3002, "狼藉号池已空，请稍后重试"),
-    USER_NOT_FOUND(3003, "行者不存在");
+    USER_NOT_FOUND(3003, "行者不存在"),
+    FOLLOW_SELF(3004, "不能关注自己"),
+    FOLLOW_ALREADY(3005, "已关注该行者"),
+    FOLLOW_NOT_FOUND(3006, "关注关系不存在"),
+    POST_NOT_FOUND(3007, "帖子不存在或已删除"),
+    COMMENT_NOT_FOUND(3008, "评论不存在或已删除");
 
     /**
      * 错误码
@@ -40,4 +45,3 @@ public enum ErrorCode {
      */
     private final String message;
 }
-
