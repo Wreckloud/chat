@@ -1,6 +1,7 @@
 package com.wreckloud.wolfchat.account.domain.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
@@ -26,9 +27,10 @@ public enum NoPoolStatus {
     RESERVED("RESERVED");
 
     /**
-     * 存储到数据库的值
+     * 存储到数据库的值，同时用于 JSON 序列化
      */
     @EnumValue
+    @JsonValue
     private final String value;
 
     NoPoolStatus(String value) {

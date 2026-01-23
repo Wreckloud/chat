@@ -5,7 +5,7 @@ import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
-import com.wreckloud.wolfchat.common.enums.UserStatus;
+import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
@@ -109,7 +109,7 @@ public class AuthService {
         userVO.setWolfNo(user.getWolfNo());
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
-        userVO.setStatus(user.getStatus() != null ? user.getStatus().getValue() : null);
+        userVO.setStatus(user.getStatus());
         loginVO.setUserInfo(userVO);
 
         return loginVO;

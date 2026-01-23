@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.follow.api.vo;
 
+import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -24,7 +25,7 @@ public class FollowUserVO {
     private String avatar;
 
     @Schema(description = "状态：NORMAL-正常，DISABLED-禁用")
-    private String status;
+    private UserStatus status;
 
     @Schema(description = "是否互关")
     private Boolean mutual;

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.domain.entity.WfNoPool;
 import com.wreckloud.wolfchat.account.infra.mapper.WfNoPoolMapper;
-import com.wreckloud.wolfchat.common.enums.NoPoolStatus;
+import com.wreckloud.wolfchat.account.domain.enums.NoPoolStatus;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,21 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 public class WolfNoService {
+    /**
+     * 号码池补充阈值：当 UNUSED 数量低于此值时触发补充
+     */
+    private static final int REPLENISH_THRESHOLD = 10;
+
+    /**
+     * 每次补充的号码数量
+     */
+    private static final int REPLENISH_COUNT = 50;
+
+    /**
+     * 号码生成重试倍数：最大重试次数 = 补充数量 × 此倍数
+     */
+    private static final int MAX_RETRY_MULTIPLIER = 10;
+
     private final WfNoPoolMapper wfNoPoolMapper;
 
     /**
@@ -83,16 +98,16 @@ public class WolfNoService {
 
     /**
      * 检查号码池并补充
-     * 当 UNUSED 数量低于阈值（10个）时，自动补充50个新号码
+     * 当 UNUSED 数量低于阈值时，自动补充新号码
      */
     private void checkAndReplenishPool() {
         LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED);
         long unusedCount = wfNoPoolMapper.selectCount(queryWrapper);
 
-        if (unusedCount < 10) {
-            log.info("号码池 UNUSED 数量不足，开始补充: current={}", unusedCount);
-            replenishPool(50);
+        if (unusedCount < REPLENISH_THRESHOLD) {
+            log.info("号码池 UNUSED 数量不足，开始补充: current={}, threshold={}", unusedCount, REPLENISH_THRESHOLD);
+            replenishPool(REPLENISH_COUNT);
         }
     }
 
@@ -105,7 +120,7 @@ public class WolfNoService {
     private void replenishPool(int count) {
         Random random = new Random();
         int added = 0;
-        int maxRetries = count * 10; // 最大重试次数
+        int maxRetries = count * MAX_RETRY_MULTIPLIER; // 最大重试次数
         int retries = 0;
 
         while (added < count && retries < maxRetries) {

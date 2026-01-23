@@ -3,7 +3,7 @@ package com.wreckloud.wolfchat.community.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.wreckloud.wolfchat.common.enums.CommentStatus;
+import com.wreckloud.wolfchat.community.domain.enums.CommentStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;

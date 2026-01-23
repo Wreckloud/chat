@@ -1,6 +1,7 @@
 package com.wreckloud.wolfchat.community.domain.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
@@ -21,9 +22,10 @@ public enum PostStatus {
     DELETED("DELETED");
 
     /**
-     * 存储到数据库的值
+     * 存储到数据库的值，同时用于 JSON 序列化
      */
     @EnumValue
+    @JsonValue
     private final String value;
 
     PostStatus(String value) {

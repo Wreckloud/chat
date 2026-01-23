@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.account.api.vo;
 
+import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -21,7 +22,7 @@ public class UserVO {
     private String avatar;
 
     @Schema(description = "状态：NORMAL-正常，DISABLED-禁用")
-    private String status;
+    private UserStatus status;
 }
 
 

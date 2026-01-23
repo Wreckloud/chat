@@ -6,7 +6,7 @@ import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.common.enums.FollowStatus;
+import com.wreckloud.wolfchat.follow.domain.enums.FollowStatus;
 import com.wreckloud.wolfchat.follow.api.vo.FollowUserVO;
 import com.wreckloud.wolfchat.follow.domain.entity.WfFollow;
 import com.wreckloud.wolfchat.follow.infra.mapper.WfFollowMapper;
@@ -195,7 +195,7 @@ public class FollowService {
         vo.setWolfNo(user.getWolfNo());
         vo.setNickname(user.getNickname());
         vo.setAvatar(user.getAvatar());
-        vo.setStatus(user.getStatus() != null ? user.getStatus().getValue() : null);
+        vo.setStatus(user.getStatus());
         vo.setMutual(mutual);
         return vo;
     }
