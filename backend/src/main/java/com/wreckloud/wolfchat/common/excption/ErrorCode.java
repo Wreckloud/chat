@@ -14,7 +14,9 @@ public enum ErrorCode {
     // 通用错误码 1000-1999
     SUCCESS(0, "操作成功"),
     PARAM_ERROR(1001, "参数错误"),
-    SYSTEM_ERROR(1002, "系统错误"),
+    SYSTEM_ERROR(1002, "系统错误，请稍后重试"),
+    DATABASE_ERROR(1003, "数据库操作失败，请稍后重试"),
+    DATABASE_CONNECTION_ERROR(1004, "数据库连接失败，请检查数据库服务是否启动"),
 
     // 认证相关错误码 2000-2999
     UNAUTHORIZED(2001, "请先登录"),
