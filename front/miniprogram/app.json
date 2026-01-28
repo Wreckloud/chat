@@ -1,7 +1,12 @@
 {
   "pages": [
+    "pages/chat/chat",
+    "pages/community/community",
+    "pages/me/me",
     "pages/login/login",
-    "pages/me/me"
+    "pages/post-create/post-create",
+    "pages/post-detail/post-detail",
+    "pages/follow/follow"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -9,6 +14,26 @@
     "navigationBarTitleText": "WolfChat",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#0d0d0d"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#0a3e1e",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/chat/chat",
+        "text": "聊天"
+      },
+      {
+        "pagePath": "pages/community/community",
+        "text": "社区"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的"
+      }
+    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",

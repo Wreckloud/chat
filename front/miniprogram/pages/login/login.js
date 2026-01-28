@@ -23,8 +23,8 @@ Page({
   onLoad() {
     // 检查是否已登录
     if (auth.isLoggedIn()) {
-      wx.redirectTo({
-        url: '/pages/me/me'
+      wx.switchTab({
+        url: '/pages/chat/chat'
       })
     }
   },
@@ -189,10 +189,10 @@ Page({
           icon: 'success'
         })
 
-        // 跳转到我的页面
+        // 跳转到聊天首页
         setTimeout(() => {
-          wx.redirectTo({
-            url: '/pages/me/me'
+          wx.switchTab({
+            url: '/pages/chat/chat'
           })
         }, 1000)
       }
@@ -210,8 +210,8 @@ Page({
    * 确认注册结果，进入应用
    */
   handleConfirmRegister() {
-    wx.redirectTo({
-      url: '/pages/me/me'
+    wx.switchTab({
+      url: '/pages/chat/chat'
     })
   }
 })

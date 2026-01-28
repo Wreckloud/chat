@@ -38,6 +38,14 @@
     <!-- 操作按钮 -->
     <view class="actions">
       <t-button 
+        theme="default" 
+        size="large" 
+        block 
+        bindtap="goFollow"
+        class="action-btn">
+        关注列表
+      </t-button>
+      <t-button 
         theme="danger" 
         variant="outline" 
         size="large" 

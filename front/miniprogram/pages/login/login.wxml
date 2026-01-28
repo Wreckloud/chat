@@ -7,26 +7,19 @@
 
     <!-- 显示注册结果 -->
     <view wx:if="{{showResult}}" class="result-container">
-      <view class="result-card">
-        <view class="result-header">
-          <view class="result-title">注册成功！</view>
-        </view>
-        <view class="result-content">
-          <view class="wolf-no-section">
-            <view class="label">行者编号</view>
-            <view class="wolf-no-value">{{registeredWolfNo}}</view>
-          </view>
-          
-          <t-button 
-            theme="primary" 
-            size="large" 
-            block 
-            bindtap="handleConfirmRegister"
-            class="confirm-btn">
-            进入群落
-          </t-button>
-        </view>
-      </view>
+      <t-cell-group>
+        <t-cell title="注册成功" note="您的行者编号" />
+        <t-cell title="行者编号" note="{{registeredWolfNo}}" />
+      </t-cell-group>
+      
+      <t-button 
+        theme="primary" 
+        size="large" 
+        block 
+        bindtap="handleConfirmRegister"
+        class="confirm-btn">
+        进入群落
+      </t-button>
     </view>
 
     <!-- 注册表单 -->

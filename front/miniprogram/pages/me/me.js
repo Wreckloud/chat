@@ -11,7 +11,7 @@ Page({
   },
 
   onLoad() {
-    // 检查登录状态
+    // tabBar 页面，检查登录状态
     if (!auth.isLoggedIn()) {
       wx.redirectTo({
         url: '/pages/login/login'
@@ -79,6 +79,14 @@ Page({
           })
         }
       }
+    })
+  },
+  /**
+   * 进入关注列表
+   */
+  goFollow() {
+    wx.navigateTo({
+      url: '/pages/follow/follow'
     })
   }
 })
