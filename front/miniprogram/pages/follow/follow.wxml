@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="tabs">
+    <view class="tab {{active === 'following' ? 'active' : ''}}" data-tab="following" bindtap="switchTab">关注</view>
+    <view class="tab {{active === 'followers' ? 'active' : ''}}" data-tab="followers" bindtap="switchTab">粉丝</view>
+    <view class="tab {{active === 'mutual' ? 'active' : ''}}" data-tab="mutual" bindtap="switchTab">互关</view>
+  </view>
+
+  <t-empty wx:if="{{list.length === 0}}" description="暂无数据" />
+
+  <view wx:for="{{list}}" wx:key="userId" class="user-item">
+    <t-cell 
+      title="{{item.nickname || item.wolfNo}}"
+      note="{{item.wolfNo}}"
+      arrow="{{false}}">
+      <view slot="right-icon" class="actions">
+        <t-button
+          wx:if="{{active === 'followers' && !item.mutual}}"
+          size="small"
+          theme="primary"
+          data-id="{{item.userId}}"
+          bindtap="handleFollow">
+          回关
+        </t-button>
+        <t-button
+          wx:if="{{active !== 'followers'}}"
+          size="small"
+          theme="default"
+          data-id="{{item.userId}}"
+          bindtap="handleUnfollow">
+          取消关注
+        </t-button>
+      </view>
+    </t-cell>
+  </view>
+</view>

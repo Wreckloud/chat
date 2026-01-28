@@ -1,0 +1,63 @@
+.container {
+  padding: 30rpx;
+}
+
+.tabs {
+  display: flex;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 28rpx;
+}
+
+.tab.active {
+  background: #e9ecff;
+  font-weight: bold;
+}
+
+.empty {
+  text-align: center;
+  color: #666;
+  margin-top: 80rpx;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  margin-right: 16rpx;
+}
+
+.info {
+  flex: 1;
+}
+
+.name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.no {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.actions {
+  margin-left: 12rpx;
+}
