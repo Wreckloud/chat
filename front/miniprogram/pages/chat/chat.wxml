@@ -1,0 +1,14 @@
+<view class="chat-container">
+  <t-empty wx:if="{{chatList.length === 0}}" description="暂无聊天记录" />
+  
+  <view wx:for="{{chatList}}" wx:key="id" class="chat-item">
+    <t-cell 
+      title="{{item.name || item.wolfNo}}"
+      note="{{item.lastMessage}}"
+      arrow
+      bindtap="goChatDetail"
+      data-id="{{item.id}}">
+    </t-cell>
+  </view>
+</view>
+
