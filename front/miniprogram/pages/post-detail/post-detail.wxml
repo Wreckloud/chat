@@ -1,0 +1,49 @@
+<view class="container" wx:if="{{post}}">
+  <view class="post-card">
+    <view class="post-header">
+      <t-avatar 
+        size="medium"
+        image="{{post.author.avatar}}"
+        shape="round">
+        {{post.author.nickname ? post.author.nickname.charAt(0) : '行'}}
+      </t-avatar>
+      <view class="post-info">
+        <view class="post-name">{{post.author.nickname || post.author.wolfNo}}</view>
+        <view class="post-time">{{post.createTime}}</view>
+      </view>
+      <t-button size="small" theme="primary" bindtap="handleFollowAuthor">关注</t-button>
+    </view>
+    <view class="post-content">{{post.content}}</view>
+  </view>
+
+  <view class="comment-section">
+    <view class="section-title">评论</view>
+    <t-empty wx:if="{{comments.length === 0}}" description="暂无评论" />
+
+    <view wx:for="{{comments}}" wx:key="commentId" class="comment-item">
+      <view class="comment-header">
+        <t-avatar 
+          size="small"
+          image="{{item.author.avatar}}"
+          shape="round">
+          {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
+        </t-avatar>
+        <view class="comment-info">
+          <view class="comment-name">{{item.author.nickname || item.author.wolfNo}}</view>
+          <view class="comment-time">{{item.createTime}}</view>
+        </view>
+      </view>
+      <view class="comment-content">{{item.content}}</view>
+    </view>
+  </view>
+
+  <view class="comment-input">
+    <t-input
+      placeholder="写下评论..."
+      value="{{commentContent}}"
+      maxlength="300"
+      bind:input="onCommentInput"
+    />
+    <t-button theme="primary" size="small" bindtap="handleComment">发送</t-button>
+  </view>
+</view>

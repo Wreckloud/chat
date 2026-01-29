@@ -5,30 +5,29 @@
  */
 
 const auth = require('./utils/auth.js');
-const logger = require('./utils/logger.js');
 
 App({
   /**
    * 小程序初始化
    */
   onLaunch(options) {
-    logger.info('Application', 'WolfChat 小程序启动 🐺', options);
+    console.info('[App] WolfChat 小程序启动', options);
     
     // 检查登录状态
-    const isLogin = auth.isLogin();
-    logger.info('Application', `登录状态: ${isLogin}`);
+    const isLogin = auth.isLoggedIn();
+    console.info('[App] 登录状态:', isLogin);
     
-    // 获取系统信息（使用新API）
+    // 获取系统信息
     try {
-      const systemInfo = wx.getSystemInfoSync();
+      const systemInfo = wx.getSystemInfoSync(); // TODO:以后可以换新的api
       this.globalData.systemInfo = systemInfo;
-      logger.debug('Application', '系统信息获取成功', {
+      console.debug('[App] 系统信息获取成功', {
         platform: systemInfo.platform,
         system: systemInfo.system,
         version: systemInfo.version
       });
     } catch (e) {
-      logger.error('Application', '获取系统信息失败', e);
+      console.error('[App] 获取系统信息失败', e);
     }
   },
 
@@ -36,21 +35,21 @@ App({
    * 小程序显示
    */
   onShow(options) {
-    logger.lifecycle('Application', 'onShow', options);
+    console.debug('[App] onShow', options);
   },
 
   /**
    * 小程序隐藏
    */
   onHide() {
-    logger.lifecycle('Application', 'onHide');
+    console.debug('[App] onHide');
   },
 
   /**
    * 小程序错误
    */
   onError(error) {
-    logger.error('Application', '小程序全局错误', error);
+    console.error('[App] 小程序全局错误', error);
   },
 
   /**

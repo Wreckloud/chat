@@ -1,0 +1,18 @@
+<view class="container">
+  <view class="header">
+    <view class="title">社区</view>
+    <t-button size="small" theme="primary" bindtap="goCreatePost">发帖</t-button>
+  </view>
+
+  <t-empty wx:if="{{posts.length === 0}}" description="暂无帖子" />
+
+  <view wx:for="{{posts}}" wx:key="postId" class="post-item">
+    <t-cell 
+      title="{{item.author.nickname || item.author.wolfNo}}"
+      note="{{item.content}}"
+      arrow
+      bindtap="goPostDetail"
+      data-id="{{item.postId}}">
+    </t-cell>
+  </view>
+</view>

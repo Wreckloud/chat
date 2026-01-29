@@ -14,7 +14,9 @@ public enum ErrorCode {
     // 通用错误码 1000-1999
     SUCCESS(0, "操作成功"),
     PARAM_ERROR(1001, "参数错误"),
-    SYSTEM_ERROR(1002, "系统错误"),
+    SYSTEM_ERROR(1002, "系统错误，请稍后重试"),
+    DATABASE_ERROR(1003, "数据库操作失败，请稍后重试"),
+    DATABASE_CONNECTION_ERROR(1004, "数据库连接失败，请检查数据库服务是否启动"),
 
     // 认证相关错误码 2000-2999
     UNAUTHORIZED(2001, "请先登录"),
@@ -28,7 +30,12 @@ public enum ErrorCode {
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),
     WOLF_NO_POOL_EMPTY(3002, "狼藉号池已空，请稍后重试"),
-    USER_NOT_FOUND(3003, "行者不存在");
+    USER_NOT_FOUND(3003, "行者不存在"),
+    FOLLOW_SELF(3004, "不能关注自己"),
+    FOLLOW_ALREADY(3005, "已关注该行者"),
+    FOLLOW_NOT_FOUND(3006, "关注关系不存在"),
+    POST_NOT_FOUND(3007, "帖子不存在或已删除"),
+    COMMENT_NOT_FOUND(3008, "评论不存在或已删除");
 
     /**
      * 错误码
@@ -40,4 +47,3 @@ public enum ErrorCode {
      */
     private final String message;
 }
-

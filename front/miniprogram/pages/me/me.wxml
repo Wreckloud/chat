@@ -1,0 +1,64 @@
+<view class="container">
+  <view wx:if="{{userInfo}}" class="content">
+    <!-- 用户信息卡片 -->
+    <view class="user-card">
+      <view class="card-header">
+        <view class="header-title">行者信息</view>
+      </view>
+      <view class="card-content">
+        <!-- 头像区域 -->
+        <view class="avatar-section">
+          <t-avatar 
+            size="large" 
+            image="{{userInfo.avatar || ''}}"
+            shape="round">
+            {{userInfo.nickname ? userInfo.nickname.charAt(0) : '行'}}
+          </t-avatar>
+        </view>
+
+        <!-- 信息列表 -->
+        <t-cell-group class="info-group">
+          <t-cell 
+            title="狼藉" 
+            note="{{userInfo.wolfNo}}"
+            arrow="{{false}}"
+            class="info-cell">
+          </t-cell>
+          
+          <t-cell 
+            title="称谓" 
+            note="{{userInfo.nickname || userInfo.wolfNo}}"
+            arrow="{{false}}"
+            class="info-cell">
+          </t-cell>
+        </t-cell-group>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="actions">
+      <t-button 
+        theme="default" 
+        size="large" 
+        block 
+        bindtap="goFollow"
+        class="action-btn">
+        关注列表
+      </t-button>
+      <t-button 
+        theme="danger" 
+        variant="outline" 
+        size="large" 
+        block 
+        bindtap="handleLogout"
+        class="logout-btn">
+        退出登录
+      </t-button>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:else class="loading-container">
+    <view class="loading-text">加载中...</view>
+  </view>
+</view>

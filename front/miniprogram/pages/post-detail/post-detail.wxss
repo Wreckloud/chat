@@ -1,0 +1,102 @@
+.container {
+  padding: 30rpx;
+}
+
+.post-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 30rpx;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.post-info {
+  flex: 1;
+}
+
+.post-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+
+.post-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.post-content {
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+}
+
+.comment-section {
+  margin-top: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.comment-item {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.comment-info {
+  flex: 1;
+}
+
+.comment-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  margin-bottom: 4rpx;
+}
+
+.comment-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.comment-content {
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+  margin-left: 80rpx;
+}
+
+.comment-input {
+  margin-top: 20rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 16rpx;
+}
+
+.comment-input .input {
+  min-height: 120rpx;
+  margin-bottom: 12rpx;
+}
+
+.empty {
+  color: #666;
+  text-align: center;
+  margin: 20rpx 0;
+}

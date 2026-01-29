@@ -1,0 +1,20 @@
+<view class="container">
+  <view class="title">发布帖子</view>
+
+  <t-textarea
+    placeholder="说点什么..."
+    value="{{content}}"
+    maxlength="500"
+    bind:input="onContentInput"
+    bind:change="onContentInput"
+  />
+
+  <t-button
+    theme="primary"
+    size="large"
+    block
+    loading="{{loading}}"
+    bindtap="handleSubmit">
+    发布
+  </t-button>
+</view>

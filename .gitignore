@@ -18,6 +18,8 @@ backend/src/test/
 front/node_modules/
 front/dist/
 front/build/
+front/miniprogram/node_modules/
+front/miniprogram/miniprogram_npm/
 
 # Logs
 *.log

@@ -3,8 +3,11 @@ package com.wreckloud.wolfchat.common.web;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import javax.validation.ConstraintViolationException;
 
 /**
  * @Description 全局异常处理器
@@ -16,21 +19,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     /**
-     * 处理自定义异常
+     * 处理自定义业务异常
      */
     @ExceptionHandler(BaseException.class)
     public Result<?> handleBaseException(BaseException e) {
-        log.error("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
 
     /**
-     * 处理参数异常
+     * 处理参数相关异常
      */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public Result<?> handleIllegalArgumentException(IllegalArgumentException e) {
-        log.error("参数异常: {}", e.getMessage());
-        return Result.error(ErrorCode.PARAM_ERROR.getCode(), e.getMessage());
+    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class, IllegalArgumentException.class})
+    public Result<?> handleParamException(Exception e) {
+        log.warn("参数异常: {}", ErrorCode.PARAM_ERROR.getMessage());
+        return Result.error(ErrorCode.PARAM_ERROR.getCode(), ErrorCode.PARAM_ERROR.getMessage());
     }
 
     /**
@@ -39,8 +42,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e) {
         log.error("系统异常", e);
-        return Result.error(ErrorCode.SYSTEM_ERROR.getCode(), e.getMessage());
+        return Result.error(ErrorCode.SYSTEM_ERROR);
     }
 }
-
-

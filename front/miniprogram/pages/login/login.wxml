@@ -1,0 +1,114 @@
+<view class="container">
+  <!-- 注册模式 -->
+  <view wx:if="{{mode === 'register'}}" class="register-container">
+    <view class="header">
+      <view class="title">注册</view>
+    </view>
+
+    <!-- 显示注册结果 -->
+    <view wx:if="{{showResult}}" class="result-container">
+      <t-cell-group>
+        <t-cell title="注册成功" note="您的行者编号" />
+        <t-cell title="行者编号" note="{{registeredWolfNo}}" />
+      </t-cell-group>
+      
+      <t-button 
+        theme="primary" 
+        size="large" 
+        block 
+        bindtap="handleConfirmRegister"
+        class="confirm-btn">
+        进入群落
+      </t-button>
+    </view>
+
+    <!-- 注册表单 -->
+    <view wx:else class="register-form">
+      <view class="register-card">
+        <view class="form-content">
+          <t-input
+            label="称谓"
+            placeholder="被其他行者所记住的称呼"
+            value="{{nickname}}"
+            bind:input="onNicknameInput"
+            bind:change="onNicknameInput"
+            clearable
+            class="form-input"
+          />
+
+          <t-input
+            label="密码"
+            placeholder="请输入密码（至少6位）"
+            type="password"
+            value="{{password}}"
+            bind:input="onPasswordInput"
+            bind:change="onPasswordInput"
+            clearable
+            class="form-input"
+          />
+
+          <t-button 
+            theme="primary" 
+            size="large" 
+            block 
+            loading="{{loading}}"
+            bindtap="handleRegister"
+            class="register-btn">
+            注册
+          </t-button>
+
+          <view class="switch-mode">
+            <text class="switch-link" bindtap="switchToLogin">已是行者？回到群落</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 登录模式 -->
+  <view wx:else class="login-container">
+    <view class="header">
+      <view class="title">登录</view>
+    </view>
+
+    <view class="login-card">
+      <view class="form-content">
+        <t-input
+          label="狼藉"
+          placeholder="请输入狼藉号"
+          type="number"
+          value="{{wolfNo}}"
+          bind:input="onWolfNoInput"
+          bind:change="onWolfNoInput"
+          clearable
+          class="form-input"
+        />
+
+        <t-input
+          label="密码"
+          placeholder="请输入密码"
+          type="password"
+          value="{{loginKey}}"
+          bind:input="onLoginKeyInput"
+          bind:change="onLoginKeyInput"
+          clearable
+          class="form-input"
+        />
+
+        <t-button 
+          theme="primary" 
+          size="large" 
+          block 
+          loading="{{loading}}"
+          bindtap="handleLogin"
+          class="login-btn">
+          登录
+        </t-button>
+
+        <view class="switch-mode">
+          <text class="switch-link" bindtap="switchToRegister">没有账号？去注册</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
