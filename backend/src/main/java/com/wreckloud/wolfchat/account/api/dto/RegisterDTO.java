@@ -20,8 +20,7 @@ public class RegisterDTO {
     private String nickname;
 
     @NotBlank(message = "密码不能为空")
-    @Size(min = 6, message = "密码长度至少6位")
-    @Schema(description = "登录密码（至少6位）", example = "123456", required = true)
+    @Size(min = 6, max = 64, message = "密码长度必须在6-64个字符之间")
+    @Schema(description = "登录密码（长度6-64位）", example = "123456", required = true)
     private String password;
 }
-
