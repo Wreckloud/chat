@@ -35,7 +35,11 @@ public enum ErrorCode {
     FOLLOW_ALREADY(3005, "已关注该行者"),
     FOLLOW_NOT_FOUND(3006, "关注关系不存在"),
     POST_NOT_FOUND(3007, "帖子不存在或已删除"),
-    COMMENT_NOT_FOUND(3008, "评论不存在或已删除");
+    COMMENT_NOT_FOUND(3008, "评论不存在或已删除"),
+    NOT_MUTUAL_FOLLOW(3009, "仅互相关注的行者可以聊天"),
+    CONVERSATION_NOT_FOUND(3010, "会话不存在"),
+    NOT_CONVERSATION_MEMBER(3011, "您不是该会话的参与者"),
+    MESSAGE_CONTENT_EMPTY(3012, "消息内容不能为空");
 
     /**
      * 错误码
