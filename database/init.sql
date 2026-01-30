@@ -77,3 +77,37 @@ CREATE TABLE `wf_comment` (
     KEY `idx_user_id` (`user_id`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
+
+-- 会话表
+DROP TABLE IF EXISTS `wf_conversation`;
+CREATE TABLE `wf_conversation` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_a_id` BIGINT NOT NULL COMMENT '会话参与者A（较小的用户ID）',
+    `user_b_id` BIGINT NOT NULL COMMENT '会话参与者B（较大的用户ID）',
+    `last_message_id` BIGINT DEFAULT NULL COMMENT '最近一条消息ID（预留）',
+    `last_message` VARCHAR(500) DEFAULT NULL COMMENT '最近一条消息内容（冗余）',
+    `last_message_time` DATETIME DEFAULT NULL COMMENT '最近消息时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_a_user_b` (`user_a_id`, `user_b_id`),
+    KEY `idx_user_a_id` (`user_a_id`),
+    KEY `idx_user_b_id` (`user_b_id`),
+    KEY `idx_last_message_time` (`last_message_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
+
+-- 消息表
+DROP TABLE IF EXISTS `wf_message`;
+CREATE TABLE `wf_message` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `conversation_id` BIGINT NOT NULL COMMENT '所属会话ID',
+    `sender_id` BIGINT NOT NULL COMMENT '发送者ID',
+    `receiver_id` BIGINT NOT NULL COMMENT '接收者ID',
+    `content` TEXT NOT NULL COMMENT '消息内容',
+    `msg_type` VARCHAR(20) NOT NULL DEFAULT 'TEXT' COMMENT '消息类型：TEXT-文本',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_conversation_id` (`conversation_id`),
+    KEY `idx_sender_id` (`sender_id`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';
