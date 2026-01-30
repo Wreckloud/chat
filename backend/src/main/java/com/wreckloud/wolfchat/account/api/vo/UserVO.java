@@ -12,6 +12,9 @@ import lombok.Data;
 @Data
 @Schema(description = "行者信息")
 public class UserVO {
+    @Schema(description = "用户ID")
+    private Long userId;
+
     @Schema(description = "狼藉号", example = "1234567890")
     private String wolfNo;
 

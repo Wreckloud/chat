@@ -106,6 +106,7 @@ public class AuthService {
         loginVO.setToken(token);
 
         UserVO userVO = new UserVO();
+        userVO.setUserId(user.getId());
         userVO.setWolfNo(user.getWolfNo());
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
