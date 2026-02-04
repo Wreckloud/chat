@@ -4,6 +4,7 @@
 const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const time = require('../../utils/time')
+const { DEFAULT_AVATAR } = require('../../utils/user')
 
 Page({
   data: {
@@ -45,6 +46,9 @@ Page({
         const list = res.data || []
         // 格式化时间
         list.forEach(item => {
+          if (!item.targetAvatar) {
+            item.targetAvatar = DEFAULT_AVATAR
+          }
           if (item.lastMessageTime) {
             item.formattedTime = time.formatTime(item.lastMessageTime)
           }

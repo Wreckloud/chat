@@ -4,6 +4,7 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const time = require('../../utils/time')
+const { withDefaultAvatar } = require('../../utils/user')
 
 Page({
   data: {
@@ -41,7 +42,7 @@ Page({
     this.setData({
       conversationId: conversationId,
       currentUserId: currentUserId,
-      currentUser: userInfo
+      currentUser: withDefaultAvatar(userInfo)
     })
 
     // 加载会话信息（获取对方用户信息）
@@ -66,12 +67,12 @@ Page({
             wolfNo: conversation.targetWolfNo,
             avatar: conversation.targetAvatar
           }
-          
-          this.setData({ targetUser })
+          const normalized = withDefaultAvatar(targetUser)
+          this.setData({ targetUser: normalized })
           
           // 设置页面标题为对方昵称
           wx.setNavigationBarTitle({
-            title: targetUser.nickname || targetUser.wolfNo || '聊天'
+            title: normalized.nickname || normalized.wolfNo || '聊天'
           })
         }
       })

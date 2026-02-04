@@ -3,6 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { withDefaultAvatar } = require('../../utils/user')
 
 Page({
   data: {
@@ -39,9 +40,11 @@ Page({
     try {
       const res = await request.get(`/posts/${this.data.postId}`)
       if (res.code === 0 && res.data) {
+        const post = res.data.post || {}
+        const comments = res.data.comments || []
         this.setData({
-          post: res.data.post,
-          comments: res.data.comments || []
+          post: { ...post, author: withDefaultAvatar(post.author) },
+          comments: comments.map(item => ({ ...item, author: withDefaultAvatar(item.author) }))
         })
       }
     } catch (error) {
