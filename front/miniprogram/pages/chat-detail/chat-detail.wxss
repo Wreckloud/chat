@@ -1,0 +1,102 @@
+.chat-detail-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.message-list {
+  flex: 1;
+  padding: 20rpx;
+  overflow-y: auto;
+}
+
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-item {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16rpx;
+}
+
+.message-time {
+  text-align: center;
+  font-size: 24rpx;
+  color: #999;
+  margin: 16rpx 0;
+}
+
+.message-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* 左侧消息（对方） */
+.message-left {
+  justify-content: flex-start;
+}
+
+.message-left .message-avatar {
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.message-left .message-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 65%;
+}
+
+.message-sender {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 6rpx;
+}
+
+.message-left .message-content {
+  background-color: #fff;
+  padding: 16rpx 20rpx;
+  border-radius: 8rpx;
+  word-wrap: break-word;
+}
+
+/* 右侧消息（自己） */
+.message-right {
+  justify-content: flex-end;
+}
+
+.message-right .message-content {
+  background-color: #0052d9;
+  color: #fff;
+  padding: 16rpx 20rpx;
+  margin-right: 30rpx;
+  border-radius: 8rpx;
+  word-wrap: break-word;
+}
+
+.message-text {
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+/* 输入框 */
+.input-bar {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background-color: #fff;
+  border-top: 1rpx solid #e5e5e5;
+}
+
+.input-field {
+  flex: 1;
+  margin-right: 20rpx;
+}
+
+.send-btn {
+  flex-shrink: 0;
+}
+
