@@ -36,6 +36,7 @@ Page({
     }
 
     // 从本地存储获取当前用户信息
+    // 本地用户信息用于区分消息归属
     const userInfo = auth.getUserInfo()
     const currentUserId = userInfo ? userInfo.userId : null
 
@@ -46,6 +47,7 @@ Page({
     })
 
     // 加载会话信息（获取对方用户信息）
+    // 获取对方信息并设置标题
     this.loadConversation()
     this.loadMessages()
   },
@@ -55,6 +57,7 @@ Page({
    */
   loadConversation() {
     // 先从会话列表中获取对方信息
+    // 复用会话列表数据获取对方资料
     request.get('/conversations')
       .then(res => {
         const conversations = res.data || []
@@ -67,6 +70,7 @@ Page({
             wolfNo: conversation.targetWolfNo,
             avatar: conversation.targetAvatar
           }
+          // 对方头像兜底，避免空白头像
           const normalized = withDefaultAvatar(targetUser)
           this.setData({ targetUser: normalized })
           

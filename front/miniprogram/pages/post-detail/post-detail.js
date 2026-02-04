@@ -42,6 +42,7 @@ Page({
       if (res.code === 0 && res.data) {
         const post = res.data.post || {}
         const comments = res.data.comments || []
+        // 作者头像兜底，避免空白
         this.setData({
           post: { ...post, author: withDefaultAvatar(post.author) },
           comments: comments.map(item => ({ ...item, author: withDefaultAvatar(item.author) }))

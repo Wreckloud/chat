@@ -46,6 +46,7 @@ Page({
         const list = res.data || []
         // 格式化时间
         list.forEach(item => {
+          // 会话对方头像兜底
           if (!item.targetAvatar) {
             item.targetAvatar = DEFAULT_AVATAR
           }
