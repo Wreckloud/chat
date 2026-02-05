@@ -3,6 +3,8 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { withDefaultAvatar } = require('../../utils/user')
+const time = require('../../utils/time')
 
 Page({
   data: {
@@ -39,9 +41,20 @@ Page({
     try {
       const res = await request.get(`/posts/${this.data.postId}`)
       if (res.code === 0 && res.data) {
+        const post = res.data.post || {}
+        const comments = res.data.comments || []
+        // 作者头像兜底，避免空白
         this.setData({
-          post: res.data.post,
-          comments: res.data.comments || []
+          post: {
+            ...post,
+            author: withDefaultAvatar(post.author),
+            timeText: time.formatTime(post.createTime)
+          },
+          comments: comments.map(item => ({
+            ...item,
+            author: withDefaultAvatar(item.author),
+            timeText: time.formatTime(item.createTime)
+          }))
         })
       }
     } catch (error) {

@@ -139,6 +139,29 @@ public class FollowService {
         return result;
     }
 
+    /**
+     * 判断是否互相关注
+     */
+    public boolean isMutualFollow(Long userId1, Long userId2) {
+        if (userId1.equals(userId2)) {
+            return false;
+        }
+        boolean user1FollowsUser2 = checkFollowStatus(userId1, userId2, FollowStatus.FOLLOWING);
+        boolean user2FollowsUser1 = checkFollowStatus(userId2, userId1, FollowStatus.FOLLOWING);
+        return user1FollowsUser2 && user2FollowsUser1;
+    }
+
+    /**
+     * 检查关注状态
+     */
+    private boolean checkFollowStatus(Long followerId, Long followeeId, FollowStatus status) {
+        LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfFollow::getFollowerId, followerId)
+                .eq(WfFollow::getFolloweeId, followeeId)
+                .eq(WfFollow::getStatus, status);
+        return wfFollowMapper.selectCount(queryWrapper) > 0;
+    }
+
     private List<WfFollow> getFollowingRecords(Long userId) {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFollowerId, userId)

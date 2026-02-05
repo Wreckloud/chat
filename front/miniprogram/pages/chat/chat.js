@@ -2,11 +2,15 @@
  * 聊天首页
  */
 const auth = require('../../utils/auth')
+const request = require('../../utils/request')
+const time = require('../../utils/time')
+const { DEFAULT_AVATAR } = require('../../utils/user')
 
 Page({
   data: {
-    // 聊天列表数据
-    chatList: []
+    // 会话列表数据
+    conversationList: [],
+    loading: false
   },
 
   onLoad() {
@@ -18,35 +22,80 @@ Page({
       return
     }
     
-    // 加载聊天列表
-    this.loadChatList()
+    // 加载会话列表
+    this.loadConversations()
   },
 
   onShow() {
-    // 每次显示时刷新聊天列表
+    // 每次显示时刷新会话列表
     if (auth.isLoggedIn()) {
-      this.loadChatList()
+      this.loadConversations()
     }
   },
 
   /**
-   * 加载聊天列表
+   * 加载会话列表
    */
-  loadChatList() {
-    // TODO: 调用后端接口获取聊天列表
-    // 暂时使用空列表
-    this.setData({
-      chatList: []
-    })
+  loadConversations() {
+    if (this.data.loading) return
+
+    this.setData({ loading: true })
+
+    request.get('/conversations')
+      .then(res => {
+        const list = res.data || []
+        // 格式化时间
+        list.forEach(item => {
+          // 会话对方头像兜底
+          if (!item.targetAvatar) {
+            item.targetAvatar = DEFAULT_AVATAR
+          }
+          if (item.lastMessageTime) {
+            item.formattedTime = time.formatTime(item.lastMessageTime)
+          }
+        })
+        
+        this.setData({
+          conversationList: list,
+          loading: false
+        })
+      })
+      .catch(err => {
+        console.error('加载会话列表失败:', err)
+        wx.showToast({
+          title: err.message || '加载失败',
+          icon: 'none',
+          duration: 2000
+        })
+        this.setData({ loading: false })
+      })
   },
 
   /**
    * 进入聊天详情
    */
   goChatDetail(e) {
-    const chatId = e.currentTarget.dataset.id
-    // TODO: 跳转到聊天详情页
-    console.log('进入聊天详情:', chatId)
+    const conversationId = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: `/pages/chat-detail/chat-detail?conversationId=${conversationId}`
+    })
+  },
+
+  /**
+   * 下拉刷新
+   */
+  onPullDownRefresh() {
+    this.loadConversations()
+    wx.stopPullDownRefresh()
+  },
+
+  /**
+   * 去互关列表找行者
+   */
+  goToMutual() {
+    wx.switchTab({
+      url: '/pages/follow/follow'
+    })
   }
 })
 

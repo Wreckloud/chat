@@ -9,7 +9,7 @@
       </t-avatar>
       <view class="post-info">
         <view class="post-name">{{post.author.nickname || post.author.wolfNo}}</view>
-        <view class="post-time">{{post.createTime}}</view>
+        <view class="post-time">{{post.timeText}}</view>
       </view>
       <t-button size="small" theme="primary" bindtap="handleFollowAuthor">关注</t-button>
     </view>
@@ -30,7 +30,7 @@
         </t-avatar>
         <view class="comment-info">
           <view class="comment-name">{{item.author.nickname || item.author.wolfNo}}</view>
-          <view class="comment-time">{{item.createTime}}</view>
+          <view class="comment-time">{{item.timeText}}</view>
         </view>
       </view>
       <view class="comment-content">{{item.content}}</view>

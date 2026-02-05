@@ -15,6 +15,10 @@ spring:
     database: 0
     timeout: 3000
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
   autoconfigure:
     exclude:
       - org.redisson.spring.starter.RedissonAutoConfiguration
