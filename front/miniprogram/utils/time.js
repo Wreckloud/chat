@@ -1,82 +1,89 @@
 /**
- * 时间格式化工具
+ * 时间格式化工具（ISO）
  */
+
+function toDate(dateStr) {
+  if (!dateStr) return null
+
+  // 统一要求后端返回 ISO 本地时间：yyyy-MM-ddTHH:mm:ss
+  const parts = dateStr.replace('T', ' ').split(' ')
+  if (parts.length < 2) return null
+
+  const datePart = parts[0]
+  const timePart = parts[1]
+  const d = datePart.split('-').map(Number)
+  const t = timePart.split(':').map(Number)
+  if (d.length !== 3 || t.length < 2) return null
+
+  const year = d[0]
+  const month = d[1]
+  const day = d[2]
+  const hour = t[0]
+  const minute = t[1]
+  const second = t.length > 2 ? t[2] : 0
+  return new Date(year, month - 1, day, hour, minute, second)
+}
 
 /**
- * 格式化时间 - 用于会话列表
- * @param {string} dateStr - ISO时间字符串
- * @returns {string} 格式化后的时间
+ * 会话列表时间
+ * @param {string} dateStr
  */
 function formatTime(dateStr) {
-  if (!dateStr) return ''
+  const date = toDate(dateStr)
+  if (!date) return ''
 
-  const date = new Date(dateStr)
   const now = new Date()
-  
-  // 获取今天0点
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  
-  // 获取昨天0点
   const yesterdayStart = new Date(todayStart)
   yesterdayStart.setDate(yesterdayStart.getDate() - 1)
-  
-  // 格式化小时和分钟
+
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
-  const timeStr = `${hours}:${minutes}`
-  
-  // 今天
+  const timeStr = hours + ':' + minutes
+
   if (date >= todayStart) {
     return timeStr
   }
-  
-  // 昨天
+
   if (date >= yesterdayStart) {
-    return `昨天 ${timeStr}`
+    return '昨天 ' + timeStr
   }
-  
+
   const year = date.getFullYear()
   const month = (date.getMonth() + 1).toString().padStart(2, '0')
   const day = date.getDate().toString().padStart(2, '0')
-  
-  // 本年
+
   if (year === now.getFullYear()) {
-    return `${month}-${day} ${timeStr}`
+    return month + '-' + day + ' ' + timeStr
   }
-  
-  // 跨年
-  return `${year}-${month}-${day}`
+
+  return year + '-' + month + '-' + day
 }
 
 /**
- * 格式化消息时间 - 用于消息时间戳
- * @param {string} dateStr - ISO时间字符串
- * @returns {string} HH:mm格式
+ * 消息时间
+ * @param {string} dateStr
  */
 function formatMessageTime(dateStr) {
-  if (!dateStr) return ''
-  
-  const date = new Date(dateStr)
+  const date = toDate(dateStr)
+  if (!date) return ''
+
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
-  
-  return `${hours}:${minutes}`
+
+  return hours + ':' + minutes
 }
 
 /**
- * 判断是否需要显示消息时间
- * 相邻消息间隔超过5分钟才显示
- * @param {string} currentTime - 当前消息时间
- * @param {string} prevTime - 上一条消息时间
- * @returns {boolean}
+ * 是否显示消息时间（间隔 > 5 分钟）
  */
 function shouldShowTime(currentTime, prevTime) {
   if (!prevTime) return true
-  
-  const current = new Date(currentTime)
-  const prev = new Date(prevTime)
-  
-  // 5分钟 = 300000毫秒
+
+  const current = toDate(currentTime)
+  const prev = toDate(prevTime)
+  if (!current || !prev) return false
+
   return (current - prev) > 300000
 }
 
@@ -85,4 +92,3 @@ module.exports = {
   formatMessageTime,
   shouldShowTime
 }
-

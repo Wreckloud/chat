@@ -1,6 +1,5 @@
 package com.wreckloud.wolfchat.chat.message.api.vo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -34,7 +33,6 @@ public class MessageVO {
     private MessageType msgType;
 
     @Schema(description = "发送时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }
 
