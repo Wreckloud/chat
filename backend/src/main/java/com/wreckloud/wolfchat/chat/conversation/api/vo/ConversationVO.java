@@ -1,6 +1,5 @@
 package com.wreckloud.wolfchat.chat.conversation.api.vo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -33,7 +32,6 @@ public class ConversationVO {
     private String lastMessage;
 
     @Schema(description = "最近消息时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastMessageTime;
 }
 

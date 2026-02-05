@@ -200,7 +200,7 @@ Page({
       
       current.showTime = time.shouldShowTime(current.createTime, prev ? prev.createTime : null)
       if (current.showTime) {
-        current.timeText = time.formatMessageTime(current.createTime)
+        current.timeText = time.formatTime(current.createTime)
       }
     }
   },

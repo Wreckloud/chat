@@ -4,6 +4,7 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { withDefaultAvatar } = require('../../utils/user')
+const time = require('../../utils/time')
 
 Page({
   data: {
@@ -44,8 +45,16 @@ Page({
         const comments = res.data.comments || []
         // 作者头像兜底，避免空白
         this.setData({
-          post: { ...post, author: withDefaultAvatar(post.author) },
-          comments: comments.map(item => ({ ...item, author: withDefaultAvatar(item.author) }))
+          post: {
+            ...post,
+            author: withDefaultAvatar(post.author),
+            timeText: time.formatTime(post.createTime)
+          },
+          comments: comments.map(item => ({
+            ...item,
+            author: withDefaultAvatar(item.author),
+            timeText: time.formatTime(item.createTime)
+          }))
         })
       }
     } catch (error) {
