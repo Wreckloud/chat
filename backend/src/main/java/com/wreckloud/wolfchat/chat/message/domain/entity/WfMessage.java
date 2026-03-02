@@ -48,6 +48,16 @@ public class WfMessage {
     private MessageType msgType;
 
     /**
+     * 是否已送达
+     */
+    private Boolean delivered;
+
+    /**
+     * 送达时间
+     */
+    private LocalDateTime deliveredTime;
+
+    /**
      * 发送时间
      */
     private LocalDateTime createTime;

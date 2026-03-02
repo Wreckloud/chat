@@ -105,9 +105,13 @@ CREATE TABLE `wf_message` (
     `receiver_id` BIGINT NOT NULL COMMENT '接收者ID',
     `content` TEXT NOT NULL COMMENT '消息内容',
     `msg_type` VARCHAR(20) NOT NULL DEFAULT 'TEXT' COMMENT '消息类型：TEXT-文本',
+    `delivered` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已送达：0-未送达，1-已送达',
+    `delivered_time` DATETIME DEFAULT NULL COMMENT '送达时间',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
     PRIMARY KEY (`id`),
     KEY `idx_conversation_id` (`conversation_id`),
     KEY `idx_sender_id` (`sender_id`),
+    KEY `idx_receiver_id` (`receiver_id`),
+    KEY `idx_delivered` (`delivered`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';

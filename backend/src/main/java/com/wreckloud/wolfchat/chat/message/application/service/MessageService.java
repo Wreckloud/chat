@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 /**
  * @Description 消息服务
  * @Author Wreckloud
@@ -62,9 +65,8 @@ public class MessageService {
         message.setReceiverId(receiverId);
         message.setContent(content);
         message.setMsgType(MessageType.TEXT);
-        if (message.getCreateTime() == null) {
-            message.setCreateTime(java.time.LocalDateTime.now());
-        }
+        message.setDelivered(Boolean.FALSE);
+        message.setCreateTime(LocalDateTime.now());
         messageMapper.insert(message);
         log.info("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
 
@@ -98,6 +100,32 @@ public class MessageService {
         Page<WfMessage> result = messageMapper.selectPage(page, queryWrapper);
         log.info("查询到消息数量: {}, 总数: {}", result.getRecords().size(), result.getTotal());
         return result;
+    }
+
+    /**
+     * 查询未送达消息
+     */
+    public List<WfMessage> listUndeliveredMessages(Long userId) {
+        LambdaQueryWrapper<WfMessage> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfMessage::getReceiverId, userId)
+                .eq(WfMessage::getDelivered, Boolean.FALSE)
+                .orderByAsc(WfMessage::getCreateTime);
+        return messageMapper.selectList(queryWrapper);
+    }
+
+    /**
+     * 标记消息为已送达
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void markDelivered(List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+        WfMessage update = new WfMessage();
+        update.setDelivered(Boolean.TRUE);
+        update.setDeliveredTime(LocalDateTime.now());
+        messageMapper.update(update, new LambdaQueryWrapper<WfMessage>()
+                .in(WfMessage::getId, messageIds));
     }
 }
 
