@@ -16,7 +16,7 @@ App({
     // 检查登录状态
     const isLogin = auth.isLoggedIn();
     console.info('[App] 登录状态:', isLogin);
-    
+
     // 获取系统信息
     try {
       const systemInfo = wx.getSystemInfoSync(); // TODO:以后可以换新的api

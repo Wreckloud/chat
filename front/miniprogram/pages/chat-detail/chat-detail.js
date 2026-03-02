@@ -4,6 +4,7 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const time = require('../../utils/time')
+const ws = require('../../utils/ws')
 const { withDefaultAvatar } = require('../../utils/user')
 
 Page({
@@ -35,13 +36,15 @@ Page({
       return
     }
 
+    const numericConversationId = Number(conversationId)
+
     // 从本地存储获取当前用户信息
     // 本地用户信息用于区分消息归属
     const userInfo = auth.getUserInfo()
     const currentUserId = userInfo ? userInfo.userId : null
 
     this.setData({
-      conversationId: conversationId,
+      conversationId: numericConversationId,
       currentUserId: currentUserId,
       currentUser: withDefaultAvatar(userInfo)
     })
@@ -50,6 +53,25 @@ Page({
     // 获取对方信息并设置标题
     this.loadConversation()
     this.loadMessages()
+    this.initSocket()
+  },
+
+  onUnload() {
+    if (this.wsHandler) {
+      ws.offMessage(this.wsHandler)
+      this.wsHandler = null
+    }
+  },
+
+  /**
+   * 初始化 WebSocket
+   */
+  initSocket() {
+    ws.connect()
+    this.wsHandler = (payload) => {
+      this.handleWsMessage(payload)
+    }
+    ws.onMessage(this.wsHandler)
   },
 
   /**
@@ -160,33 +182,68 @@ Page({
 
     this.setData({ sending: true })
 
-    request.post(`/conversations/${this.data.conversationId}/messages`, {
+    const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    this.pendingClientMsgId = clientMsgId
+
+    ws.send({
+      type: 'SEND',
+      clientMsgId: clientMsgId,
+      conversationId: Number(this.data.conversationId),
+      msgType: 'TEXT',
       content: content
     })
-      .then(res => {
-        const newMessage = res.data
-        const messages = [...this.data.messages, newMessage]
-        
-        // 处理消息时间显示
-        this.processMessageTimes(messages)
-        
+  },
+
+  /**
+   * 处理 WebSocket 消息
+   */
+  handleWsMessage(payload) {
+    if (!payload || !payload.type) return
+
+    if (payload.type === 'ERROR') {
+      if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
+        this.pendingClientMsgId = null
+        this.setData({ sending: false })
+      }
+      wx.showToast({
+        title: payload.message || '发送失败',
+        icon: 'none'
+      })
+      return
+    }
+
+    if (payload.type === 'ACK') {
+      if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
+        this.pendingClientMsgId = null
         this.setData({
-          messages,
           inputMessage: '',
           sending: false
         })
+      }
+      this.appendMessage(payload.data)
+      return
+    }
 
-        this.scrollToBottom()
-      })
-      .catch(err => {
-        console.error('发送消息失败:', err)
-        wx.showToast({
-          title: err.message || '发送失败',
-          icon: 'none',
-          duration: 2000
-        })
-        this.setData({ sending: false })
-      })
+    if (payload.type === 'MESSAGE') {
+      this.appendMessage(payload.data)
+    }
+  },
+
+  /**
+   * 追加消息并刷新时间显示
+   */
+  appendMessage(message) {
+    if (!message || message.conversationId !== Number(this.data.conversationId)) {
+      return
+    }
+    if (this.data.messages.some(item => item.messageId === message.messageId)) {
+      return
+    }
+
+    const messages = [...this.data.messages, message]
+    this.processMessageTimes(messages)
+    this.setData({ messages })
+    this.scrollToBottom()
   },
 
   /**
