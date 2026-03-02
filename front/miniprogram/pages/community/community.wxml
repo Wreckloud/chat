@@ -7,9 +7,17 @@
   <t-empty wx:if="{{posts.length === 0}}" description="暂无帖子" />
 
   <view wx:for="{{posts}}" wx:key="postId" class="post-item">
+    <view class="post-author" catchtap="goUserProfile" data-user="{{item.author}}">
+      <t-avatar
+        size="small"
+        shape="round"
+        image="{{item.author.avatar}}">
+        {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
+      </t-avatar>
+      <view class="post-author-name">{{item.author.nickname || item.author.wolfNo}}</view>
+    </view>
     <t-cell 
-      title="{{item.author.nickname || item.author.wolfNo}}"
-      note="{{item.content}}"
+      title="{{item.content}}"
       arrow
       bindtap="goPostDetail"
       data-id="{{item.postId}}">

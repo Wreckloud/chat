@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.chat.message.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import lombok.Data;
 
@@ -46,6 +47,16 @@ public class WfMessage {
      * 消息类型：TEXT-文本
      */
     private MessageType msgType;
+
+    /**
+     * 是否已送达
+     */
+    private MessageDeliveryStatus delivered;
+
+    /**
+     * 送达时间
+     */
+    private LocalDateTime deliveredTime;
 
     /**
      * 发送时间

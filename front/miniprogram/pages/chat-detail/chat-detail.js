@@ -4,7 +4,9 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const time = require('../../utils/time')
-const { withDefaultAvatar } = require('../../utils/user')
+const ws = require('../../utils/ws')
+const { normalizeUser, openUserProfile } = require('../../utils/user')
+const { toastError } = require('../../utils/ui')
 
 Page({
   data: {
@@ -25,15 +27,14 @@ Page({
   onLoad(options) {
     const conversationId = options.conversationId
     if (!conversationId) {
-      wx.showToast({
-        title: '会话ID不能为空',
-        icon: 'none'
-      })
+      toastError('会话ID不能为空', '会话ID不能为空')
       setTimeout(() => {
         wx.navigateBack()
       }, 1500)
       return
     }
+
+    const numericConversationId = Number(conversationId)
 
     // 从本地存储获取当前用户信息
     // 本地用户信息用于区分消息归属
@@ -41,15 +42,34 @@ Page({
     const currentUserId = userInfo ? userInfo.userId : null
 
     this.setData({
-      conversationId: conversationId,
+      conversationId: numericConversationId,
       currentUserId: currentUserId,
-      currentUser: withDefaultAvatar(userInfo)
+      currentUser: normalizeUser(userInfo)
     })
 
     // 加载会话信息（获取对方用户信息）
     // 获取对方信息并设置标题
     this.loadConversation()
     this.loadMessages()
+    this.initSocket()
+  },
+
+  onUnload() {
+    if (this.wsHandler) {
+      ws.offMessage(this.wsHandler)
+      this.wsHandler = null
+    }
+  },
+
+  /**
+   * 初始化 WebSocket
+   */
+  initSocket() {
+    ws.connect()
+    this.wsHandler = (payload) => {
+      this.handleWsMessage(payload)
+    }
+    ws.onMessage(this.wsHandler)
   },
 
   /**
@@ -71,7 +91,7 @@ Page({
             avatar: conversation.targetAvatar
           }
           // 对方头像兜底，避免空白头像
-          const normalized = withDefaultAvatar(targetUser)
+          const normalized = normalizeUser(targetUser)
           this.setData({ targetUser: normalized })
           
           // 设置页面标题为对方昵称
@@ -82,6 +102,7 @@ Page({
       })
       .catch(err => {
         console.error('加载会话信息失败:', err)
+        toastError(err, '加载失败')
       })
   },
 
@@ -122,11 +143,7 @@ Page({
       })
       .catch(err => {
         console.error('加载消息失败:', err)
-        wx.showToast({
-          title: err.message || '加载失败',
-          icon: 'none',
-          duration: 2000
-        })
+        toastError(err, '加载失败')
         this.setData({ loading: false })
       })
   },
@@ -147,10 +164,7 @@ Page({
     const content = this.data.inputMessage.trim()
 
     if (!content) {
-      wx.showToast({
-        title: '消息内容不能为空',
-        icon: 'none'
-      })
+      toastError('消息内容不能为空', '消息内容不能为空')
       return
     }
 
@@ -160,33 +174,70 @@ Page({
 
     this.setData({ sending: true })
 
-    request.post(`/conversations/${this.data.conversationId}/messages`, {
+    const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    this.pendingClientMsgId = clientMsgId
+
+    ws.send({
+      type: 'SEND',
+      clientMsgId: clientMsgId,
+      conversationId: Number(this.data.conversationId),
       content: content
     })
-      .then(res => {
-        const newMessage = res.data
-        const messages = [...this.data.messages, newMessage]
-        
-        // 处理消息时间显示
-        this.processMessageTimes(messages)
-        
+  },
+
+  /**
+   * 处理 WebSocket 消息
+   */
+  handleWsMessage(payload) {
+    if (!payload || !payload.type) return
+
+    if (payload.type === 'ERROR') {
+      if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
+        this.pendingClientMsgId = null
+        this.setData({ sending: false })
+      }
+      toastError(payload.message || '发送失败', '发送失败')
+      return
+    }
+
+    if (payload.type === 'ACK') {
+      if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
+        this.pendingClientMsgId = null
         this.setData({
-          messages,
           inputMessage: '',
           sending: false
         })
+      }
+      this.appendMessage(payload.data)
+      return
+    }
 
-        this.scrollToBottom()
-      })
-      .catch(err => {
-        console.error('发送消息失败:', err)
-        wx.showToast({
-          title: err.message || '发送失败',
-          icon: 'none',
-          duration: 2000
-        })
-        this.setData({ sending: false })
-      })
+    if (payload.type === 'MESSAGE') {
+      this.appendMessage(payload.data)
+    }
+  },
+
+  /**
+   * 追加消息并刷新时间显示
+   */
+  appendMessage(message) {
+    if (!message || message.conversationId !== Number(this.data.conversationId)) {
+      return
+    }
+    if (this.data.messages.some(item => item.messageId === message.messageId)) {
+      return
+    }
+
+    const messages = [...this.data.messages, message]
+    this.processMessageTimes(messages)
+    this.setData({ messages })
+    this.scrollToBottom()
+  },
+
+  goUserProfile() {
+    const user = this.data.targetUser
+    if (!user || !user.userId) return
+    openUserProfile(user)
   },
 
   /**

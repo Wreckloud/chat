@@ -1,6 +1,7 @@
 package com.wreckloud.wolfchat.account.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
@@ -105,12 +106,7 @@ public class AuthService {
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(token);
 
-        UserVO userVO = new UserVO();
-        userVO.setUserId(user.getId());
-        userVO.setWolfNo(user.getWolfNo());
-        userVO.setNickname(user.getNickname());
-        userVO.setAvatar(user.getAvatar());
-        userVO.setStatus(user.getStatus());
+        UserVO userVO = UserConverter.toUserVO(user);
         loginVO.setUserInfo(userVO);
 
         return loginVO;

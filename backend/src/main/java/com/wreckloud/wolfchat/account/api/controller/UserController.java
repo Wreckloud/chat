@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.account.api.controller;
 
+import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,14 +44,25 @@ public class UserController {
             throw new BaseException(ErrorCode.USER_NOT_FOUND);
         }
 
-        UserVO userVO = new UserVO();
-        userVO.setUserId(user.getId());
-        userVO.setWolfNo(user.getWolfNo());
-        userVO.setNickname(user.getNickname());
-        userVO.setAvatar(user.getAvatar());
-        userVO.setStatus(user.getStatus());
+        return Result.success(UserConverter.toUserVO(user));
+    }
 
-        return Result.success(userVO);
+    /**
+     * 获取指定行者信息
+     */
+    @Operation(summary = "获取指定行者信息", description = "根据行者ID获取基础信息（需要登录）")
+    @GetMapping("/{userId}")
+    public Result<UserVO> getUserById(@PathVariable Long userId) {
+        if (userId == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+
+        WfUser user = wfUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BaseException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return Result.success(UserConverter.toUserVO(user));
     }
 }
 

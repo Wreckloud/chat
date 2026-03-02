@@ -3,7 +3,7 @@
  */
 const TOKEN_KEY = 'wolfchat_token'
 const USER_INFO_KEY = 'wolfchat_user_info'
-const DEFAULT_AVATAR = '/images/default-avatar.png'
+const { DEFAULT_AVATAR } = require('./user')
 
 const auth = {
   /**

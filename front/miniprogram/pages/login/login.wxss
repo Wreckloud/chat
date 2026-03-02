@@ -21,31 +21,6 @@
   margin-top: 40rpx;
 }
 
-.result-card {
-  padding: 40rpx;
-}
-
-.result-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  margin-bottom: 20rpx;
-}
-
-.wolf-no-section {
-  text-align: center;
-  padding: 30rpx 0;
-}
-
-.label {
-  font-size: 28rpx;
-  margin-bottom: 20rpx;
-}
-
-.wolf-no-value {
-  font-size: 40rpx;
-  font-weight: bold;
-  margin-bottom: 20rpx;
-}
 
 .confirm-btn {
   margin-top: 40rpx;
@@ -76,14 +51,6 @@
   margin-bottom: 20rpx;
 }
 
-.input-hint {
-  margin-bottom: 20rpx;
-  padding: 0 20rpx;
-}
-
-.hint-text {
-  font-size: 24rpx;
-}
 
 .login-btn {
   margin-top: 40rpx;

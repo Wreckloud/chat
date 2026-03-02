@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wreckloud.wolfchat.chat.conversation.application.service.ConversationService;
 import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.chat.message.infra.mapper.WfMessageMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -15,6 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 /**
  * @Description 消息服务
  * @Author Wreckloud
@@ -24,6 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class MessageService {
+    /**
+     * 离线补发上限，避免单次补发过多导致阻塞
+     */
+    private static final int UNDELIVERED_LIMIT = 200;
+
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
     private final FollowService followService;
@@ -62,9 +71,8 @@ public class MessageService {
         message.setReceiverId(receiverId);
         message.setContent(content);
         message.setMsgType(MessageType.TEXT);
-        if (message.getCreateTime() == null) {
-            message.setCreateTime(java.time.LocalDateTime.now());
-        }
+        message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
+        message.setCreateTime(LocalDateTime.now());
         messageMapper.insert(message);
         log.info("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
 
@@ -98,6 +106,33 @@ public class MessageService {
         Page<WfMessage> result = messageMapper.selectPage(page, queryWrapper);
         log.info("查询到消息数量: {}, 总数: {}", result.getRecords().size(), result.getTotal());
         return result;
+    }
+
+    /**
+     * 查询未送达消息
+     */
+    public List<WfMessage> listUndeliveredMessages(Long userId) {
+        LambdaQueryWrapper<WfMessage> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfMessage::getReceiverId, userId)
+                .eq(WfMessage::getDelivered, MessageDeliveryStatus.UNDELIVERED)
+                .orderByAsc(WfMessage::getCreateTime)
+                .last("LIMIT " + UNDELIVERED_LIMIT);
+        return messageMapper.selectList(queryWrapper);
+    }
+
+    /**
+     * 标记消息为已送达
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void markDelivered(List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+        WfMessage update = new WfMessage();
+        update.setDelivered(MessageDeliveryStatus.DELIVERED);
+        update.setDeliveredTime(LocalDateTime.now());
+        messageMapper.update(update, new LambdaQueryWrapper<WfMessage>()
+                .in(WfMessage::getId, messageIds));
     }
 }
 

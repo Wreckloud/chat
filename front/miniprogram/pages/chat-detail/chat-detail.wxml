@@ -31,11 +31,12 @@
             class="message-avatar"
             size="small" 
             shape="round"
-            image="{{targetUser.avatar}}">
+            image="{{targetUser.avatar}}"
+            catchtap="goUserProfile">
             {{targetUser.nickname ? targetUser.nickname.charAt(0) : '行'}}
           </t-avatar>
           <view class="message-content-wrapper">
-            <view class="message-sender">{{targetUser.nickname || targetUser.wolfNo}}</view>
+            <view class="message-sender" catchtap="goUserProfile">{{targetUser.nickname || targetUser.wolfNo}}</view>
             <view class="message-content">
               <text class="message-text">{{item.content}}</text>
             </view>

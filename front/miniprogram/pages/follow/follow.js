@@ -3,6 +3,8 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { normalizeUserList, openUserProfile } = require('../../utils/user')
+const { toastError, toastSuccess } = require('../../utils/ui')
 
 Page({
   data: {
@@ -47,14 +49,11 @@ Page({
       const res = await request.get(url)
       if (res.code === 0 && res.data) {
         this.setData({
-          list: res.data || []
+          list: normalizeUserList(res.data || [])
         })
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'none'
-      })
+      toastError(error, '加载失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -67,17 +66,11 @@ Page({
     try {
       const res = await request.post(`/follow/${userId}`)
       if (res.code === 0) {
-        wx.showToast({
-          title: '关注成功',
-          icon: 'success'
-        })
+        toastSuccess('关注成功')
         this.loadList()
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '关注失败',
-        icon: 'none'
-      })
+      toastError(error, '关注失败')
     }
   },
 
@@ -86,22 +79,19 @@ Page({
     if (!userId) return
 
     try {
-      const res = await request.request({
-        url: `/follow/${userId}`,
-        method: 'DELETE'
-      })
+      const res = await request.del(`/follow/${userId}`)
       if (res.code === 0) {
-        wx.showToast({
-          title: '已取消关注',
-          icon: 'success'
-        })
+        toastSuccess('已取消关注')
         this.loadList()
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '操作失败',
-        icon: 'none'
-      })
+      toastError(error, '操作失败')
     }
+  },
+
+  goUserProfile(e) {
+    const user = e.currentTarget.dataset.user
+    if (!user || !user.userId) return
+    openUserProfile(user)
   }
 })

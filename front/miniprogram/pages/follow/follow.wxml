@@ -11,14 +11,23 @@
     <t-cell 
       title="{{item.nickname || item.wolfNo}}"
       note="{{item.wolfNo}}"
-      arrow="{{false}}">
+      arrow="{{false}}"
+      bindtap="goUserProfile"
+      data-user="{{item}}">
+      <t-avatar
+        slot="leftIcon"
+        size="small"
+        shape="round"
+        image="{{item.avatar}}">
+        {{item.nickname ? item.nickname.charAt(0) : '行'}}
+      </t-avatar>
       <view slot="right-icon" class="actions">
         <t-button
           wx:if="{{active === 'followers' && !item.mutual}}"
           size="small"
           theme="primary"
           data-id="{{item.userId}}"
-          bindtap="handleFollow">
+          catchtap="handleFollow">
           回关
         </t-button>
         <t-button
@@ -26,7 +35,7 @@
           size="small"
           theme="default"
           data-id="{{item.userId}}"
-          bindtap="handleUnfollow">
+          catchtap="handleUnfollow">
           取消关注
         </t-button>
       </view>

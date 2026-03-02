@@ -17,8 +17,23 @@ function withDefaultAvatarList(list) {
   return list.map(withDefaultAvatar)
 }
 
+function normalizeUser(user) {
+  return withDefaultAvatar(user)
+}
+
+function normalizeUserList(list) {
+  return withDefaultAvatarList(list)
+}
+
+function openUserProfile(user) {
+  if (!user || !user.userId) return
+  const url = `/pages/user-detail/user-detail?userId=${user.userId}`
+  wx.navigateTo({ url })
+}
+
 module.exports = {
   DEFAULT_AVATAR,
-  withDefaultAvatar,
-  withDefaultAvatarList
+  normalizeUser,
+  normalizeUserList,
+  openUserProfile
 }

@@ -3,6 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { toastError, toastSuccess } = require('../../utils/ui')
 
 Page({
   data: {
@@ -98,18 +99,12 @@ Page({
     const { nickname, password } = this.data
 
     if (!nickname || !nickname.trim()) {
-      wx.showToast({
-        title: '请输入行者名',
-        icon: 'none'
-      })
+      toastError('请输入行者名', '请输入行者名')
       return
     }
 
     if (!password || password.length < 6) {
-      wx.showToast({
-        title: '密码至少6位',
-        icon: 'none'
-      })
+      toastError('密码至少6位', '密码至少6位')
       return
     }
 
@@ -132,16 +127,10 @@ Page({
           registeredWolfNo: res.data.userInfo.wolfNo
         })
 
-        wx.showToast({
-          title: '注册成功',
-          icon: 'success'
-        })
+        toastSuccess('注册成功')
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '注册失败',
-        icon: 'none'
-      })
+      toastError(error, '注册失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -156,18 +145,12 @@ Page({
     const { wolfNo, loginKey } = this.data
 
     if (!wolfNo) {
-      wx.showToast({
-        title: '请输入狼藉号',
-        icon: 'none'
-      })
+      toastError('请输入狼藉号', '请输入狼藉号')
       return
     }
 
     if (!loginKey) {
-      wx.showToast({
-        title: '请输入密码',
-        icon: 'none'
-      })
+      toastError('请输入密码', '请输入密码')
       return
     }
 
@@ -184,10 +167,7 @@ Page({
         auth.setToken(res.data.token)
         auth.setUserInfo(res.data.userInfo)
 
-        wx.showToast({
-          title: '登录成功',
-          icon: 'success'
-        })
+        toastSuccess('登录成功')
 
         // 跳转到聊天首页
         setTimeout(() => {
@@ -197,10 +177,7 @@ Page({
         }, 1000)
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '登录失败',
-        icon: 'none'
-      })
+      toastError(error, '登录失败')
     } finally {
       this.setData({ loading: false })
     }

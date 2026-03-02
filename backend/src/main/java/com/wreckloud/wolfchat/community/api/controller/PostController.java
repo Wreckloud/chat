@@ -4,7 +4,6 @@ import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.community.api.dto.CreateCommentDTO;
 import com.wreckloud.wolfchat.community.api.dto.CreatePostDTO;
-import com.wreckloud.wolfchat.community.api.vo.CommentVO;
 import com.wreckloud.wolfchat.community.api.vo.PostDetailVO;
 import com.wreckloud.wolfchat.community.api.vo.PostPageVO;
 import com.wreckloud.wolfchat.community.api.vo.PostVO;
@@ -15,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 /**
  * @Description 社区帖子控制器
@@ -59,10 +57,4 @@ public class PostController {
         return Result.success("评论成功", null);
     }
 
-    @Operation(summary = "评论列表", description = "获取帖子评论列表")
-    @GetMapping("/{postId}/comments")
-    public Result<List<CommentVO>> listComments(@PathVariable Long postId) {
-        List<CommentVO> comments = postService.getComments(postId);
-        return Result.success(comments);
-    }
 }
