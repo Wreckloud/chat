@@ -5,26 +5,29 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
- * @Description 消息类型枚举
+ * @Description 消息送达状态
  * @Author Wreckloud
- * @Date 2026-01-29
+ * @Date 2026-03-02
  */
 @Getter
-public enum MessageType {
+public enum MessageDeliveryStatus {
     /**
-     * 文本消息
+     * 未送达
      */
-    TEXT("TEXT");
+    UNDELIVERED(0),
+    /**
+     * 已送达
+     */
+    DELIVERED(1);
 
     /**
      * 存储到数据库的值，同时用于 JSON 序列化
      */
     @EnumValue
     @JsonValue
-    private final String value;
+    private final Integer value;
 
-    MessageType(String value) {
+    MessageDeliveryStatus(Integer value) {
         this.value = value;
     }
 }
-

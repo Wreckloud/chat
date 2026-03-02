@@ -1,6 +1,5 @@
 package com.wreckloud.wolfchat.chat.websocket.enums;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -9,7 +8,6 @@ import lombok.Getter;
  * @Date 2026-02-15
  */
 @Getter
-@AllArgsConstructor
 public enum WsType {
     /**
      * 客户端认证
@@ -37,6 +35,10 @@ public enum WsType {
     ERROR("ERROR");
 
     private final String value;
+
+    WsType(String value) {
+        this.value = value;
+    }
 
     /**
      * 从字符串解析消息类型

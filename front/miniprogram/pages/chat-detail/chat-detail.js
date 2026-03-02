@@ -189,7 +189,6 @@ Page({
       type: 'SEND',
       clientMsgId: clientMsgId,
       conversationId: Number(this.data.conversationId),
-      msgType: 'TEXT',
       content: content
     })
   },

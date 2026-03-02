@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wreckloud.wolfchat.chat.conversation.application.service.ConversationService;
 import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.chat.message.infra.mapper.WfMessageMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -65,7 +66,7 @@ public class MessageService {
         message.setReceiverId(receiverId);
         message.setContent(content);
         message.setMsgType(MessageType.TEXT);
-        message.setDelivered(Boolean.FALSE);
+        message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
         message.setCreateTime(LocalDateTime.now());
         messageMapper.insert(message);
         log.info("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
@@ -108,7 +109,7 @@ public class MessageService {
     public List<WfMessage> listUndeliveredMessages(Long userId) {
         LambdaQueryWrapper<WfMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfMessage::getReceiverId, userId)
-                .eq(WfMessage::getDelivered, Boolean.FALSE)
+                .eq(WfMessage::getDelivered, MessageDeliveryStatus.UNDELIVERED)
                 .orderByAsc(WfMessage::getCreateTime);
         return messageMapper.selectList(queryWrapper);
     }
@@ -122,7 +123,7 @@ public class MessageService {
             return;
         }
         WfMessage update = new WfMessage();
-        update.setDelivered(Boolean.TRUE);
+        update.setDelivered(MessageDeliveryStatus.DELIVERED);
         update.setDeliveredTime(LocalDateTime.now());
         messageMapper.update(update, new LambdaQueryWrapper<WfMessage>()
                 .in(WfMessage::getId, messageIds));

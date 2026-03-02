@@ -13,6 +13,7 @@ import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.CloseStatus;
@@ -37,12 +38,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final WsSessionManager sessionManager;
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
+    public void afterConnectionEstablished(@NonNull WebSocketSession session) {
         log.info("WS 连接建立: sessionId={}", session.getId());
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
         WsRequest request;
         try {
             request = JSON.parseObject(message.getPayload(), WsRequest.class);
@@ -76,7 +77,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         sessionManager.removeSession(session);
         log.info("WS 连接关闭: sessionId={}, status={}", session.getId(), status);
     }

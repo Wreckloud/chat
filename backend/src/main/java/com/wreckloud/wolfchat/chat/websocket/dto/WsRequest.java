@@ -30,11 +30,6 @@ public class WsRequest {
     private Long conversationId;
 
     /**
-     * 消息类型（TEXT）
-     */
-    private String msgType;
-
-    /**
      * 消息内容
      */
     private String content;
