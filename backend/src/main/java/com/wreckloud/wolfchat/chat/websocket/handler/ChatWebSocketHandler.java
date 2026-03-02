@@ -123,19 +123,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleSend(WebSocketSession session, WsRequest request) {
+        String clientMsgId = request.getClientMsgId();
         Long userId = sessionManager.getUserId(session);
         if (userId == null) {
-            sendError(session, ErrorCode.UNAUTHORIZED, "请先认证");
+            sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
             return;
         }
 
         if (request.getConversationId() == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空");
+            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
             return;
         }
 
         if (!StringUtils.hasText(request.getContent())) {
-            sendError(session, ErrorCode.MESSAGE_CONTENT_EMPTY, "消息内容不能为空");
+            sendError(session, ErrorCode.MESSAGE_CONTENT_EMPTY, "消息内容不能为空", clientMsgId);
             return;
         }
 
@@ -163,10 +164,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
             }
         } catch (BaseException e) {
-            sendError(session, e.getCode(), e.getMessage());
+            sendError(session, e.getCode(), e.getMessage(), clientMsgId);
         } catch (Exception e) {
             log.error("WS 发送消息失败: {}", e.getMessage(), e);
-            sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误");
+            sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
         }
     }
 
@@ -181,14 +182,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendError(WebSocketSession session, ErrorCode errorCode, String message) {
-        sendError(session, errorCode.getCode(), message);
+        sendError(session, errorCode.getCode(), message, null);
     }
 
     private void sendError(WebSocketSession session, Integer code, String message) {
+        sendError(session, code, message, null);
+    }
+
+    private void sendError(WebSocketSession session, Integer code, String message, String clientMsgId) {
         WsResponse response = new WsResponse();
         response.setType(WsType.ERROR);
         response.setCode(code);
         response.setMessage(message);
+        response.setClientMsgId(clientMsgId);
         send(session, response);
     }
 }
