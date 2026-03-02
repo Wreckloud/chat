@@ -1,0 +1,205 @@
+package com.wreckloud.wolfchat.chat.websocket.handler;
+
+import com.alibaba.fastjson.JSON;
+import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
+import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
+import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
+import com.wreckloud.wolfchat.chat.websocket.dto.WsRequest;
+import com.wreckloud.wolfchat.chat.websocket.dto.WsResponse;
+import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
+import com.wreckloud.wolfchat.chat.websocket.session.WsSessionManager;
+import com.wreckloud.wolfchat.common.excption.BaseException;
+import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.util.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * @Description WebSocket 消息处理
+ * @Author Wreckloud
+ * @Date 2026-02-05
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ChatWebSocketHandler extends TextWebSocketHandler {
+    private final JwtUtil jwtUtil;
+    private final MessageService messageService;
+    private final WsSessionManager sessionManager;
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) {
+        log.info("WS 连接建立: sessionId={}", session.getId());
+    }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        WsRequest request;
+        try {
+            request = JSON.parseObject(message.getPayload(), WsRequest.class);
+        } catch (Exception e) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息格式错误");
+            return;
+        }
+
+        if (request == null || !StringUtils.hasText(request.getType())) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息类型不能为空");
+            return;
+        }
+
+        WsType type = WsType.fromValue(request.getType());
+        if (type == null) {
+            sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
+            return;
+        }
+
+        switch (type) {
+            case AUTH:
+                handleAuth(session, request);
+                break;
+            case SEND:
+                handleSend(session, request);
+                break;
+            default:
+                sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
+                break;
+        }
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        sessionManager.removeSession(session);
+        log.info("WS 连接关闭: sessionId={}, status={}", session.getId(), status);
+    }
+
+    private void handleAuth(WebSocketSession session, WsRequest request) {
+        String token = request.getToken();
+        if (!StringUtils.hasText(token)) {
+            sendError(session, ErrorCode.UNAUTHORIZED, "token 不能为空");
+            return;
+        }
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        if (!jwtUtil.validateToken(token)) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return;
+        }
+
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        if (userId == null) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return;
+        }
+
+        sessionManager.addSession(userId, session);
+        log.info("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
+        WsResponse response = new WsResponse();
+        response.setType(WsType.AUTH_OK.getValue());
+        send(session, response);
+
+        // 推送未送达消息
+        List<WfMessage> undelivered = messageService.listUndeliveredMessages(userId);
+        if (!undelivered.isEmpty()) {
+            log.info("WS 补发未送达消息: userId={}, count={}", userId, undelivered.size());
+            for (WfMessage message : undelivered) {
+                WsResponse push = new WsResponse();
+                push.setType(WsType.MESSAGE.getValue());
+                push.setData(toMessageVO(message));
+                send(session, push);
+            }
+            messageService.markDelivered(
+                    undelivered.stream().map(WfMessage::getId).collect(Collectors.toList())
+            );
+        }
+    }
+
+    private void handleSend(WebSocketSession session, WsRequest request) {
+        Long userId = sessionManager.getUserId(session);
+        if (userId == null) {
+            sendError(session, ErrorCode.UNAUTHORIZED, "请先认证");
+            return;
+        }
+
+        if (request.getConversationId() == null) {
+            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空");
+            return;
+        }
+
+        if (!StringUtils.hasText(request.getContent())) {
+            sendError(session, ErrorCode.MESSAGE_CONTENT_EMPTY, "消息内容不能为空");
+            return;
+        }
+
+        try {
+            WfMessage message = messageService.sendMessage(
+                    userId,
+                    request.getConversationId(),
+                    request.getContent()
+            );
+
+            MessageVO messageVO = toMessageVO(message);
+
+            WsResponse ack = new WsResponse();
+            ack.setType(WsType.ACK.getValue());
+            ack.setClientMsgId(request.getClientMsgId());
+            ack.setData(messageVO);
+            send(session, ack);
+
+            WsResponse push = new WsResponse();
+            push.setType(WsType.MESSAGE.getValue());
+            push.setData(messageVO);
+            if (sessionManager.isUserOnline(message.getReceiverId())) {
+                sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
+                messageService.markDelivered(List.of(message.getId()));
+                log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
+            }
+        } catch (BaseException e) {
+            sendError(session, e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("WS 发送消息失败: {}", e.getMessage(), e);
+            sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误");
+        }
+    }
+
+    private MessageVO toMessageVO(WfMessage message) {
+        MessageVO vo = new MessageVO();
+        vo.setMessageId(message.getId());
+        vo.setConversationId(message.getConversationId());
+        vo.setSenderId(message.getSenderId());
+        vo.setReceiverId(message.getReceiverId());
+        vo.setContent(message.getContent());
+        vo.setMsgType(message.getMsgType());
+        vo.setCreateTime(message.getCreateTime());
+        return vo;
+    }
+
+    private void send(WebSocketSession session, WsResponse response) {
+        try {
+            session.sendMessage(new TextMessage(JSON.toJSONString(response)));
+        } catch (Exception e) {
+            log.warn("WS 发送失败: sessionId={}, error={}", session.getId(), e.getMessage());
+        }
+    }
+
+    private void sendError(WebSocketSession session, ErrorCode errorCode, String message) {
+        sendError(session, errorCode.getCode(), message);
+    }
+
+    private void sendError(WebSocketSession session, Integer code, String message) {
+        WsResponse response = new WsResponse();
+        response.setType(WsType.ERROR.getValue());
+        response.setCode(code);
+        response.setMessage(message);
+        send(session, response);
+    }
+}
