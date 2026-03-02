@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.chat.websocket.dto;
 
+import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import lombok.Data;
 
 /**
@@ -12,7 +13,7 @@ public class WsRequest {
     /**
      * 消息类型：AUTH / SEND
      */
-    private String type;
+    private WsType type;
 
     /**
      * 授权 token（AUTH 消息使用）

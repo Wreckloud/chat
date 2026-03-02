@@ -46,20 +46,13 @@ public class WsSessionManager {
         return sessionUserMap.get(session.getId());
     }
 
-    /**
-     * 判断用户是否在线
-     */
-    public boolean isUserOnline(Long userId) {
-        Set<WebSocketSession> sessions = userSessions.get(userId);
-        return sessions != null && !sessions.isEmpty();
-    }
-
-    public void sendToUser(Long userId, String payload) {
+    public int sendToUser(Long userId, String payload) {
         Set<WebSocketSession> sessions = userSessions.get(userId);
         if (sessions == null || sessions.isEmpty()) {
-            return;
+            return 0;
         }
         TextMessage message = new TextMessage(payload);
+        int successCount = 0;
         for (WebSocketSession session : sessions) {
             if (!session.isOpen()) {
                 removeSession(session);
@@ -67,9 +60,12 @@ public class WsSessionManager {
             }
             try {
                 session.sendMessage(message);
+                successCount++;
             } catch (IOException e) {
                 log.warn("WS 推送失败: userId={}, sessionId={}, error={}", userId, session.getId(), e.getMessage());
+                removeSession(session);
             }
         }
+        return successCount;
     }
 }

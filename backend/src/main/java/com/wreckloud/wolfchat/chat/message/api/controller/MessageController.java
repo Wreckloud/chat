@@ -1,6 +1,7 @@
 package com.wreckloud.wolfchat.chat.message.api.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.wreckloud.wolfchat.chat.message.api.converter.MessageConverter;
 import com.wreckloud.wolfchat.chat.message.api.dto.SendMessageDTO;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
@@ -38,7 +39,7 @@ public class MessageController {
                 conversationId,
                 dto.getContent()
         );
-        return Result.success(toMessageVO(message));
+        return Result.success(MessageConverter.toMessageVO(message));
     }
 
     @Operation(summary = "消息列表", description = "分页查询会话消息列表")
@@ -57,23 +58,12 @@ public class MessageController {
         // 转换为 VO
         Page<MessageVO> voPage = new Page<>(messagePage.getCurrent(), messagePage.getSize(), messagePage.getTotal());
         List<MessageVO> voList = messagePage.getRecords().stream()
-                .map(this::toMessageVO)
+                .map(MessageConverter::toMessageVO)
                 .collect(Collectors.toList());
         voPage.setRecords(voList);
 
         return Result.success(voPage);
     }
 
-    private MessageVO toMessageVO(WfMessage message) {
-        MessageVO vo = new MessageVO();
-        vo.setMessageId(message.getId());
-        vo.setConversationId(message.getConversationId());
-        vo.setSenderId(message.getSenderId());
-        vo.setReceiverId(message.getReceiverId());
-        vo.setContent(message.getContent());
-        vo.setMsgType(message.getMsgType());
-        vo.setCreateTime(message.getCreateTime());
-        return vo;
-    }
 }
 

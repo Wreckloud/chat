@@ -1,6 +1,7 @@
 package com.wreckloud.wolfchat.chat.websocket.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.wreckloud.wolfchat.chat.message.api.converter.MessageConverter;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
@@ -21,8 +22,8 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @Description WebSocket 消息处理
@@ -52,18 +53,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        if (request == null || !StringUtils.hasText(request.getType())) {
+        if (request == null || request.getType() == null) {
             sendError(session, ErrorCode.PARAM_ERROR, "消息类型不能为空");
             return;
         }
 
-        WsType type = WsType.fromValue(request.getType());
-        if (type == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
-            return;
-        }
-
-        switch (type) {
+        switch (request.getType()) {
             case AUTH:
                 handleAuth(session, request);
                 break;
@@ -105,22 +100,25 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessionManager.addSession(userId, session);
         log.info("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
         WsResponse response = new WsResponse();
-        response.setType(WsType.AUTH_OK.getValue());
+        response.setType(WsType.AUTH_OK);
         send(session, response);
 
         // 推送未送达消息
         List<WfMessage> undelivered = messageService.listUndeliveredMessages(userId);
         if (!undelivered.isEmpty()) {
             log.info("WS 补发未送达消息: userId={}, count={}", userId, undelivered.size());
+            List<Long> deliveredIds = new ArrayList<>();
             for (WfMessage message : undelivered) {
                 WsResponse push = new WsResponse();
-                push.setType(WsType.MESSAGE.getValue());
-                push.setData(toMessageVO(message));
-                send(session, push);
+                push.setType(WsType.MESSAGE);
+                push.setData(MessageConverter.toMessageVO(message));
+                if (send(session, push)) {
+                    deliveredIds.add(message.getId());
+                }
             }
-            messageService.markDelivered(
-                    undelivered.stream().map(WfMessage::getId).collect(Collectors.toList())
-            );
+            if (!deliveredIds.isEmpty()) {
+                messageService.markDelivered(deliveredIds);
+            }
         }
     }
 
@@ -148,19 +146,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     request.getContent()
             );
 
-            MessageVO messageVO = toMessageVO(message);
+            MessageVO messageVO = MessageConverter.toMessageVO(message);
 
             WsResponse ack = new WsResponse();
-            ack.setType(WsType.ACK.getValue());
+            ack.setType(WsType.ACK);
             ack.setClientMsgId(request.getClientMsgId());
             ack.setData(messageVO);
             send(session, ack);
 
             WsResponse push = new WsResponse();
-            push.setType(WsType.MESSAGE.getValue());
+            push.setType(WsType.MESSAGE);
             push.setData(messageVO);
-            if (sessionManager.isUserOnline(message.getReceiverId())) {
-                sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
+            int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
+            if (successCount > 0) {
                 messageService.markDelivered(List.of(message.getId()));
                 log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
             }
@@ -172,23 +170,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private MessageVO toMessageVO(WfMessage message) {
-        MessageVO vo = new MessageVO();
-        vo.setMessageId(message.getId());
-        vo.setConversationId(message.getConversationId());
-        vo.setSenderId(message.getSenderId());
-        vo.setReceiverId(message.getReceiverId());
-        vo.setContent(message.getContent());
-        vo.setMsgType(message.getMsgType());
-        vo.setCreateTime(message.getCreateTime());
-        return vo;
-    }
-
-    private void send(WebSocketSession session, WsResponse response) {
+    private boolean send(WebSocketSession session, WsResponse response) {
         try {
             session.sendMessage(new TextMessage(JSON.toJSONString(response)));
+            return true;
         } catch (Exception e) {
             log.warn("WS 发送失败: sessionId={}, error={}", session.getId(), e.getMessage());
+            return false;
         }
     }
 
@@ -198,7 +186,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void sendError(WebSocketSession session, Integer code, String message) {
         WsResponse response = new WsResponse();
-        response.setType(WsType.ERROR.getValue());
+        response.setType(WsType.ERROR);
         response.setCode(code);
         response.setMessage(message);
         send(session, response);

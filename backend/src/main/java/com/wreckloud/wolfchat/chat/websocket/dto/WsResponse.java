@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.chat.websocket.dto;
 
+import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import lombok.Data;
 
 /**
@@ -12,7 +13,7 @@ public class WsResponse {
     /**
      * 消息类型：AUTH_OK / ACK / MESSAGE / ERROR
      */
-    private String type;
+    private WsType type;
 
     /**
      * 业务错误码（ERROR 时使用）

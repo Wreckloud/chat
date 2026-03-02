@@ -28,6 +28,11 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class MessageService {
+    /**
+     * 离线补发上限，避免单次补发过多导致阻塞
+     */
+    private static final int UNDELIVERED_LIMIT = 200;
+
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
     private final FollowService followService;
@@ -110,7 +115,8 @@ public class MessageService {
         LambdaQueryWrapper<WfMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfMessage::getReceiverId, userId)
                 .eq(WfMessage::getDelivered, MessageDeliveryStatus.UNDELIVERED)
-                .orderByAsc(WfMessage::getCreateTime);
+                .orderByAsc(WfMessage::getCreateTime)
+                .last("LIMIT " + UNDELIVERED_LIMIT);
         return messageMapper.selectList(queryWrapper);
     }
 
