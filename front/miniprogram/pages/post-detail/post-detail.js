@@ -3,7 +3,8 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { withDefaultAvatar } = require('../../utils/user')
+const { normalizeUser, openUserProfile } = require('../../utils/user')
+const { toastError, toastSuccess } = require('../../utils/ui')
 const time = require('../../utils/time')
 
 Page({
@@ -23,10 +24,7 @@ Page({
 
     const postId = Number(options.postId)
     if (!postId) {
-      wx.showToast({
-        title: '参数错误',
-        icon: 'none'
-      })
+      toastError('参数错误', '参数错误')
       return
     }
 
@@ -47,21 +45,18 @@ Page({
         this.setData({
           post: {
             ...post,
-            author: withDefaultAvatar(post.author),
+            author: normalizeUser(post.author) || {},
             timeText: time.formatTime(post.createTime)
           },
           comments: comments.map(item => ({
             ...item,
-            author: withDefaultAvatar(item.author),
+            author: normalizeUser(item.author) || {},
             timeText: time.formatTime(item.createTime)
           }))
         })
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'none'
-      })
+      toastError(error, '加载失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -76,10 +71,7 @@ Page({
   async handleComment() {
     const content = this.data.commentContent.trim()
     if (!content) {
-      wx.showToast({
-        title: '请输入评论内容',
-        icon: 'none'
-      })
+      toastError('请输入评论内容', '请输入评论内容')
       return
     }
 
@@ -90,10 +82,7 @@ Page({
         this.loadDetail()
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '评论失败',
-        icon: 'none'
-      })
+      toastError(error, '评论失败')
     }
   },
 
@@ -105,16 +94,16 @@ Page({
     try {
       const res = await request.post(`/follow/${authorId}`)
       if (res.code === 0) {
-        wx.showToast({
-          title: '关注成功',
-          icon: 'success'
-        })
+        toastSuccess('关注成功')
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '关注失败',
-        icon: 'none'
-      })
+      toastError(error, '关注失败')
     }
+  },
+
+  goUserProfile(e) {
+    const user = e.currentTarget.dataset.user
+    if (!user || !user.userId) return
+    openUserProfile(user)
   }
 })

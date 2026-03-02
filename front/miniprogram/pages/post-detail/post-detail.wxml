@@ -4,10 +4,12 @@
       <t-avatar 
         size="medium"
         image="{{post.author.avatar}}"
-        shape="round">
+        shape="round"
+        catchtap="goUserProfile"
+        data-user="{{post.author}}">
         {{post.author.nickname ? post.author.nickname.charAt(0) : '行'}}
       </t-avatar>
-      <view class="post-info">
+      <view class="post-info" catchtap="goUserProfile" data-user="{{post.author}}">
         <view class="post-name">{{post.author.nickname || post.author.wolfNo}}</view>
         <view class="post-time">{{post.timeText}}</view>
       </view>
@@ -25,10 +27,12 @@
         <t-avatar 
           size="small"
           image="{{item.author.avatar}}"
-          shape="round">
+          shape="round"
+          catchtap="goUserProfile"
+          data-user="{{item.author}}">
           {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
         </t-avatar>
-        <view class="comment-info">
+        <view class="comment-info" catchtap="goUserProfile" data-user="{{item.author}}">
           <view class="comment-name">{{item.author.nickname || item.author.wolfNo}}</view>
           <view class="comment-time">{{item.timeText}}</view>
         </view>

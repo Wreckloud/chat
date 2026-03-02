@@ -26,7 +26,6 @@ function initEvents() {
   wx.onSocketOpen(() => {
     socketOpen = true
     connecting = false
-    console.info('[WS] 连接已建立')
     sendAuth()
     flushQueue()
   })
@@ -46,7 +45,6 @@ function initEvents() {
     socketOpen = false
     connecting = false
     messageQueue.length = 0
-    console.warn('[WS] 连接已关闭')
   })
 
   wx.onSocketError((err) => {
@@ -60,7 +58,6 @@ function connect() {
   if (socketOpen || connecting) return
   initEvents()
   connecting = true
-  console.debug('[WS] 尝试连接')
   wx.connectSocket({
     url: getWsUrl()
   })
@@ -92,15 +89,6 @@ function send(data) {
   }
 }
 
-function close() {
-  if (socketOpen || connecting) {
-    wx.closeSocket()
-  }
-  socketOpen = false
-  connecting = false
-  messageQueue.length = 0
-}
-
 function onMessage(handler) {
   listeners.add(handler)
 }
@@ -112,7 +100,6 @@ function offMessage(handler) {
 module.exports = {
   connect,
   send,
-  close,
   onMessage,
   offMessage
 }

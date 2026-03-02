@@ -16,18 +16,22 @@
   <view wx:else>
     <t-cell-group wx:for="{{conversationList}}" wx:key="conversationId">
       <t-cell
-        title="{{item.targetNickname || item.targetWolfNo}}"
         description="{{item.lastMessage || '暂无消息'}}"
         note="{{item.formattedTime || ''}}"
         arrow
         hover
         bindtap="goChatDetail"
         data-id="{{item.conversationId}}">
+        <view slot="title" class="chat-title" catchtap="goUserProfile" data-item="{{item}}">
+          {{item.targetNickname || item.targetWolfNo}}
+        </view>
         <t-avatar
           slot="leftIcon"
           size="small"
           shape="round"
-          image="{{item.targetAvatar}}">
+          image="{{item.targetAvatar}}"
+          catchtap="goUserProfile"
+          data-item="{{item}}">
           {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
         </t-avatar>
       </t-cell>

@@ -5,7 +5,8 @@ const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
-const { DEFAULT_AVATAR } = require('../../utils/user')
+const { DEFAULT_AVATAR, openUserProfile } = require('../../utils/user')
+const { toastError } = require('../../utils/ui')
 
 Page({
   data: {
@@ -53,17 +54,11 @@ Page({
 
     request.get('/conversations')
       .then(res => {
-        const list = res.data || []
-        // 格式化时间
-        list.forEach(item => {
-          // 会话对方头像兜底
-          if (!item.targetAvatar) {
-            item.targetAvatar = DEFAULT_AVATAR
-          }
-          if (item.lastMessageTime) {
-            item.formattedTime = time.formatTime(item.lastMessageTime)
-          }
-        })
+        const list = (res.data || []).map(item => ({
+          ...item,
+          targetAvatar: item.targetAvatar || DEFAULT_AVATAR,
+          formattedTime: item.lastMessageTime ? time.formatTime(item.lastMessageTime) : ''
+        }))
         
         this.setData({
           conversationList: list,
@@ -72,11 +67,7 @@ Page({
       })
       .catch(err => {
         console.error('加载会话列表失败:', err)
-        wx.showToast({
-          title: err.message || '加载失败',
-          icon: 'none',
-          duration: 2000
-        })
+        toastError(err, '加载失败')
         this.setData({ loading: false })
       })
   },
@@ -136,6 +127,18 @@ Page({
     wx.navigateTo({
       url: `/pages/chat-detail/chat-detail?conversationId=${conversationId}`
     })
+  },
+
+  goUserProfile(e) {
+    const item = e.currentTarget.dataset.item
+    if (!item || !item.targetUserId) return
+    const user = {
+      userId: item.targetUserId,
+      nickname: item.targetNickname,
+      wolfNo: item.targetWolfNo,
+      avatar: item.targetAvatar
+    }
+    openUserProfile(user)
   },
 
   /**

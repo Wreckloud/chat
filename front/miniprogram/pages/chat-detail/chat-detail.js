@@ -5,7 +5,8 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
-const { withDefaultAvatar } = require('../../utils/user')
+const { normalizeUser, openUserProfile } = require('../../utils/user')
+const { toastError } = require('../../utils/ui')
 
 Page({
   data: {
@@ -26,10 +27,7 @@ Page({
   onLoad(options) {
     const conversationId = options.conversationId
     if (!conversationId) {
-      wx.showToast({
-        title: '会话ID不能为空',
-        icon: 'none'
-      })
+      toastError('会话ID不能为空', '会话ID不能为空')
       setTimeout(() => {
         wx.navigateBack()
       }, 1500)
@@ -46,7 +44,7 @@ Page({
     this.setData({
       conversationId: numericConversationId,
       currentUserId: currentUserId,
-      currentUser: withDefaultAvatar(userInfo)
+      currentUser: normalizeUser(userInfo)
     })
 
     // 加载会话信息（获取对方用户信息）
@@ -93,7 +91,7 @@ Page({
             avatar: conversation.targetAvatar
           }
           // 对方头像兜底，避免空白头像
-          const normalized = withDefaultAvatar(targetUser)
+          const normalized = normalizeUser(targetUser)
           this.setData({ targetUser: normalized })
           
           // 设置页面标题为对方昵称
@@ -104,6 +102,7 @@ Page({
       })
       .catch(err => {
         console.error('加载会话信息失败:', err)
+        toastError(err, '加载失败')
       })
   },
 
@@ -144,11 +143,7 @@ Page({
       })
       .catch(err => {
         console.error('加载消息失败:', err)
-        wx.showToast({
-          title: err.message || '加载失败',
-          icon: 'none',
-          duration: 2000
-        })
+        toastError(err, '加载失败')
         this.setData({ loading: false })
       })
   },
@@ -169,10 +164,7 @@ Page({
     const content = this.data.inputMessage.trim()
 
     if (!content) {
-      wx.showToast({
-        title: '消息内容不能为空',
-        icon: 'none'
-      })
+      toastError('消息内容不能为空', '消息内容不能为空')
       return
     }
 
@@ -204,10 +196,7 @@ Page({
         this.pendingClientMsgId = null
         this.setData({ sending: false })
       }
-      wx.showToast({
-        title: payload.message || '发送失败',
-        icon: 'none'
-      })
+      toastError(payload.message || '发送失败', '发送失败')
       return
     }
 
@@ -243,6 +232,12 @@ Page({
     this.processMessageTimes(messages)
     this.setData({ messages })
     this.scrollToBottom()
+  },
+
+  goUserProfile() {
+    const user = this.data.targetUser
+    if (!user || !user.userId) return
+    openUserProfile(user)
   },
 
   /**

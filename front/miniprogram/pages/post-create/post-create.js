@@ -3,6 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { toastError, toastSuccess } = require('../../utils/ui')
 
 Page({
   data: {
@@ -27,10 +28,7 @@ Page({
 
     const content = this.data.content.trim()
     if (!content) {
-      wx.showToast({
-        title: '请输入内容',
-        icon: 'none'
-      })
+      toastError('请输入内容', '请输入内容')
       return
     }
 
@@ -39,19 +37,13 @@ Page({
     try {
       const res = await request.post('/posts', { content })
       if (res.code === 0) {
-        wx.showToast({
-          title: '发布成功',
-          icon: 'success'
-        })
+        toastSuccess('发布成功')
         setTimeout(() => {
           wx.navigateBack()
         }, 800)
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '发布失败',
-        icon: 'none'
-      })
+      toastError(error, '发布失败')
     } finally {
       this.setData({ loading: false })
     }

@@ -3,6 +3,8 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { normalizeUser, openUserProfile } = require('../../utils/user')
+const { toastError } = require('../../utils/ui')
 
 Page({
   data: {
@@ -37,15 +39,16 @@ Page({
         size: this.data.size
       })
       if (res.code === 0 && res.data) {
+        const list = (res.data.list || []).map(item => ({
+          ...item,
+          author: normalizeUser(item.author) || {}
+        }))
         this.setData({
-          posts: res.data.list || []
+          posts: list
         })
       }
     } catch (error) {
-      wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'none'
-      })
+      toastError(error, '加载失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -62,5 +65,11 @@ Page({
     wx.navigateTo({
       url: `/pages/post-detail/post-detail?postId=${postId}`
     })
+  },
+
+  goUserProfile(e) {
+    const user = e.currentTarget.dataset.user
+    if (!user || !user.userId) return
+    openUserProfile(user)
   }
 })

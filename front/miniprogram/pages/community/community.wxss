@@ -17,3 +17,15 @@
 .post-item {
   margin-bottom: 12rpx;
 }
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.post-author-name {
+  font-size: 28rpx;
+  font-weight: 500;
+}
