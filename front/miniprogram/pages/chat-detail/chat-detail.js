@@ -24,6 +24,8 @@ Page({
     currentUser: null // 当前用户信息
   },
 
+  SEND_TIMEOUT_MS: 8000,
+
   onLoad(options) {
     const conversationId = options.conversationId
     if (!conversationId) {
@@ -55,6 +57,7 @@ Page({
   },
 
   onUnload() {
+    this.clearPendingTimer()
     if (this.wsHandler) {
       ws.offMessage(this.wsHandler)
       this.wsHandler = null
@@ -176,6 +179,7 @@ Page({
 
     const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     this.pendingClientMsgId = clientMsgId
+    this.startPendingTimer(clientMsgId)
 
     ws.send({
       type: 'SEND',
@@ -193,8 +197,10 @@ Page({
 
     if (payload.type === 'ERROR') {
       if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
-        this.pendingClientMsgId = null
-        this.setData({ sending: false })
+        this.clearPendingState(payload.clientMsgId)
+      } else if (!payload.clientMsgId && this.data.sending) {
+        // 通用错误也要收敛发送态，避免页面卡住
+        this.clearPendingState()
       }
       toastError(payload.message || '发送失败', '发送失败')
       return
@@ -202,6 +208,7 @@ Page({
 
     if (payload.type === 'ACK') {
       if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
+        this.clearPendingTimer()
         this.pendingClientMsgId = null
         this.setData({
           inputMessage: '',
@@ -270,5 +277,31 @@ Page({
    */
   onReachBottom() {
     this.loadMessages()
+  },
+
+  startPendingTimer(clientMsgId) {
+    this.clearPendingTimer()
+    this.pendingTimer = setTimeout(() => {
+      if (this.pendingClientMsgId === clientMsgId) {
+        this.clearPendingState(clientMsgId)
+        toastError('消息发送超时，请重试', '发送超时')
+      }
+    }, this.SEND_TIMEOUT_MS)
+  },
+
+  clearPendingTimer() {
+    if (this.pendingTimer) {
+      clearTimeout(this.pendingTimer)
+      this.pendingTimer = null
+    }
+  },
+
+  clearPendingState(clientMsgId) {
+    if (clientMsgId && this.pendingClientMsgId !== clientMsgId) {
+      return
+    }
+    this.clearPendingTimer()
+    this.pendingClientMsgId = null
+    this.setData({ sending: false })
   }
 })

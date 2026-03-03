@@ -7,8 +7,10 @@ const auth = require('./auth')
 let socketOpen = false
 let connecting = false
 let inited = false
+let reconnectTimer = null
 const messageQueue = []
 const listeners = new Set()
+const RECONNECT_DELAY = 3000
 
 function getWsUrl() {
   // 统一把 http/https 转为 ws/wss
@@ -44,18 +46,20 @@ function initEvents() {
   wx.onSocketClose(() => {
     socketOpen = false
     connecting = false
-    messageQueue.length = 0
+    scheduleReconnect()
   })
 
   wx.onSocketError((err) => {
     socketOpen = false
     connecting = false
     console.error('WS 连接错误:', err)
+    scheduleReconnect()
   })
 }
 
 function connect() {
   if (socketOpen || connecting) return
+  if (!auth.getToken()) return
   initEvents()
   connecting = true
   wx.connectSocket({
@@ -75,14 +79,31 @@ function sendAuth() {
 function flushQueue() {
   while (socketOpen && messageQueue.length > 0) {
     const data = messageQueue.shift()
-    wx.sendSocketMessage({ data })
+    wx.sendSocketMessage({
+      data,
+      fail: () => {
+        // 发送失败回退到队列头，等待重连后补发
+        messageQueue.unshift(data)
+        socketOpen = false
+        connecting = false
+        scheduleReconnect()
+      }
+    })
   }
 }
 
 function send(data) {
   const payload = JSON.stringify(data)
   if (socketOpen) {
-    wx.sendSocketMessage({ data: payload })
+    wx.sendSocketMessage({
+      data: payload,
+      fail: () => {
+        messageQueue.unshift(payload)
+        socketOpen = false
+        connecting = false
+        scheduleReconnect()
+      }
+    })
   } else {
     messageQueue.push(payload)
     connect()
@@ -95,6 +116,18 @@ function onMessage(handler) {
 
 function offMessage(handler) {
   listeners.delete(handler)
+  if (listeners.size === 0 && reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer || socketOpen || connecting || listeners.size === 0) return
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null
+    connect()
+  }, RECONNECT_DELAY)
 }
 
 module.exports = {
