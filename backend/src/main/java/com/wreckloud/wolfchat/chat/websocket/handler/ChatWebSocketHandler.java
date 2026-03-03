@@ -189,10 +189,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sendError(session, errorCode.getCode(), message, clientMsgId);
     }
 
-    private void sendError(WebSocketSession session, Integer code, String message) {
-        sendError(session, code, message, null);
-    }
-
     private void sendError(WebSocketSession session, Integer code, String message, String clientMsgId) {
         WsResponse response = new WsResponse();
         response.setType(WsType.ERROR);
