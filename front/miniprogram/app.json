@@ -38,7 +38,13 @@
     ]
   },
   "usingComponents": {
-    "retro-button": "/components/retro-button/retro-button"
+    "retro-button": "/components/retro-button/retro-button",
+    "retro-avatar": "/components/retro-avatar/retro-avatar",
+    "retro-input": "/components/retro-input/retro-input",
+    "retro-textarea": "/components/retro-textarea/retro-textarea",
+    "retro-empty": "/components/retro-empty/retro-empty",
+    "retro-loading": "/components/retro-loading/retro-loading",
+    "retro-swipe-cell": "/components/retro-swipe-cell/retro-swipe-cell"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
