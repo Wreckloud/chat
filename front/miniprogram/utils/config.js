@@ -3,7 +3,7 @@
  */
 const config = {
   // API 基础地址
-  baseURL: 'http://192.168.3.87:8080/api',
+  baseURL: 'http://localhost:8080/api',
   
   // 请求超时时间（毫秒）
   timeout: 10000

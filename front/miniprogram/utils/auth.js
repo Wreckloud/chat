@@ -3,6 +3,7 @@
  */
 const TOKEN_KEY = 'wolfchat_token'
 const USER_INFO_KEY = 'wolfchat_user_info'
+const LOGIN_PAGE_URL = '/pages/login/login'
 const { DEFAULT_AVATAR } = require('./user')
 
 const auth = {
@@ -68,6 +69,17 @@ const auth = {
   },
 
   /**
+   * 检查登录态，不满足时跳转登录页
+   */
+  requireLogin() {
+    if (this.isLoggedIn()) {
+      return true
+    }
+    wx.redirectTo({ url: LOGIN_PAGE_URL })
+    return false
+  },
+
+  /**
    * 退出登录
    */
   logout() {
@@ -77,8 +89,4 @@ const auth = {
 }
 
 module.exports = auth
-
-
-
-
 

@@ -1,53 +1,57 @@
-<view class="container">
+<view class="container {{themeClass}}">
   <!-- 注册模式 -->
-  <view wx:if="{{mode === 'register'}}" class="register-container">
+  <view wx:if="{{mode === 'register'}}">
     <view class="header">
       <view class="title">注册</view>
     </view>
 
     <!-- 显示注册结果 -->
     <view wx:if="{{showResult}}" class="result-container">
-      <t-cell-group>
-        <t-cell title="注册成功" note="您的行者编号" />
-        <t-cell title="行者编号" note="{{registeredWolfNo}}" />
-      </t-cell-group>
+      <view class="result-list">
+        <view class="result-row">
+          <text class="result-label">注册成功</text>
+          <text class="result-note">您的行者编号</text>
+        </view>
+        <view class="result-row">
+          <text class="result-label">行者编号</text>
+          <text class="result-note">{{registeredWolfNo}}</text>
+        </view>
+      </view>
       
-      <t-button 
+      <retro-button 
         theme="primary" 
         size="large" 
         block 
         bindtap="handleConfirmRegister"
         class="confirm-btn">
         进入群落
-      </t-button>
+      </retro-button>
     </view>
 
     <!-- 注册表单 -->
-    <view wx:else class="register-form">
+    <view wx:else>
       <view class="register-card">
         <view class="form-content">
-          <t-input
+          <retro-input
             label="称谓"
             placeholder="被其他行者所记住的称呼"
             value="{{nickname}}"
             bind:input="onNicknameInput"
             bind:change="onNicknameInput"
-            clearable
             class="form-input"
           />
 
-          <t-input
+          <retro-input
             label="密码"
             placeholder="请输入密码（至少6位）"
             type="password"
             value="{{password}}"
             bind:input="onPasswordInput"
             bind:change="onPasswordInput"
-            clearable
             class="form-input"
           />
 
-          <t-button 
+          <retro-button 
             theme="primary" 
             size="large" 
             block 
@@ -55,7 +59,7 @@
             bindtap="handleRegister"
             class="register-btn">
             注册
-          </t-button>
+          </retro-button>
 
           <view class="switch-mode">
             <text class="switch-link" bindtap="switchToLogin">已是行者？回到群落</text>
@@ -66,36 +70,34 @@
   </view>
 
   <!-- 登录模式 -->
-  <view wx:else class="login-container">
+  <view wx:else>
     <view class="header">
       <view class="title">登录</view>
     </view>
 
     <view class="login-card">
       <view class="form-content">
-        <t-input
+        <retro-input
           label="狼藉"
           placeholder="请输入狼藉号"
           type="number"
           value="{{wolfNo}}"
           bind:input="onWolfNoInput"
           bind:change="onWolfNoInput"
-          clearable
           class="form-input"
         />
 
-        <t-input
+        <retro-input
           label="密码"
           placeholder="请输入密码"
           type="password"
           value="{{loginKey}}"
           bind:input="onLoginKeyInput"
           bind:change="onLoginKeyInput"
-          clearable
           class="form-input"
         />
 
-        <t-button 
+        <retro-button 
           theme="primary" 
           size="large" 
           block 
@@ -103,7 +105,7 @@
           bindtap="handleLogin"
           class="login-btn">
           登录
-        </t-button>
+        </retro-button>
 
         <view class="switch-mode">
           <text class="switch-link" bindtap="switchToRegister">没有账号？去注册</text>

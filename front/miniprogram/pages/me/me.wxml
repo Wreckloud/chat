@@ -1,32 +1,59 @@
-<view class="container">
+<view class="container {{themeClass}}">
   <view wx:if="{{userInfo}}" class="content">
     <view class="user-card">
       <view class="avatar-section">
-        <t-avatar
+        <retro-avatar
           size="large"
           image="{{userInfo.avatar || ''}}"
           shape="round">
           {{userInfo.nickname ? userInfo.nickname.charAt(0) : '行'}}
-        </t-avatar>
+        </retro-avatar>
       </view>
 
-      <t-cell-group class="info-group">
-        <t-cell title="狼藉" note="{{userInfo.wolfNo}}" arrow="{{false}}" />
-        <t-cell title="称谓" note="{{userInfo.nickname || userInfo.wolfNo}}" arrow="{{false}}" />
-      </t-cell-group>
+      <view class="profile-list">
+        <view class="profile-row">
+          <text class="profile-label">狼藉</text>
+          <text class="profile-value">{{userInfo.wolfNo}}</text>
+        </view>
+        <view class="profile-row">
+          <text class="profile-label">称谓</text>
+          <text class="profile-value">{{userInfo.nickname || userInfo.wolfNo}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="theme-card">
+      <view class="theme-title">主题色</view>
+      <view class="theme-list">
+        <view
+          wx:for="{{themeOptions}}"
+          wx:key="name"
+          class="theme-item {{themeName === item.name ? 'theme-item-active' : ''}}"
+          bindtap="onSelectTheme"
+          data-theme="{{item.name}}">
+          <view class="theme-main">
+            <view class="theme-name">{{item.label}}</view>
+            <view class="theme-desc">{{item.description}}</view>
+          </view>
+          <view class="theme-preview">
+            <view wx:for="{{item.preview}}" wx:key="*this" wx:for-item="color" class="theme-dot" style="background-color: {{color}};"></view>
+          </view>
+          <view class="theme-state">{{themeName === item.name ? '已选' : ''}}</view>
+        </view>
+      </view>
     </view>
 
     <view class="actions">
-      <t-button theme="default" size="large" block bindtap="goFollow">
+      <retro-button theme="default" size="large" block bindtap="goFollow">
         关注列表
-      </t-button>
-      <t-button theme="danger" variant="outline" size="large" block bindtap="handleLogout">
+      </retro-button>
+      <retro-button theme="danger" variant="outline" size="large" block bindtap="handleLogout">
         退出登录
-      </t-button>
+      </retro-button>
     </view>
   </view>
 
   <view wx:else class="loading-container">
-    <view class="loading-text">加载中...</view>
+    <view>加载中...</view>
   </view>
 </view>

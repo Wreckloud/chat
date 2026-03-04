@@ -1,0 +1,11 @@
+<view class="retro-textarea {{disabled ? 'is-disabled' : ''}}">
+  <textarea
+    class="retro-textarea-core"
+    value="{{value}}"
+    placeholder="{{placeholder}}"
+    maxlength="{{maxlength}}"
+    disabled="{{disabled}}"
+    auto-height="{{autoHeight}}"
+    bindinput="onInput"
+    bindchange="onChange" />
+</view>

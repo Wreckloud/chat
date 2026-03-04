@@ -1,27 +1,102 @@
-.container {
-  padding: 30rpx;
+/* Layout layer */
+.follow-page {
+  min-height: 100vh;
+  padding: 22rpx 18rpx;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
 }
 
 .tabs {
   display: flex;
-  background: #fff;
-  border-radius: 16rpx;
-  overflow: hidden;
-  margin-bottom: 20rpx;
+  margin-bottom: 14rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
 }
 
 .tab {
   flex: 1;
   text-align: center;
-  padding: 20rpx 0;
-  font-size: 28rpx;
+  padding: 16rpx 0;
+  font-size: 25rpx;
+  border-right: 1rpx solid var(--retro-tab-divider);
+  color: var(--retro-tab-text);
+}
+
+.tab:last-child {
+  border-right: none;
 }
 
 .tab.active {
-  background: #e9ecff;
-  font-weight: bold;
+  font-weight: 600;
+  background: var(--retro-tab-active-bg);
+  color: var(--retro-tab-active-text);
 }
 
-.actions {
+.user-board {
+  display: flex;
+  flex-direction: column;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 16rpx;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.user-row:nth-child(even) {
+  background: var(--retro-row-even-bg);
+}
+
+.user-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.user-avatar {
+  border: 1rpx solid var(--retro-avatar-border);
+}
+
+.user-meta {
+  min-width: 0;
   margin-left: 12rpx;
+}
+
+.user-name-line {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  max-width: 220rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mutual-tag {
+  margin-left: 8rpx;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  background: var(--retro-chip-bg);
+  color: var(--retro-chip-text);
+}
+
+.user-no {
+  margin-top: 3rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.user-actions {
+  margin-left: 12rpx;
+  flex-shrink: 0;
 }

@@ -1,0 +1,14 @@
+<view class="retro-input {{disabled ? 'is-disabled' : ''}}">
+  <text wx:if="{{label}}" class="retro-input-label">{{label}}</text>
+  <input
+    class="retro-input-core"
+    type="{{type}}"
+    value="{{value}}"
+    placeholder="{{placeholder}}"
+    disabled="{{disabled}}"
+    maxlength="{{maxlength}}"
+    confirm-type="{{confirmType}}"
+    bindinput="onInput"
+    bindchange="onChange"
+    bindconfirm="onConfirm" />
+</view>

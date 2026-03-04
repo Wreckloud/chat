@@ -5,28 +5,27 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
     posts: [],
     page: 1,
     size: 10,
-    loading: false
+    loading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad() {
-    // tabBar 页面，检查登录状态
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({ url: '/pages/login/login' })
+    if (!auth.requireLogin()) {
       return
     }
-    this.loadPosts()
   },
 
   onShow() {
-    if (auth.isLoggedIn()) {
-      this.loadPosts()
-    }
+    if (!auth.requireLogin()) return
+    this.applyTheme()
+    this.loadPosts()
   },
 
   async loadPosts() {
@@ -71,5 +70,9 @@ Page({
     const user = e.currentTarget.dataset.user
     if (!user || !user.userId) return
     openUserProfile(user)
+  },
+
+  applyTheme() {
+    applyPageTheme(this, { tabBar: true })
   }
 })

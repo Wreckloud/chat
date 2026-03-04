@@ -7,6 +7,7 @@ const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
@@ -20,16 +21,21 @@ Page({
     pageSize: 20,
     currentUserId: null,
     scrollTop: 0,
-    targetUser: null, // 对方用户信息
-    currentUser: null // 当前用户信息
+    targetUser: {}, // 对方用户信息
+    currentUser: {}, // 当前用户信息
+    themeClass: 'theme-retro-blue'
   },
 
   SEND_TIMEOUT_MS: 8000,
 
   onLoad(options) {
+    if (!auth.requireLogin()) {
+      return
+    }
+
     const conversationId = options.conversationId
     if (!conversationId) {
-      toastError('会话ID不能为空', '会话ID不能为空')
+      toastError('会话ID不能为空')
       setTimeout(() => {
         wx.navigateBack()
       }, 1500)
@@ -46,7 +52,7 @@ Page({
     this.setData({
       conversationId: numericConversationId,
       currentUserId: currentUserId,
-      currentUser: normalizeUser(userInfo)
+      currentUser: normalizeUser(userInfo) || {}
     })
 
     // 加载会话信息（获取对方用户信息）
@@ -54,6 +60,11 @@ Page({
     this.loadConversation()
     this.loadMessages()
     this.initSocket()
+  },
+
+  onShow() {
+    if (!auth.requireLogin()) return
+    this.applyTheme()
   },
 
   onUnload() {
@@ -84,7 +95,9 @@ Page({
     request.get('/conversations')
       .then(res => {
         const conversations = res.data || []
-        const conversation = conversations.find(c => c.conversationId === Number(this.data.conversationId))
+        const conversation = conversations.find(
+          c => Number(c.conversationId) === Number(this.data.conversationId)
+        )
         
         if (conversation) {
           const targetUser = {
@@ -94,7 +107,7 @@ Page({
             avatar: conversation.targetAvatar
           }
           // 对方头像兜底，避免空白头像
-          const normalized = normalizeUser(targetUser)
+          const normalized = normalizeUser(targetUser) || {}
           this.setData({ targetUser: normalized })
           
           // 设置页面标题为对方昵称
@@ -167,7 +180,7 @@ Page({
     const content = this.data.inputMessage.trim()
 
     if (!content) {
-      toastError('消息内容不能为空', '消息内容不能为空')
+      toastError('消息内容不能为空')
       return
     }
 
@@ -245,6 +258,10 @@ Page({
     const user = this.data.targetUser
     if (!user || !user.userId) return
     openUserProfile(user)
+  },
+
+  applyTheme() {
+    applyPageTheme(this)
   },
 
   /**

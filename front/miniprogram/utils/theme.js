@@ -1,51 +1,140 @@
 /**
- * 主题配置 - 深色模式
- * 狼主题风格：深色系，主色调 #0a3e1e
+ * 主题中心
+ * 负责主题持久化、页面主题类和导航栏配色
  */
-const theme = {
-  // 主色调（深森林绿）
-  primaryColor: '#0a3e1e',
-  
-  // 辅色（与主色相同）
-  secondaryColor: '#0a3e1e',
-  
-  // 次要色
-  minorColor: '#189649',
-  
-  // 警告色
-  warningColor: '#3e0a0b',
-  
-  // 渐变色（基于主题色）
-  gradientStart: '#0a3e1e',
-  gradientEnd: '#1a5f3e',
-  
-  // 深色模式 - 文字颜色
-  textPrimary: '#ffffff',
-  textSecondary: 'rgba(255, 255, 255, 0.85)',
-  textTertiary: 'rgba(255, 255, 255, 0.65)',
-  textDisabled: 'rgba(255, 255, 255, 0.4)',
-  
-  // 深色模式 - 背景色
-  bgPrimary: '#0d0d0d',        // 主背景（深黑）
-  bgSecondary: '#1a1a1a',       // 次背景（深灰）
-  bgTertiary: '#262626',        // 三级背景
-  bgCard: '#1f1f1f',            // 卡片背景
-  bgHover: 'rgba(10, 62, 30, 0.2)',  // 悬停背景
-  
-  // 深色模式 - 边框色
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-  borderColorHover: 'rgba(10, 62, 30, 0.5)',
-  
-  // 圆角（统一为 3-5px，避免过于圆润）
-  borderRadiusSmall: '6rpx',   // 3px - 小圆角（按钮、标签等）
-  borderRadius: '8rpx',         // 4px - 标准圆角（卡片、输入框等）
-  borderRadiusLarge: '10rpx',   // 5px - 大圆角（特殊场景）
-  
-  // 阴影（深色模式）
-  shadowSmall: '0 2rpx 8rpx rgba(0, 0, 0, 0.3)',
-  shadowMedium: '0 4rpx 16rpx rgba(0, 0, 0, 0.4)',
-  shadowLarge: '0 8rpx 24rpx rgba(0, 0, 0, 0.5)'
+const THEME_KEY = 'wolfchat_theme'
+const DEFAULT_THEME = 'retro_blue'
+
+const THEMES = {
+  retro_blue: {
+    name: 'retro_blue',
+    label: '雾蓝经典',
+    description: '清爽论坛蓝',
+    preview: ['#dce4ef', '#c7d2e4', '#536b87'],
+    className: 'theme-retro-blue',
+    nav: {
+      frontColor: '#ffffff',
+      backgroundColor: '#536b87'
+    },
+    tabBar: {
+      color: '#7a8798',
+      selectedColor: '#536b87',
+      backgroundColor: '#ffffff',
+      borderStyle: 'black'
+    },
+    swipeAction: {
+      pin: '#315f9f',
+      unread: '#5e6d82',
+      delete: '#e34d59'
+    }
+  },
+  retro_olive: {
+    name: 'retro_olive',
+    label: '森林深绿',
+    description: '以 #0a3e1e 为主色',
+    preview: ['#d8e6dc', '#a8c2b1', '#0a3e1e'],
+    className: 'theme-retro-olive',
+    nav: {
+      frontColor: '#ffffff',
+      backgroundColor: '#0a3e1e'
+    },
+    tabBar: {
+      color: '#6a756d',
+      selectedColor: '#0a3e1e',
+      backgroundColor: '#ffffff',
+      borderStyle: 'black'
+    },
+    swipeAction: {
+      pin: '#0f5f30',
+      unread: '#5f7567',
+      delete: '#cf5660'
+    }
+  }
 }
 
-module.exports = theme
+function normalizeThemeName(themeName) {
+  return Object.prototype.hasOwnProperty.call(THEMES, themeName)
+    ? themeName
+    : DEFAULT_THEME
+}
 
+function getThemeName() {
+  const saved = wx.getStorageSync(THEME_KEY)
+  return normalizeThemeName(saved)
+}
+
+function setThemeName(themeName) {
+  const normalized = normalizeThemeName(themeName)
+  wx.setStorageSync(THEME_KEY, normalized)
+  return normalized
+}
+
+function getTheme(themeName) {
+  const name = normalizeThemeName(themeName || getThemeName())
+  return THEMES[name]
+}
+
+function getThemeContext(themeName) {
+  const theme = getTheme(themeName)
+  return {
+    themeName: theme.name,
+    themeClass: theme.className,
+    theme
+  }
+}
+
+function getSwipeActionStyles(themeName) {
+  const theme = getTheme(themeName)
+  return {
+    pin: `color:#ffffff;background-color:${theme.swipeAction.pin};`,
+    unread: `color:#ffffff;background-color:${theme.swipeAction.unread};`,
+    delete: `color:#ffffff;background-color:${theme.swipeAction.delete};`
+  }
+}
+
+function applyNavigationBar(themeName) {
+  const theme = getTheme(themeName)
+  wx.setNavigationBarColor({
+    frontColor: theme.nav.frontColor,
+    backgroundColor: theme.nav.backgroundColor
+  })
+}
+
+function applyTabBar(themeName) {
+  const theme = getTheme(themeName)
+  const tabBar = theme.tabBar
+  if (!tabBar) {
+    return
+  }
+  wx.setTabBarStyle({
+    color: tabBar.color,
+    selectedColor: tabBar.selectedColor,
+    backgroundColor: tabBar.backgroundColor,
+    borderStyle: tabBar.borderStyle
+  })
+}
+
+function listThemes() {
+  return Object.keys(THEMES).map(themeName => {
+    const theme = THEMES[themeName]
+    return {
+      name: theme.name,
+      label: theme.label,
+      description: theme.description,
+      preview: theme.preview
+    }
+  })
+}
+
+module.exports = {
+  THEMES,
+  DEFAULT_THEME,
+  getThemeName,
+  setThemeName,
+  getTheme,
+  getThemeContext,
+  getSwipeActionStyles,
+  applyNavigationBar,
+  applyTabBar,
+  listThemes
+}

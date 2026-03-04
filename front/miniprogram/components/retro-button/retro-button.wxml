@@ -1,0 +1,8 @@
+<view
+  class="retro-btn theme-{{theme}} size-{{size}} {{block ? 'is-block' : ''}} {{variant === 'outline' ? 'is-outline' : ''}} {{disabled || loading ? 'is-disabled' : ''}}"
+  bindtap="onTap">
+  <view class="retro-btn-content">
+    <view wx:if="{{loading}}" class="retro-spinner"></view>
+    <slot></slot>
+  </view>
+</view>

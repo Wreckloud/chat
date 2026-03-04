@@ -1,0 +1,11 @@
+<view class="retro-avatar size-{{size}} shape-{{shape}}">
+  <image
+    wx:if="{{imageAvailable}}"
+    class="retro-avatar-image"
+    src="{{image}}"
+    mode="aspectFill"
+    binderror="onImageError" />
+  <view wx:else class="retro-avatar-fallback">
+    <slot></slot>
+  </view>
+</view>

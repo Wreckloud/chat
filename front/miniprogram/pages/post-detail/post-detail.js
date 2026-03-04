@@ -6,6 +6,7 @@ const auth = require('../../utils/auth')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const time = require('../../utils/time')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
@@ -13,23 +14,28 @@ Page({
     post: null,
     comments: [],
     commentContent: '',
-    loading: false
+    loading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad(options) {
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({ url: '/pages/login/login' })
+    if (!auth.requireLogin()) {
       return
     }
 
     const postId = Number(options.postId)
     if (!postId) {
-      toastError('参数错误', '参数错误')
+      toastError('参数错误')
       return
     }
 
     this.setData({ postId })
     this.loadDetail()
+  },
+
+  onShow() {
+    if (!auth.requireLogin()) return
+    this.applyTheme()
   },
 
   async loadDetail() {
@@ -71,7 +77,7 @@ Page({
   async handleComment() {
     const content = this.data.commentContent.trim()
     if (!content) {
-      toastError('请输入评论内容', '请输入评论内容')
+      toastError('请输入评论内容')
       return
     }
 
@@ -105,5 +111,9 @@ Page({
     const user = e.currentTarget.dataset.user
     if (!user || !user.userId) return
     openUserProfile(user)
+  },
+
+  applyTheme() {
+    applyPageTheme(this)
   }
 })

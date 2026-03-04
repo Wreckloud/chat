@@ -1,9 +1,3 @@
 {
-  "navigationBarTitleText": "关注",
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-empty": "tdesign-miniprogram/empty/empty",
-    "t-cell": "tdesign-miniprogram/cell/cell",
-    "t-avatar": "tdesign-miniprogram/avatar/avatar"
-  }
+  "navigationBarTitleText": "关注"
 }

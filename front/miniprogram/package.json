@@ -4,6 +4,7 @@
   "description": "WolfChat微信小程序 - 狼群聚集地",
   "main": "app.js",
   "scripts": {
+    "check:theme": "node scripts/check-theme-tokens.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -13,9 +14,5 @@
     "wolf"
   ],
   "author": "Wreckloud",
-  "license": "MIT",
-  "dependencies": {
-    "tdesign-miniprogram": "^1.4.0"
-  }
+  "license": "MIT"
 }
-

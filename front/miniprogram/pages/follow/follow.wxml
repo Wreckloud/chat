@@ -1,44 +1,48 @@
-<view class="container">
+<view class="follow-page {{themeClass}}">
   <view class="tabs">
     <view class="tab {{active === 'following' ? 'active' : ''}}" data-tab="following" bindtap="switchTab">关注</view>
     <view class="tab {{active === 'followers' ? 'active' : ''}}" data-tab="followers" bindtap="switchTab">粉丝</view>
     <view class="tab {{active === 'mutual' ? 'active' : ''}}" data-tab="mutual" bindtap="switchTab">互关</view>
   </view>
 
-  <t-empty wx:if="{{list.length === 0}}" description="暂无数据" />
+  <retro-empty wx:if="{{list.length === 0}}" description="暂无数据" />
 
-  <view wx:for="{{list}}" wx:key="userId" class="user-item">
-    <t-cell 
-      title="{{item.nickname || item.wolfNo}}"
-      note="{{item.wolfNo}}"
-      arrow="{{false}}"
-      bindtap="goUserProfile"
-      data-user="{{item}}">
-      <t-avatar
-        slot="leftIcon"
-        size="small"
-        shape="round"
-        image="{{item.avatar}}">
-        {{item.nickname ? item.nickname.charAt(0) : '行'}}
-      </t-avatar>
-      <view slot="right-icon" class="actions">
-        <t-button
+  <view wx:else class="user-board">
+    <view wx:for="{{list}}" wx:key="userId" class="user-row">
+      <view class="user-main" bindtap="goUserProfile" data-user="{{item}}">
+        <retro-avatar
+          class="user-avatar"
+          size="small"
+          shape="round"
+          image="{{item.avatar}}">
+          {{item.nickname ? item.nickname.charAt(0) : '行'}}
+        </retro-avatar>
+        <view class="user-meta">
+          <view class="user-name-line">
+            <text class="user-name">{{item.nickname || item.wolfNo}}</text>
+            <text wx:if="{{item.mutual}}" class="mutual-tag">互关</text>
+          </view>
+          <view class="user-no">ID: {{item.wolfNo || '--'}}</view>
+        </view>
+      </view>
+      <view class="user-actions">
+        <retro-button
           wx:if="{{active === 'followers' && !item.mutual}}"
           size="small"
           theme="primary"
           data-id="{{item.userId}}"
           catchtap="handleFollow">
           回关
-        </t-button>
-        <t-button
+        </retro-button>
+        <retro-button
           wx:if="{{active !== 'followers'}}"
           size="small"
           theme="default"
           data-id="{{item.userId}}"
           catchtap="handleUnfollow">
           取消关注
-        </t-button>
+        </retro-button>
       </view>
-    </t-cell>
+    </view>
   </view>
 </view>

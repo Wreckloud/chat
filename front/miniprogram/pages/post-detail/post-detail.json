@@ -1,9 +1,3 @@
 {
-  "navigationBarTitleText": "帖子详情",
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-avatar": "tdesign-miniprogram/avatar/avatar",
-    "t-input": "tdesign-miniprogram/input/input",
-    "t-empty": "tdesign-miniprogram/empty/empty"
-  }
+  "navigationBarTitleText": "帖子详情"
 }

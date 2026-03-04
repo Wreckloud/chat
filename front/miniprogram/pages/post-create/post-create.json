@@ -1,7 +1,3 @@
 {
-  "navigationBarTitleText": "发布帖子",
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-textarea": "tdesign-miniprogram/textarea/textarea"
-  }
+  "navigationBarTitleText": "发布帖子"
 }

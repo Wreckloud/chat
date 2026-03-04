@@ -1,9 +1,3 @@
 {
-  "navigationBarTitleText": "登录/注册",
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-input": "tdesign-miniprogram/input/input",
-    "t-cell": "tdesign-miniprogram/cell/cell",
-    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group"
-  }
+  "navigationBarTitleText": "登录/注册"
 }
