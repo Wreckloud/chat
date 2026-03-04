@@ -51,6 +51,13 @@
             class="form-input"
           />
 
+          <view wx:if="{{password}}" class="password-strength">
+            <text class="strength-tag strength-{{passwordStrengthLevel}}">
+              {{passwordStrengthLevel === 'strong' ? '强' : (passwordStrengthLevel === 'medium' ? '中' : '弱')}}
+            </text>
+            <text class="strength-text">{{passwordStrengthText}}</text>
+          </view>
+
           <retro-button 
             theme="primary" 
             size="large" 

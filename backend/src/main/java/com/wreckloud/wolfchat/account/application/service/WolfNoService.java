@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @Description 狼藉号分配服务，实现批量预生成 + 用完补充策略
@@ -39,6 +39,11 @@ public class WolfNoService {
      */
     private static final int MAX_RETRY_MULTIPLIER = 10;
 
+    /**
+     * 分配重试次数：并发冲突时最多重试次数
+     */
+    private static final int ALLOCATE_MAX_RETRY = 5;
+
     private final WfNoPoolMapper wfNoPoolMapper;
 
     /**
@@ -53,28 +58,29 @@ public class WolfNoService {
         // 1. 检查号码池中 UNUSED 数量，低于阈值时自动补充
         checkAndReplenishPool();
 
-        // 2. 从号码池随机获取一个 UNUSED 号码
-        WfNoPool noPool = getRandomUnusedWolfNo();
-        if (noPool == null) {
-            throw new BaseException(ErrorCode.WOLF_NO_POOL_EMPTY);
+        // 2. 并发冲突时进行有限重试（避免递归调用）
+        for (int retry = 1; retry <= ALLOCATE_MAX_RETRY; retry++) {
+            WfNoPool noPool = getRandomUnusedWolfNo();
+            if (noPool == null) {
+                throw new BaseException(ErrorCode.WOLF_NO_POOL_EMPTY);
+            }
+
+            LambdaUpdateWrapper<WfNoPool> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(WfNoPool::getId, noPool.getId())
+                    .eq(WfNoPool::getStatus, NoPoolStatus.UNUSED)
+                    .set(WfNoPool::getStatus, NoPoolStatus.USED)
+                    .set(WfNoPool::getUserId, userId);
+
+            int updateCount = wfNoPoolMapper.update(null, updateWrapper);
+            if (updateCount == 1) {
+                log.info("狼藉号分配成功: wolfNo={}, userId={}", noPool.getWolfNo(), userId);
+                return noPool.getWolfNo();
+            }
+
+            log.warn("狼藉号分配冲突，重试: wolfNo={}, retry={}/{}", noPool.getWolfNo(), retry, ALLOCATE_MAX_RETRY);
         }
 
-        // 3. 更新状态为 USED 并绑定 user_id
-        LambdaUpdateWrapper<WfNoPool> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfNoPool::getId, noPool.getId())
-                .eq(WfNoPool::getStatus, NoPoolStatus.UNUSED)
-                .set(WfNoPool::getStatus, NoPoolStatus.USED)
-                .set(WfNoPool::getUserId, userId);
-
-        int updateCount = wfNoPoolMapper.update(null, updateWrapper);
-        if (updateCount == 0) {
-            // 并发冲突，重试
-            log.warn("狼藉号分配冲突，重试: wolfNo={}", noPool.getWolfNo());
-            return allocateWolfNo(userId);
-        }
-
-        log.info("狼藉号分配成功: wolfNo={}, userId={}", noPool.getWolfNo(), userId);
-        return noPool.getWolfNo();
+        throw new BaseException(ErrorCode.WOLF_NO_ALLOCATE_FAILED);
     }
 
     /**
@@ -91,8 +97,7 @@ public class WolfNoService {
         }
 
         // 随机选择一个
-        Random random = new Random();
-        int index = random.nextInt(unusedList.size());
+        int index = ThreadLocalRandom.current().nextInt(unusedList.size());
         return unusedList.get(index);
     }
 
@@ -118,7 +123,6 @@ public class WolfNoService {
      * @param count 补充数量
      */
     private void replenishPool(int count) {
-        Random random = new Random();
         int added = 0;
         int maxRetries = count * MAX_RETRY_MULTIPLIER; // 最大重试次数
         int retries = 0;
@@ -127,7 +131,7 @@ public class WolfNoService {
             // 生成10位随机号码（范围：1000000000-9999999999，首位1-9）
             long min = 1000000000L;
             long max = 9999999999L;
-            long randomNo = min + (long) (random.nextDouble() * (max - min + 1));
+            long randomNo = ThreadLocalRandom.current().nextLong(min, max + 1);
             String wolfNo = String.valueOf(randomNo);
 
             // 检查是否已存在
@@ -140,8 +144,10 @@ public class WolfNoService {
                 WfNoPool newNo = new WfNoPool();
                 newNo.setWolfNo(wolfNo);
                 newNo.setStatus(NoPoolStatus.UNUSED);
-                wfNoPoolMapper.insert(newNo);
-                added++;
+                int insertRows = wfNoPoolMapper.insert(newNo);
+                if (insertRows == 1) {
+                    added++;
+                }
             }
 
             retries++;
@@ -162,7 +168,10 @@ public class WolfNoService {
         LambdaUpdateWrapper<WfNoPool> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfNoPool::getWolfNo, wolfNo)
                 .set(WfNoPool::getUserId, userId);
-        wfNoPoolMapper.update(null, updateWrapper);
+        int updateRows = wfNoPoolMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 }
 

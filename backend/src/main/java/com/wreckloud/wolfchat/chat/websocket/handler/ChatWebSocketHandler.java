@@ -45,16 +45,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
-        WsRequest request;
-        try {
-            request = JSON.parseObject(message.getPayload(), WsRequest.class);
-        } catch (Exception e) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息格式错误");
-            return;
-        }
-
-        if (request == null || request.getType() == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息类型不能为空");
+        WsRequest request = parseRequest(session, message.getPayload());
+        if (request == null) {
             return;
         }
 
@@ -77,48 +69,86 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.info("WS 连接关闭: sessionId={}, status={}", session.getId(), status);
     }
 
-    private void handleAuth(WebSocketSession session, WsRequest request) {
-        String token = request.getToken();
-        if (!StringUtils.hasText(token)) {
-            sendError(session, ErrorCode.UNAUTHORIZED, "token 不能为空");
-            return;
-        }
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-        if (!jwtUtil.validateToken(token)) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
-            return;
+    private WsRequest parseRequest(WebSocketSession session, String payload) {
+        WsRequest request;
+        try {
+            request = JSON.parseObject(payload, WsRequest.class);
+        } catch (Exception e) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息格式错误");
+            return null;
         }
 
-        Long userId = jwtUtil.getUserIdFromToken(token);
+        if (request == null || request.getType() == null) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息类型不能为空");
+            return null;
+        }
+        return request;
+    }
+
+    private void handleAuth(WebSocketSession session, WsRequest request) {
+        Long userId = authenticateUserId(session, request.getToken());
         if (userId == null) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return;
         }
 
         sessionManager.addSession(userId, session);
         log.info("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
+        sendAuthOk(session);
+        replayUndeliveredMessages(session, userId);
+    }
+
+    private Long authenticateUserId(WebSocketSession session, String rawToken) {
+        String token = normalizeToken(rawToken);
+        if (!StringUtils.hasText(token)) {
+            sendError(session, ErrorCode.UNAUTHORIZED, "token 不能为空");
+            return null;
+        }
+        if (!jwtUtil.validateToken(token)) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return null;
+        }
+
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        if (userId == null) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return null;
+        }
+        return userId;
+    }
+
+    private String normalizeToken(String rawToken) {
+        if (!StringUtils.hasText(rawToken)) {
+            return null;
+        }
+        if (rawToken.startsWith("Bearer ")) {
+            return rawToken.substring(7);
+        }
+        return rawToken;
+    }
+
+    private void sendAuthOk(WebSocketSession session) {
         WsResponse response = new WsResponse();
         response.setType(WsType.AUTH_OK);
         send(session, response);
+    }
 
-        // 推送未送达消息
+    private void replayUndeliveredMessages(WebSocketSession session, Long userId) {
+        // 离线补发只对当前认证会话执行；仅当推送成功后再标记 delivered。
         List<WfMessage> undelivered = messageService.listUndeliveredMessages(userId);
-        if (!undelivered.isEmpty()) {
-            log.info("WS 补发未送达消息: userId={}, count={}", userId, undelivered.size());
-            List<Long> deliveredIds = new ArrayList<>();
-            for (WfMessage message : undelivered) {
-                WsResponse push = new WsResponse();
-                push.setType(WsType.MESSAGE);
-                push.setData(MessageConverter.toMessageVO(message));
-                if (send(session, push)) {
-                    deliveredIds.add(message.getId());
-                }
+        if (undelivered.isEmpty()) {
+            return;
+        }
+
+        log.info("WS 补发未送达消息: userId={}, count={}", userId, undelivered.size());
+        List<Long> deliveredIds = new ArrayList<>();
+        for (WfMessage message : undelivered) {
+            WsResponse push = buildMessageResponse(message);
+            if (send(session, push)) {
+                deliveredIds.add(message.getId());
             }
-            if (!deliveredIds.isEmpty()) {
-                messageService.markDelivered(deliveredIds);
-            }
+        }
+        if (!deliveredIds.isEmpty()) {
+            messageService.markDelivered(deliveredIds);
         }
     }
 
@@ -130,13 +160,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        if (request.getConversationId() == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
-            return;
-        }
-
-        if (!StringUtils.hasText(request.getContent())) {
-            sendError(session, ErrorCode.MESSAGE_CONTENT_EMPTY, "消息内容不能为空", clientMsgId);
+        if (!validateSendRequest(session, request, clientMsgId)) {
             return;
         }
 
@@ -148,26 +172,52 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             );
 
             MessageVO messageVO = MessageConverter.toMessageVO(message);
-
-            WsResponse ack = new WsResponse();
-            ack.setType(WsType.ACK);
-            ack.setClientMsgId(request.getClientMsgId());
-            ack.setData(messageVO);
-            send(session, ack);
-
-            WsResponse push = new WsResponse();
-            push.setType(WsType.MESSAGE);
-            push.setData(messageVO);
-            int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
-            if (successCount > 0) {
-                messageService.markDelivered(List.of(message.getId()));
-                log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
-            }
+            sendAck(session, request.getClientMsgId(), messageVO);
+            pushMessageToReceiver(message, messageVO);
         } catch (BaseException e) {
             sendError(session, e.getCode(), e.getMessage(), clientMsgId);
         } catch (Exception e) {
             log.error("WS 发送消息失败: {}", e.getMessage(), e);
             sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
+        }
+    }
+
+    private boolean validateSendRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
+        if (request.getConversationId() == null) {
+            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
+            return false;
+        }
+
+        if (!StringUtils.hasText(request.getContent())) {
+            sendError(session, ErrorCode.MESSAGE_CONTENT_EMPTY, "消息内容不能为空", clientMsgId);
+            return false;
+        }
+        return true;
+    }
+
+    private void sendAck(WebSocketSession session, String clientMsgId, MessageVO messageVO) {
+        WsResponse ack = new WsResponse();
+        ack.setType(WsType.ACK);
+        ack.setClientMsgId(clientMsgId);
+        ack.setData(messageVO);
+        send(session, ack);
+    }
+
+    private WsResponse buildMessageResponse(WfMessage message) {
+        WsResponse push = new WsResponse();
+        push.setType(WsType.MESSAGE);
+        push.setData(MessageConverter.toMessageVO(message));
+        return push;
+    }
+
+    private void pushMessageToReceiver(WfMessage message, MessageVO messageVO) {
+        WsResponse push = new WsResponse();
+        push.setType(WsType.MESSAGE);
+        push.setData(messageVO);
+        int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
+        if (successCount > 0) {
+            messageService.markDelivered(List.of(message.getId()));
+            log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
         }
     }
 

@@ -21,7 +21,7 @@ DROP TABLE IF EXISTS `wf_user`;
 CREATE TABLE `wf_user` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `wolf_no` VARCHAR(10) NOT NULL COMMENT '狼藉号（唯一标识）',
-    `login_key` VARCHAR(64) NOT NULL COMMENT '登录密码（预留哈希空间）',
+    `login_key` VARCHAR(64) NOT NULL COMMENT '登录密码哈希（BCrypt）',
     `nickname` VARCHAR(64) DEFAULT NULL COMMENT '行者名（行者在群落中的称呼，将被其他行者看到，注册后可修改）',
     `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL-正常，DISABLED-禁用',

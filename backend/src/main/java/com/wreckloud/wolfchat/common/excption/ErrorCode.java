@@ -26,6 +26,8 @@ public enum ErrorCode {
     WOLF_NO_NOT_FOUND(2005, "狼藉号不存在"),
     LOGIN_KEY_ERROR(2006, "密码错误"),
     USER_DISABLED(2007, "行者账号已禁用"),
+    OLD_LOGIN_KEY_ERROR(2008, "原密码错误"),
+    NEW_LOGIN_KEY_NOT_MATCH(2009, "新密码与确认密码不一致"),
 
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),

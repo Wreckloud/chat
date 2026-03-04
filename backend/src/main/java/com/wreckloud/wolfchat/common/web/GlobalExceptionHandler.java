@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.common.web;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,8 +33,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class, IllegalArgumentException.class})
     public Result<?> handleParamException(Exception e) {
-        log.warn("参数异常: {}", ErrorCode.PARAM_ERROR.getMessage());
-        return Result.error(ErrorCode.PARAM_ERROR.getCode(), ErrorCode.PARAM_ERROR.getMessage());
+        String message = resolveParamErrorMessage(e);
+        log.warn("参数异常: {}", message);
+        return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
     }
 
     /**
@@ -43,5 +45,33 @@ public class GlobalExceptionHandler {
     public Result<?> handleException(Exception e) {
         log.error("系统异常", e);
         return Result.error(ErrorCode.SYSTEM_ERROR);
+    }
+
+    private String resolveParamErrorMessage(Exception e) {
+        if (e instanceof MethodArgumentNotValidException) {
+            MethodArgumentNotValidException ex = (MethodArgumentNotValidException) e;
+            if (ex.getBindingResult().hasFieldErrors()) {
+                String msg = ex.getBindingResult().getFieldError().getDefaultMessage();
+                if (StringUtils.hasText(msg)) {
+                    return msg;
+                }
+            }
+        }
+
+        if (e instanceof ConstraintViolationException) {
+            ConstraintViolationException ex = (ConstraintViolationException) e;
+            if (!ex.getConstraintViolations().isEmpty()) {
+                String msg = ex.getConstraintViolations().iterator().next().getMessage();
+                if (StringUtils.hasText(msg)) {
+                    return msg;
+                }
+            }
+        }
+
+        if (e instanceof IllegalArgumentException && StringUtils.hasText(e.getMessage())) {
+            return e.getMessage();
+        }
+
+        return ErrorCode.PARAM_ERROR.getMessage();
     }
 }

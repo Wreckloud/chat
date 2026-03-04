@@ -2,8 +2,8 @@ package com.wreckloud.wolfchat.community.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateCommentDTO;
@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,7 +38,7 @@ import java.util.stream.Collectors;
 public class PostService {
     private final WfPostMapper wfPostMapper;
     private final WfCommentMapper wfCommentMapper;
-    private final WfUserMapper wfUserMapper;
+    private final UserService userService;
 
     /**
      * 发布帖子
@@ -51,9 +50,12 @@ public class PostService {
         post.setContent(dto.getContent());
         post.setRoomId(dto.getRoomId());
         post.setStatus(PostStatus.NORMAL);
-        wfPostMapper.insert(post);
+        int insertRows = wfPostMapper.insert(post);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
 
-        WfUser user = wfUserMapper.selectById(userId);
+        WfUser user = userService.getByIdOrThrow(userId);
         return toPostVO(post, user);
     }
 
@@ -68,7 +70,7 @@ public class PostService {
         Page<WfPost> result = wfPostMapper.selectPage(pageReq, queryWrapper);
 
         List<WfPost> records = result.getRecords();
-        Map<Long, WfUser> userMap = getUserMap(records.stream()
+        Map<Long, WfUser> userMap = userService.getUserMap(records.stream()
                 .map(WfPost::getUserId)
                 .collect(Collectors.toList()));
 
@@ -95,7 +97,7 @@ public class PostService {
             throw new BaseException(ErrorCode.POST_NOT_FOUND);
         }
 
-        WfUser user = wfUserMapper.selectById(post.getUserId());
+        WfUser user = userService.getByIdOrThrow(post.getUserId());
         PostVO postVO = toPostVO(post, user);
 
         List<CommentVO> comments = getComments(postId);
@@ -120,7 +122,10 @@ public class PostService {
         comment.setUserId(userId);
         comment.setContent(dto.getContent());
         comment.setStatus(CommentStatus.NORMAL);
-        wfCommentMapper.insert(comment);
+        int insertRows = wfCommentMapper.insert(comment);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 
     /**
@@ -133,7 +138,7 @@ public class PostService {
                 .orderByAsc(WfComment::getCreateTime);
         List<WfComment> comments = wfCommentMapper.selectList(queryWrapper);
 
-        Map<Long, WfUser> userMap = getUserMap(comments.stream()
+        Map<Long, WfUser> userMap = userService.getUserMap(comments.stream()
                 .map(WfComment::getUserId)
                 .collect(Collectors.toList()));
 
@@ -143,18 +148,6 @@ public class PostService {
             list.add(toCommentVO(comment, user));
         }
         return list;
-    }
-
-    private Map<Long, WfUser> getUserMap(List<Long> userIds) {
-        if (userIds.isEmpty()) {
-            return new HashMap<>();
-        }
-        List<WfUser> users = wfUserMapper.selectBatchIds(userIds);
-        Map<Long, WfUser> map = new HashMap<>();
-        for (WfUser user : users) {
-            map.put(user.getId(), user);
-        }
-        return map;
     }
 
     private PostVO toPostVO(WfPost post, WfUser user) {

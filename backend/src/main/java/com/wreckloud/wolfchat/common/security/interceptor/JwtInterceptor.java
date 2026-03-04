@@ -40,6 +40,9 @@ public class JwtInterceptor implements HandlerInterceptor {
         // 设置用户上下文
         Long userId = jwtUtil.getUserIdFromToken(token);
         String wolfNo = jwtUtil.getWolfNoFromToken(token);
+        if (userId == null || !StringUtils.hasText(wolfNo)) {
+            throw new BaseException(ErrorCode.TOKEN_INVALID);
+        }
         UserContext.setUserId(userId);
         UserContext.setWolfNo(wolfNo);
 

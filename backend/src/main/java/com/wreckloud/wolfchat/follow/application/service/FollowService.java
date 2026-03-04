@@ -2,8 +2,8 @@ package com.wreckloud.wolfchat.follow.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.follow.domain.enums.FollowStatus;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FollowService {
     private final WfFollowMapper wfFollowMapper;
-    private final WfUserMapper wfUserMapper;
+    private final UserService userService;
 
     /**
      * 关注行者
@@ -41,10 +40,7 @@ public class FollowService {
             throw new BaseException(ErrorCode.FOLLOW_SELF);
         }
 
-        WfUser target = wfUserMapper.selectById(followeeId);
-        if (target == null) {
-            throw new BaseException(ErrorCode.USER_NOT_FOUND);
-        }
+        userService.getByIdOrThrow(followeeId);
 
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFollowerId, followerId)
@@ -58,7 +54,10 @@ public class FollowService {
             LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(WfFollow::getId, follow.getId())
                     .set(WfFollow::getStatus, FollowStatus.FOLLOWING);
-            wfFollowMapper.update(null, updateWrapper);
+            int updateRows = wfFollowMapper.update(null, updateWrapper);
+            if (updateRows != 1) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
             return;
         }
 
@@ -66,7 +65,10 @@ public class FollowService {
         newFollow.setFollowerId(followerId);
         newFollow.setFolloweeId(followeeId);
         newFollow.setStatus(FollowStatus.FOLLOWING);
-        wfFollowMapper.insert(newFollow);
+        int insertRows = wfFollowMapper.insert(newFollow);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 
     /**
@@ -86,7 +88,10 @@ public class FollowService {
         LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfFollow::getId, follow.getId())
                 .set(WfFollow::getStatus, FollowStatus.UNFOLLOWED);
-        wfFollowMapper.update(null, updateWrapper);
+        int updateRows = wfFollowMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 
     /**
@@ -125,9 +130,7 @@ public class FollowService {
             return new ArrayList<>();
         }
 
-        List<WfUser> users = wfUserMapper.selectBatchIds(followingSet);
-        Map<Long, WfUser> userMap = users.stream()
-                .collect(Collectors.toMap(WfUser::getId, user -> user));
+        Map<Long, WfUser> userMap = userService.getUserMap(followingSet);
 
         List<FollowUserVO> result = new ArrayList<>();
         for (Long id : followingSet) {
@@ -195,11 +198,7 @@ public class FollowService {
             return new ArrayList<>();
         }
 
-        List<WfUser> users = wfUserMapper.selectBatchIds(userIds);
-        Map<Long, WfUser> userMap = new HashMap<>();
-        for (WfUser user : users) {
-            userMap.put(user.getId(), user);
-        }
+        Map<Long, WfUser> userMap = userService.getUserMap(userIds);
 
         List<FollowUserVO> result = new ArrayList<>();
         for (Long id : userIds) {

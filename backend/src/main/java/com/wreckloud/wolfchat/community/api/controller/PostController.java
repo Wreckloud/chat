@@ -30,7 +30,8 @@ public class PostController {
     @Operation(summary = "发布帖子", description = "发布一条帖子")
     @PostMapping
     public Result<PostVO> createPost(@RequestBody @Validated CreatePostDTO dto) {
-        PostVO post = postService.createPost(UserContext.getUserId(), dto);
+        Long userId = UserContext.getRequiredUserId();
+        PostVO post = postService.createPost(userId, dto);
         return Result.success("发布成功", post);
     }
 
@@ -53,7 +54,8 @@ public class PostController {
     @PostMapping("/{postId}/comments")
     public Result<Void> addComment(@PathVariable Long postId,
                                    @RequestBody @Validated CreateCommentDTO dto) {
-        postService.addComment(UserContext.getUserId(), postId, dto);
+        Long userId = UserContext.getRequiredUserId();
+        postService.addComment(userId, postId, dto);
         return Result.success("评论成功", null);
     }
 

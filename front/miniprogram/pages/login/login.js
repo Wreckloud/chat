@@ -5,6 +5,7 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
+const { evaluatePasswordStrength } = require('../../utils/password')
 
 Page({
   data: {
@@ -13,6 +14,8 @@ Page({
     // 注册表单
     nickname: '',
     password: '',
+    passwordStrengthLevel: '',
+    passwordStrengthText: '',
     // 登录表单
     wolfNo: '',
     loginKey: '',
@@ -55,6 +58,8 @@ Page({
       mode: 'register',
       nickname: '',
       password: '',
+      passwordStrengthLevel: '',
+      passwordStrengthText: '',
       showResult: false,
       registeredWolfNo: ''
     })
@@ -73,8 +78,12 @@ Page({
    * 输入密码（注册）
    */
   onPasswordInput(e) {
+    const password = e.detail.value || ''
+    const strength = evaluatePasswordStrength(password)
     this.setData({
-      password: e.detail.value || ''
+      password: password,
+      passwordStrengthLevel: strength.level,
+      passwordStrengthText: strength.text
     })
   },
 

@@ -2,8 +2,9 @@ package com.wreckloud.wolfchat.chat.conversation.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
+import com.wreckloud.wolfchat.chat.conversation.api.vo.ConversationVO;
 import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
 import com.wreckloud.wolfchat.chat.conversation.infra.mapper.WfConversationMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ConversationService {
     private final WfConversationMapper conversationMapper;
-    private final WfUserMapper userMapper;
+    private final UserService userService;
     private final FollowService followService;
 
     /**
@@ -65,7 +66,10 @@ public class ConversationService {
         newConversation.setUserAId(userAId);
         newConversation.setUserBId(userBId);
         try {
-            conversationMapper.insert(newConversation);
+            int insertRows = conversationMapper.insert(newConversation);
+            if (insertRows != 1) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
             log.info("创建新会话成功: conversationId={}, userAId={}, userBId={}", 
                     newConversation.getId(), userAId, userBId);
         } catch (DuplicateKeyException ex) {
@@ -107,7 +111,10 @@ public class ConversationService {
                 .set(WfConversation::getLastMessageId, messageId)
                 .set(WfConversation::getLastMessage, message)
                 .set(WfConversation::getLastMessageTime, time);
-        conversationMapper.update(null, updateWrapper);
+        int updateRows = conversationMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 
     /**
@@ -139,19 +146,46 @@ public class ConversationService {
     public Long getTargetUserId(WfConversation conversation, Long currentUserId) {
         if (conversation.getUserAId().equals(currentUserId)) {
             return conversation.getUserBId();
-        } else {
+        }
+        if (conversation.getUserBId().equals(currentUserId)) {
             return conversation.getUserAId();
         }
+        throw new BaseException(ErrorCode.NOT_CONVERSATION_MEMBER);
     }
 
     /**
-     * 批量获取用户信息
+     * 获取当前用户会话列表（VO）
      */
-    public Map<Long, WfUser> getUserMap(Collection<Long> userIds) {
-        if (userIds == null || userIds.isEmpty()) {
-            return new HashMap<>();
+    public List<ConversationVO> listConversationVOs(Long userId) {
+        List<WfConversation> conversations = listConversations(userId);
+        if (conversations.isEmpty()) {
+            return Collections.emptyList();
         }
-        List<WfUser> users = userMapper.selectBatchIds(userIds);
-        return users.stream().collect(Collectors.toMap(WfUser::getId, user -> user));
+
+        List<Long> targetUserIds = conversations.stream()
+                .map(conversation -> getTargetUserId(conversation, userId))
+                .collect(Collectors.toList());
+        Map<Long, WfUser> userMap = userService.getUserMap(targetUserIds);
+
+        List<ConversationVO> result = new ArrayList<>();
+        for (WfConversation conversation : conversations) {
+            Long targetUserId = getTargetUserId(conversation, userId);
+            WfUser targetUser = userMap.get(targetUserId);
+            if (targetUser == null) {
+                continue;
+            }
+
+            ConversationVO vo = new ConversationVO();
+            vo.setConversationId(conversation.getId());
+            vo.setTargetUserId(targetUserId);
+            vo.setTargetWolfNo(targetUser.getWolfNo());
+            vo.setTargetNickname(targetUser.getNickname());
+            vo.setTargetAvatar(targetUser.getAvatar());
+            vo.setLastMessage(conversation.getLastMessage());
+            vo.setLastMessageTime(conversation.getLastMessageTime());
+            result.add(vo);
+        }
+        return result;
     }
+
 }

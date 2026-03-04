@@ -1,17 +1,17 @@
 package com.wreckloud.wolfchat.account.application.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
+import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
     private final WfUserMapper wfUserMapper;
     private final WolfNoService wolfNoService;
+    private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 注册
@@ -45,10 +47,13 @@ public class AuthService {
         // 2. 创建行者
         WfUser user = new WfUser();
         user.setWolfNo(wolfNo);
-        user.setLoginKey(password); // TODO:阶段1简化存储，后续升级为哈希存储
+        user.setLoginKey(encodeLoginKey(password));
         user.setNickname(nickname);
         user.setStatus(UserStatus.NORMAL);
-        wfUserMapper.insert(user);
+        int insertRows = wfUserMapper.insert(user);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
 
         // 3. 更新号码池中的 userId（分配时userId为null，现在更新为实际userId）
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
@@ -63,32 +68,45 @@ public class AuthService {
      * 验证狼藉号+密码，返回 token
      *
      * @param wolfNo  狼藉号
-     * @param loginKey 登录密码
+     * @param loginKey 登录密码（明文）
      * @return 登录响应（包含 token、userInfo，不包含 loginKey）
      */
     public LoginVO login(String wolfNo, String loginKey) {
-        // 1. 查询行者
-        LambdaQueryWrapper<WfUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfUser::getWolfNo, wolfNo);
-        WfUser user = wfUserMapper.selectOne(queryWrapper);
+        // 1. 查询可用行者
+        WfUser user = userService.getEnabledByWolfNoOrThrow(wolfNo);
 
-        if (user == null) {
-            throw new BaseException(ErrorCode.WOLF_NO_NOT_FOUND);
-        }
+        // 2. 验证密码（BCrypt）
+        verifyLoginKey(loginKey, user.getLoginKey(), ErrorCode.LOGIN_KEY_ERROR);
 
-        // 2. 检查状态
-        if (UserStatus.DISABLED.equals(user.getStatus())) {
-            throw new BaseException(ErrorCode.USER_DISABLED);
-        }
-
-        // 3. 验证密码（阶段1简化，直接比较明文）
-        if (!loginKey.equals(user.getLoginKey())) {
-            throw new BaseException(ErrorCode.LOGIN_KEY_ERROR);
-        }
-
-        // 4. 构建并返回登录响应
+        // 3. 构建并返回登录响应
         log.info("行者登录成功: wolfNo={}, userId={}", wolfNo, user.getId());
         return buildLoginVO(user);
+    }
+
+    /**
+     * 修改登录密码
+     *
+     * @param userId 当前登录行者ID
+     * @param oldLoginKey 原密码（明文）
+     * @param newLoginKey 新密码（明文）
+     * @param confirmLoginKey 确认密码（明文）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, String oldLoginKey, String newLoginKey, String confirmLoginKey) {
+        WfUser user = userService.getEnabledByIdOrThrow(userId);
+        verifyLoginKey(oldLoginKey, user.getLoginKey(), ErrorCode.OLD_LOGIN_KEY_ERROR);
+
+        if (!newLoginKey.equals(confirmLoginKey)) {
+            throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
+        }
+
+        user.setLoginKey(encodeLoginKey(newLoginKey));
+        int updateRows = wfUserMapper.updateById(user);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+
+        log.info("行者修改密码成功: userId={}", userId);
     }
 
     /**
@@ -110,6 +128,16 @@ public class AuthService {
         loginVO.setUserInfo(userVO);
 
         return loginVO;
+    }
+
+    private String encodeLoginKey(String rawLoginKey) {
+        return passwordEncoder.encode(rawLoginKey);
+    }
+
+    private void verifyLoginKey(String rawLoginKey, String encodedLoginKey, ErrorCode errorCode) {
+        if (!passwordEncoder.matches(rawLoginKey, encodedLoginKey)) {
+            throw new BaseException(errorCode);
+        }
     }
 
 }

@@ -32,6 +32,7 @@ public class MessageService {
      * 离线补发上限，避免单次补发过多导致阻塞
      */
     private static final int UNDELIVERED_LIMIT = 200;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
@@ -43,13 +44,8 @@ public class MessageService {
     @Transactional(rollbackFor = Exception.class)
     public WfMessage sendMessage(Long userId, Long conversationId, String content) {
         log.info("发送消息: userId={}, conversationId={}", userId, conversationId);
-        
-        // 内容校验：trim 后检查是否为空
-        if (content == null || content.trim().isEmpty()) {
-            log.warn("消息内容为空: userId={}", userId);
-            throw new BaseException(ErrorCode.MESSAGE_CONTENT_EMPTY);
-        }
-        content = content.trim();
+
+        String normalizedContent = normalizeContent(content, userId);
 
         // 校验会话存在且用户是参与者
         conversationService.validateConversationMember(conversationId, userId);
@@ -69,18 +65,21 @@ public class MessageService {
         message.setConversationId(conversationId);
         message.setSenderId(userId);
         message.setReceiverId(receiverId);
-        message.setContent(content);
+        message.setContent(normalizedContent);
         message.setMsgType(MessageType.TEXT);
         message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
         message.setCreateTime(LocalDateTime.now());
-        messageMapper.insert(message);
+        int insertRows = messageMapper.insert(message);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
         log.info("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
 
         // 更新会话的最近消息信息
         conversationService.updateLastMessage(
                 conversationId,
                 message.getId(),
-                content.length() > 100 ? content.substring(0, 100) : content,
+                normalizedContent.length() > 100 ? normalizedContent.substring(0, 100) : normalizedContent,
                 message.getCreateTime()
         );
 
@@ -91,6 +90,7 @@ public class MessageService {
      * 分页查询消息列表
      */
     public Page<WfMessage> listMessages(Long userId, Long conversationId, Integer pageNum, Integer pageSize) {
+        validatePageParams(pageNum, pageSize);
         log.info("查询消息列表: userId={}, conversationId={}, page={}, size={}", 
                 userId, conversationId, pageNum, pageSize);
         
@@ -131,8 +131,25 @@ public class MessageService {
         WfMessage update = new WfMessage();
         update.setDelivered(MessageDeliveryStatus.DELIVERED);
         update.setDeliveredTime(LocalDateTime.now());
-        messageMapper.update(update, new LambdaQueryWrapper<WfMessage>()
+        int updateRows = messageMapper.update(update, new LambdaQueryWrapper<WfMessage>()
                 .in(WfMessage::getId, messageIds));
+        if (updateRows == 0) {
+            log.warn("标记消息送达未命中: messageIds={}", messageIds);
+        }
+    }
+
+    private String normalizeContent(String content, Long userId) {
+        if (content == null || content.trim().isEmpty()) {
+            log.warn("消息内容为空: userId={}", userId);
+            throw new BaseException(ErrorCode.MESSAGE_CONTENT_EMPTY);
+        }
+        return content.trim();
+    }
+
+    private void validatePageParams(Integer pageNum, Integer pageSize) {
+        if (pageNum == null || pageNum < 1 || pageSize == null || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
     }
 }
 
