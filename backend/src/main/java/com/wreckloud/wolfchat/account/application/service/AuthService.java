@@ -1,6 +1,5 @@
 package com.wreckloud.wolfchat.account.application.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
@@ -12,8 +11,8 @@ import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -28,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
     private final WfUserMapper wfUserMapper;
     private final WolfNoService wolfNoService;
+    private final UserService userService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -47,10 +47,13 @@ public class AuthService {
         // 2. 创建行者
         WfUser user = new WfUser();
         user.setWolfNo(wolfNo);
-        user.setLoginKey(passwordEncoder.encode(password));
+        user.setLoginKey(encodeLoginKey(password));
         user.setNickname(nickname);
         user.setStatus(UserStatus.NORMAL);
-        wfUserMapper.insert(user);
+        int insertRows = wfUserMapper.insert(user);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
 
         // 3. 更新号码池中的 userId（分配时userId为null，现在更新为实际userId）
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
@@ -69,26 +72,13 @@ public class AuthService {
      * @return 登录响应（包含 token、userInfo，不包含 loginKey）
      */
     public LoginVO login(String wolfNo, String loginKey) {
-        // 1. 查询行者
-        LambdaQueryWrapper<WfUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfUser::getWolfNo, wolfNo);
-        WfUser user = wfUserMapper.selectOne(queryWrapper);
+        // 1. 查询可用行者
+        WfUser user = userService.getEnabledByWolfNoOrThrow(wolfNo);
 
-        if (user == null) {
-            throw new BaseException(ErrorCode.WOLF_NO_NOT_FOUND);
-        }
+        // 2. 验证密码（BCrypt）
+        verifyLoginKey(loginKey, user.getLoginKey(), ErrorCode.LOGIN_KEY_ERROR);
 
-        // 2. 检查状态
-        if (UserStatus.DISABLED.equals(user.getStatus())) {
-            throw new BaseException(ErrorCode.USER_DISABLED);
-        }
-
-        // 3. 验证密码（BCrypt）
-        if (!passwordEncoder.matches(loginKey, user.getLoginKey())) {
-            throw new BaseException(ErrorCode.LOGIN_KEY_ERROR);
-        }
-
-        // 4. 构建并返回登录响应
+        // 3. 构建并返回登录响应
         log.info("行者登录成功: wolfNo={}, userId={}", wolfNo, user.getId());
         return buildLoginVO(user);
     }
@@ -103,25 +93,18 @@ public class AuthService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(Long userId, String oldLoginKey, String newLoginKey, String confirmLoginKey) {
-        WfUser user = wfUserMapper.selectById(userId);
-        if (user == null) {
-            throw new BaseException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        if (UserStatus.DISABLED.equals(user.getStatus())) {
-            throw new BaseException(ErrorCode.USER_DISABLED);
-        }
-
-        if (!passwordEncoder.matches(oldLoginKey, user.getLoginKey())) {
-            throw new BaseException(ErrorCode.OLD_LOGIN_KEY_ERROR);
-        }
+        WfUser user = userService.getEnabledByIdOrThrow(userId);
+        verifyLoginKey(oldLoginKey, user.getLoginKey(), ErrorCode.OLD_LOGIN_KEY_ERROR);
 
         if (!newLoginKey.equals(confirmLoginKey)) {
             throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
         }
 
-        user.setLoginKey(passwordEncoder.encode(newLoginKey));
-        wfUserMapper.updateById(user);
+        user.setLoginKey(encodeLoginKey(newLoginKey));
+        int updateRows = wfUserMapper.updateById(user);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
 
         log.info("行者修改密码成功: userId={}", userId);
     }
@@ -145,6 +128,16 @@ public class AuthService {
         loginVO.setUserInfo(userVO);
 
         return loginVO;
+    }
+
+    private String encodeLoginKey(String rawLoginKey) {
+        return passwordEncoder.encode(rawLoginKey);
+    }
+
+    private void verifyLoginKey(String rawLoginKey, String encodedLoginKey, ErrorCode errorCode) {
+        if (!passwordEncoder.matches(rawLoginKey, encodedLoginKey)) {
+            throw new BaseException(errorCode);
+        }
     }
 
 }

@@ -26,35 +26,40 @@ public class FollowController {
     @Operation(summary = "关注行者", description = "关注指定行者")
     @PostMapping("/{targetUserId}")
     public Result<Void> follow(@PathVariable Long targetUserId) {
-        followService.follow(UserContext.getUserId(), targetUserId);
+        Long userId = UserContext.getRequiredUserId();
+        followService.follow(userId, targetUserId);
         return Result.success("关注成功", null);
     }
 
     @Operation(summary = "取消关注", description = "取消关注指定行者")
     @DeleteMapping("/{targetUserId}")
     public Result<Void> unfollow(@PathVariable Long targetUserId) {
-        followService.unfollow(UserContext.getUserId(), targetUserId);
+        Long userId = UserContext.getRequiredUserId();
+        followService.unfollow(userId, targetUserId);
         return Result.success("已取消关注", null);
     }
 
     @Operation(summary = "关注列表", description = "获取当前行者的关注列表")
     @GetMapping("/following")
     public Result<List<FollowUserVO>> getFollowing() {
-        List<FollowUserVO> list = followService.getFollowing(UserContext.getUserId());
+        Long userId = UserContext.getRequiredUserId();
+        List<FollowUserVO> list = followService.getFollowing(userId);
         return Result.success(list);
     }
 
     @Operation(summary = "粉丝列表", description = "获取当前行者的粉丝列表")
     @GetMapping("/followers")
     public Result<List<FollowUserVO>> getFollowers() {
-        List<FollowUserVO> list = followService.getFollowers(UserContext.getUserId());
+        Long userId = UserContext.getRequiredUserId();
+        List<FollowUserVO> list = followService.getFollowers(userId);
         return Result.success(list);
     }
 
     @Operation(summary = "互关列表", description = "获取当前行者的互关列表")
     @GetMapping("/mutual")
     public Result<List<FollowUserVO>> getMutual() {
-        List<FollowUserVO> list = followService.getMutual(UserContext.getUserId());
+        Long userId = UserContext.getRequiredUserId();
+        List<FollowUserVO> list = followService.getMutual(userId);
         return Result.success(list);
     }
 }

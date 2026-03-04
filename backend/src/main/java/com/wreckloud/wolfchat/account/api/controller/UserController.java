@@ -1,13 +1,9 @@
 package com.wreckloud.wolfchat.account.api.controller;
 
-import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.dto.ChangePasswordDTO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
-import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
-import com.wreckloud.wolfchat.common.excption.BaseException;
-import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
-    private final WfUserMapper wfUserMapper;
+    private final UserService userService;
     private final AuthService authService;
 
     /**
@@ -40,17 +36,8 @@ public class UserController {
     @Operation(summary = "获取当前行者信息", description = "获取当前登录行者的信息（需要登录）")
     @GetMapping("/me")
     public Result<UserVO> getCurrentUser() {
-        Long userId = UserContext.getUserId();
-        if (userId == null) {
-            throw new BaseException(ErrorCode.UNAUTHORIZED);
-        }
-
-        WfUser user = wfUserMapper.selectById(userId);
-        if (user == null) {
-            throw new BaseException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        return Result.success(UserConverter.toUserVO(user));
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(userService.getUserVOById(userId));
     }
 
     /**
@@ -59,16 +46,7 @@ public class UserController {
     @Operation(summary = "获取指定行者信息", description = "根据行者ID获取基础信息（需要登录）")
     @GetMapping("/{userId}")
     public Result<UserVO> getUserById(@PathVariable Long userId) {
-        if (userId == null) {
-            throw new BaseException(ErrorCode.PARAM_ERROR);
-        }
-
-        WfUser user = wfUserMapper.selectById(userId);
-        if (user == null) {
-            throw new BaseException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        return Result.success(UserConverter.toUserVO(user));
+        return Result.success(userService.getUserVOById(userId));
     }
 
     /**
@@ -77,11 +55,7 @@ public class UserController {
     @Operation(summary = "修改密码", description = "校验原密码后修改当前登录行者密码（需要登录）")
     @PutMapping("/password")
     public Result<Void> changePassword(@RequestBody @Validated ChangePasswordDTO dto) {
-        Long userId = UserContext.getUserId();
-        if (userId == null) {
-            throw new BaseException(ErrorCode.UNAUTHORIZED);
-        }
-
+        Long userId = UserContext.getRequiredUserId();
         authService.changePassword(userId, dto.getOldLoginKey(), dto.getNewLoginKey(), dto.getConfirmLoginKey());
         return Result.success("密码修改成功", null);
     }

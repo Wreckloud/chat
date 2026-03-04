@@ -34,8 +34,9 @@ public class MessageController {
     public Result<MessageVO> sendMessage(
             @PathVariable Long conversationId,
             @Valid @RequestBody SendMessageDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
         WfMessage message = messageService.sendMessage(
-                UserContext.getUserId(),
+                userId,
                 conversationId,
                 dto.getContent()
         );
@@ -48,8 +49,9 @@ public class MessageController {
             @PathVariable Long conversationId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
+        Long userId = UserContext.getRequiredUserId();
         Page<WfMessage> messagePage = messageService.listMessages(
-                UserContext.getUserId(),
+                userId,
                 conversationId,
                 page,
                 size
