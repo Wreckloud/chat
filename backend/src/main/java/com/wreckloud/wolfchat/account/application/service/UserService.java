@@ -2,6 +2,7 @@ package com.wreckloud.wolfchat.account.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wreckloud.wolfchat.account.api.converter.UserConverter;
+import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
@@ -14,6 +15,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -30,8 +32,15 @@ public class UserService {
     /**
      * 根据行者ID获取用户信息 VO
      */
-    public UserVO getUserVOById(Long userId) {
+    public UserVO getCurrentUserVOById(Long userId) {
         return UserConverter.toUserVO(getByIdOrThrow(userId));
+    }
+
+    /**
+     * 根据行者ID获取公开用户信息 VO（不包含隐私字段）
+     */
+    public UserPublicVO getPublicUserVOById(Long userId) {
+        return UserConverter.toUserPublicVO(getByIdOrThrow(userId));
     }
 
     /**
@@ -79,6 +88,42 @@ public class UserService {
      */
     public WfUser getEnabledByWolfNoOrThrow(String wolfNo) {
         WfUser user = getByWolfNoOrThrow(wolfNo);
+        checkEnabled(user);
+        return user;
+    }
+
+    /**
+     * 根据邮箱查询行者实体，未找到返回 null
+     */
+    public WfUser findByEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        LambdaQueryWrapper<WfUser> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfUser::getEmail, normalizedEmail);
+        return wfUserMapper.selectOne(queryWrapper);
+    }
+
+    /**
+     * 根据邮箱获取行者实体，不存在抛异常
+     */
+    public WfUser getByEmailOrThrow(String email) {
+        if (!StringUtils.hasText(email)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        WfUser user = findByEmail(email);
+        if (user == null) {
+            throw new BaseException(ErrorCode.EMAIL_NOT_BOUND);
+        }
+        return user;
+    }
+
+    /**
+     * 根据邮箱获取可用账号（状态必须为 NORMAL）
+     */
+    public WfUser getEnabledByEmailOrThrow(String email) {
+        WfUser user = getByEmailOrThrow(email);
         checkEnabled(user);
         return user;
     }

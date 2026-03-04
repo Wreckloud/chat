@@ -14,9 +14,9 @@ import javax.validation.constraints.Size;
 @Data
 @Schema(description = "登录请求")
 public class LoginDTO {
-    @NotBlank(message = "狼藉号不能为空")
-    @Schema(description = "狼藉号", example = "1234567890", required = true)
-    private String wolfNo;
+    @NotBlank(message = "账号不能为空")
+    @Schema(description = "登录账号（支持狼藉号或邮箱）", example = "1234567890", required = true)
+    private String account;
 
     @NotBlank(message = "密码不能为空")
     @Size(min = 6, max = 64, message = "密码长度必须在6-64个字符之间")

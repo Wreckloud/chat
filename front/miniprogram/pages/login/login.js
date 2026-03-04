@@ -7,18 +7,24 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { evaluatePasswordStrength } = require('../../utils/password')
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 Page({
   data: {
     // 登录模式：'register' 注册，'login' 登录
     mode: 'login',
+
     // 注册表单
     nickname: '',
     password: '',
+    email: '',
     passwordStrengthLevel: '',
     passwordStrengthText: '',
+
     // 登录表单
-    wolfNo: '',
+    account: '',
     loginKey: '',
+
     // 注册结果
     showResult: false,
     registeredWolfNo: '',
@@ -45,7 +51,7 @@ Page({
   switchToLogin() {
     this.setData({
       mode: 'login',
-      wolfNo: '',
+      account: '',
       loginKey: ''
     })
   },
@@ -58,6 +64,7 @@ Page({
       mode: 'register',
       nickname: '',
       password: '',
+      email: '',
       passwordStrengthLevel: '',
       passwordStrengthText: '',
       showResult: false,
@@ -88,11 +95,20 @@ Page({
   },
 
   /**
-   * 输入狼藉号（登录）
+   * 输入邮箱（注册）
    */
-  onWolfNoInput(e) {
+  onEmailInput(e) {
     this.setData({
-      wolfNo: e.detail.value || ''
+      email: e.detail.value || ''
+    })
+  },
+
+  /**
+   * 输入账号（登录）
+   */
+  onAccountInput(e) {
+    this.setData({
+      account: e.detail.value || ''
     })
   },
 
@@ -111,7 +127,7 @@ Page({
   async handleRegister() {
     if (this.data.loading) return
 
-    const { nickname, password } = this.data
+    const { nickname, password, email } = this.data
 
     if (!nickname || !nickname.trim()) {
       toastError('请输入行者名')
@@ -123,14 +139,21 @@ Page({
       return
     }
 
+    const normalizedEmail = (email || '').trim()
+    if (!this.isValidEmail(normalizedEmail)) {
+      toastError('请输入正确的邮箱')
+      return
+    }
+
     this.setData({ loading: true })
 
     try {
       const res = await request.post('/auth/register', {
         nickname: nickname.trim(),
-        password: password.trim()
+        password: password.trim(),
+        email: normalizedEmail
       })
-      
+
       if (res.code === 0 && res.data) {
         // 保存 token 和用户信息
         auth.setToken(res.data.token)
@@ -157,10 +180,10 @@ Page({
   async handleLogin() {
     if (this.data.loading) return
 
-    const { wolfNo, loginKey } = this.data
+    const { account, loginKey } = this.data
 
-    if (!wolfNo) {
-      toastError('请输入狼藉号')
+    if (!account || !account.trim()) {
+      toastError('请输入狼藉号或邮箱')
       return
     }
 
@@ -173,7 +196,7 @@ Page({
 
     try {
       const res = await request.post('/auth/login', {
-        wolfNo: wolfNo.trim(),
+        account: account.trim(),
         loginKey: loginKey.trim()
       })
 
@@ -209,6 +232,9 @@ Page({
 
   applyTheme() {
     applyPageTheme(this)
+  },
+
+  isValidEmail(email) {
+    return EMAIL_REGEX.test(email)
   }
 })
-

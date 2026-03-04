@@ -33,6 +33,16 @@ public class WfUser {
     private String loginKey;
 
     /**
+     * 邮箱（唯一）
+     */
+    private String email;
+
+    /**
+     * 邮箱是否已认证
+     */
+    private Boolean emailVerified;
+
+    /**
      * 行者名（用户的昵称）
      */
     private String nickname;

@@ -28,6 +28,13 @@ public enum ErrorCode {
     USER_DISABLED(2007, "行者账号已禁用"),
     OLD_LOGIN_KEY_ERROR(2008, "原密码错误"),
     NEW_LOGIN_KEY_NOT_MATCH(2009, "新密码与确认密码不一致"),
+    EMAIL_ALREADY_USED(2010, "邮箱已被占用"),
+    EMAIL_NOT_BOUND(2011, "邮箱未绑定"),
+    EMAIL_NOT_VERIFIED(2012, "邮箱未认证"),
+    EMAIL_CODE_ERROR(2013, "验证码错误"),
+    EMAIL_CODE_EXPIRED(2014, "验证码已过期"),
+    EMAIL_CODE_SEND_TOO_FREQUENT(2015, "验证码发送过于频繁，请稍后重试"),
+    EMAIL_CODE_DAILY_LIMIT(2016, "验证码发送次数已达上限"),
 
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),

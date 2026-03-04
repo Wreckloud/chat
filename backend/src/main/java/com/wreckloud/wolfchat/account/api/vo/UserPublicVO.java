@@ -5,24 +5,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * @Description 行者信息响应 VO
+ * @Description 行者公开信息响应 VO
  * @Author Wreckloud
- * @Date 2026-01-06
+ * @Date 2026-03-05
  */
 @Data
-@Schema(description = "行者信息")
-public class UserVO {
+@Schema(description = "行者公开信息")
+public class UserPublicVO {
     @Schema(description = "用户ID")
     private Long userId;
 
     @Schema(description = "狼藉号", example = "1234567890")
     private String wolfNo;
-
-    @Schema(description = "邮箱", example = "user@example.com")
-    private String email;
-
-    @Schema(description = "邮箱是否已认证")
-    private Boolean emailVerified;
 
     @Schema(description = "行者名（用户昵称）", example = "维克罗德")
     private String nickname;
@@ -33,5 +27,3 @@ public class UserVO {
     @Schema(description = "状态：NORMAL-正常，DISABLED-禁用")
     private UserStatus status;
 }
-
-
