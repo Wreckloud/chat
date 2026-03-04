@@ -58,8 +58,3 @@ module.exports = {
   post: (url, data, options = {}) => request({ ...options, url, method: 'POST', data }),
   del: (url, data, options = {}) => request({ ...options, url, method: 'DELETE', data })
 }
-
-
-
-
-

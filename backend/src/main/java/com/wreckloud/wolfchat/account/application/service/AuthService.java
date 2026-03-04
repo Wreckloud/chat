@@ -5,14 +5,15 @@ import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
+import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -28,6 +29,7 @@ public class AuthService {
     private final WfUserMapper wfUserMapper;
     private final WolfNoService wolfNoService;
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 注册
@@ -45,7 +47,7 @@ public class AuthService {
         // 2. 创建行者
         WfUser user = new WfUser();
         user.setWolfNo(wolfNo);
-        user.setLoginKey(password); // TODO:阶段1简化存储，后续升级为哈希存储
+        user.setLoginKey(passwordEncoder.encode(password));
         user.setNickname(nickname);
         user.setStatus(UserStatus.NORMAL);
         wfUserMapper.insert(user);
@@ -63,7 +65,7 @@ public class AuthService {
      * 验证狼藉号+密码，返回 token
      *
      * @param wolfNo  狼藉号
-     * @param loginKey 登录密码
+     * @param loginKey 登录密码（明文）
      * @return 登录响应（包含 token、userInfo，不包含 loginKey）
      */
     public LoginVO login(String wolfNo, String loginKey) {
@@ -81,8 +83,8 @@ public class AuthService {
             throw new BaseException(ErrorCode.USER_DISABLED);
         }
 
-        // 3. 验证密码（阶段1简化，直接比较明文）
-        if (!loginKey.equals(user.getLoginKey())) {
+        // 3. 验证密码（BCrypt）
+        if (!passwordEncoder.matches(loginKey, user.getLoginKey())) {
             throw new BaseException(ErrorCode.LOGIN_KEY_ERROR);
         }
 

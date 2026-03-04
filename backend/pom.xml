@@ -140,6 +140,12 @@
 			<artifactId>spring-boot-starter-aop</artifactId>
 		</dependency>
 
+		<!-- 密码哈希（BCrypt） -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
+
 		<!-- Knife4j API文档（基于springdoc-openapi） -->
 		<dependency>
 			<groupId>com.github.xiaoymin</groupId>

@@ -28,7 +28,7 @@ public class WfUser {
     private String wolfNo;
 
     /**
-     * 登录密码（阶段1简化存储，预留哈希空间）
+     * 登录密码哈希（BCrypt）
      */
     private String loginKey;
 

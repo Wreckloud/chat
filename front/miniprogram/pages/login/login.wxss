@@ -71,6 +71,44 @@
   margin-bottom: 16rpx;
 }
 
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: -2rpx 0 10rpx;
+}
+
+.strength-tag {
+  min-width: 36rpx;
+  padding: 2rpx 8rpx;
+  border: 1rpx solid;
+  font-size: 20rpx;
+  text-align: center;
+}
+
+.strength-weak {
+  color: #b54852;
+  border-color: #b54852;
+  background: rgba(229, 124, 135, 0.18);
+}
+
+.strength-medium {
+  color: #8a6a23;
+  border-color: #8a6a23;
+  background: rgba(207, 176, 103, 0.2);
+}
+
+.strength-strong {
+  color: #2d7a46;
+  border-color: #2d7a46;
+  background: rgba(127, 197, 147, 0.2);
+}
+
+.strength-text {
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}
+
 .switch-mode {
   text-align: center;
   margin-top: 30rpx;
