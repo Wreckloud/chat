@@ -5,26 +5,26 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { normalizeUserList, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
     active: 'following',
     list: [],
-    loading: false
+    loading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad() {
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({ url: '/pages/login/login' })
+    if (!auth.requireLogin()) {
       return
     }
-    this.loadList()
   },
 
   onShow() {
-    if (auth.isLoggedIn()) {
-      this.loadList()
-    }
+    if (!auth.requireLogin()) return
+    this.applyTheme()
+    this.loadList()
   },
 
   switchTab(e) {
@@ -93,5 +93,9 @@ Page({
     const user = e.currentTarget.dataset.user
     if (!user || !user.userId) return
     openUserProfile(user)
+  },
+
+  applyTheme() {
+    applyPageTheme(this)
   }
 })

@@ -4,17 +4,24 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
     content: '',
-    loading: false
+    loading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad() {
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({ url: '/pages/login/login' })
+    if (!auth.requireLogin()) {
+      return
     }
+  },
+
+  onShow() {
+    if (!auth.requireLogin()) return
+    this.applyTheme()
   },
 
   onContentInput(e) {
@@ -28,7 +35,7 @@ Page({
 
     const content = this.data.content.trim()
     if (!content) {
-      toastError('请输入内容', '请输入内容')
+      toastError('请输入内容')
       return
     }
 
@@ -47,5 +54,9 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  applyTheme() {
+    applyPageTheme(this)
   }
 })

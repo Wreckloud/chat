@@ -1,19 +1,34 @@
-.container {
-  padding: 30rpx;
+/* Layout layer */
+.post-detail-page {
+  min-height: 100vh;
+  padding: 22rpx 18rpx;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
+}
+
+.post-card,
+.comment-item,
+.comment-input {
+  padding: 18rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
 }
 
 .post-card {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 30rpx;
+  margin-bottom: 16rpx;
 }
 
 .post-header {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  margin-bottom: 16rpx;
+  gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+
+.author-avatar,
+.comment-avatar {
+  border: 1rpx solid var(--retro-avatar-border);
 }
 
 .post-info {
@@ -21,44 +36,36 @@
 }
 
 .post-name {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 600;
-  margin-bottom: 4rpx;
 }
 
 .post-time {
-  font-size: 24rpx;
-  color: #999;
+  margin-top: 2rpx;
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
 }
 
 .post-content {
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #333;
-}
-
-.comment-section {
-  margin-top: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.55;
+  color: var(--retro-body-text);
 }
 
 .section-title {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 600;
-  margin-bottom: 16rpx;
+  margin: 8rpx 0 14rpx;
 }
 
 .comment-item {
-  background: #fff;
-  border-radius: 12rpx;
-  padding: 20rpx;
-  margin-bottom: 16rpx;
+  margin-bottom: 12rpx;
 }
 
 .comment-header {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  margin-bottom: 12rpx;
+  gap: 12rpx;
 }
 
 .comment-info {
@@ -66,32 +73,24 @@
 }
 
 .comment-name {
-  font-size: 28rpx;
-  font-weight: 500;
-  margin-bottom: 4rpx;
+  font-size: 25rpx;
+  font-weight: 600;
 }
 
 .comment-time {
-  font-size: 24rpx;
-  color: #999;
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
 }
 
 .comment-content {
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #333;
-  margin-left: 80rpx;
+  margin-top: 10rpx;
+  padding-left: 58rpx;
+  font-size: 25rpx;
+  line-height: 1.5;
+  color: var(--retro-body-text);
 }
 
 .comment-input {
-  margin-top: 20rpx;
-  background: #fff;
-  border-radius: 12rpx;
-  padding: 16rpx;
+  margin-top: 16rpx;
 }
-
-.comment-input .input {
-  min-height: 120rpx;
-  margin-bottom: 12rpx;
-}
-

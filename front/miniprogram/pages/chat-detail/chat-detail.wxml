@@ -75,7 +75,7 @@
       confirm-type="send"
       bindconfirm="sendMessage"
     />
-    <t-button
+    <retro-button
       class="composer-send"
       size="small"
       theme="primary"
@@ -83,6 +83,6 @@
       loading="{{sending}}"
       bindtap="sendMessage">
       {{sending ? '发送中' : '发送'}}
-    </t-button>
+    </retro-button>
   </view>
 </view>

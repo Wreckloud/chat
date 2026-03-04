@@ -5,6 +5,7 @@ const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const { normalizeUser } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
@@ -14,12 +15,12 @@ Page({
     isMutual: false,
     loading: false,
     followLoading: false,
-    chatLoading: false
+    chatLoading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad(options) {
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({ url: '/pages/login/login' })
+    if (!auth.requireLogin()) {
       return
     }
 
@@ -27,7 +28,7 @@ Page({
     const currentUserId = currentUser ? currentUser.userId : null
     const userId = Number(options.userId)
     if (!userId) {
-      toastError('用户信息缺失', '用户信息缺失')
+      toastError('用户信息缺失')
       setTimeout(() => {
         wx.navigateBack()
       }, 1500)
@@ -48,17 +49,22 @@ Page({
     this.loadUserInfo(userId)
   },
 
+  onShow() {
+    if (!auth.requireLogin()) return
+    this.applyTheme()
+  },
+
   async loadUserInfo(userId) {
     if (this.data.loading) return
     this.setData({ loading: true })
 
     try {
       const res = await request.get(`/users/${userId}`)
-        if (res.code === 0 && res.data) {
-          this.setData({
+      if (res.code === 0 && res.data) {
+        this.setData({
           userInfo: normalizeUser(res.data)
-          })
-        }
+        })
+      }
     } catch (error) {
       toastError(error, '加载失败')
     } finally {
@@ -133,5 +139,9 @@ Page({
     } finally {
       this.setData({ chatLoading: false })
     }
+  },
+
+  applyTheme() {
+    applyPageTheme(this)
   }
 })

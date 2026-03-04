@@ -1,6 +1,8 @@
 /* Layout layer */
 .chat-page {
   min-height: 100vh;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
 }
 
 .retro-toolbar {
@@ -8,6 +10,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 18rpx 22rpx;
+  border-top: 1rpx solid var(--retro-toolbar-top-border);
+  border-bottom: 1rpx solid var(--retro-toolbar-border);
+  background: var(--retro-toolbar-bg);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
 .retro-title {
@@ -18,10 +24,14 @@
 
 .retro-count {
   font-size: 22rpx;
+  color: var(--retro-muted-text-2);
 }
 
 .conversation-board {
   margin: 14rpx 12rpx 20rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
 }
 
 .board-head {
@@ -29,6 +39,10 @@
   align-items: center;
   padding: 12rpx 14rpx;
   font-size: 22rpx;
+  border-top: 1rpx solid var(--retro-board-head-top-border);
+  border-bottom: 1rpx solid var(--retro-board-head-bottom-border);
+  background: var(--retro-board-head-bg);
+  color: var(--retro-board-head-text);
 }
 
 .board-head-user {
@@ -50,6 +64,16 @@
   align-items: center;
   min-height: 112rpx;
   padding: 10rpx 14rpx;
+  border-bottom: 1rpx solid var(--retro-row-border);
+  background: var(--retro-record-peer-bg);
+}
+
+.conversation-row-even {
+  background: var(--retro-row-even-bg);
+}
+
+.conversation-row-pinned {
+  background: var(--retro-row-pinned-bg);
 }
 
 .conversation-user {
@@ -59,6 +83,8 @@
 }
 
 .conversation-avatar {
+  border: 1rpx solid var(--retro-avatar-border);
+  background: #ffffff;
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
@@ -77,6 +103,7 @@
   max-width: 180rpx;
   font-size: 26rpx;
   font-weight: 600;
+  color: var(--retro-strong-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -85,11 +112,13 @@
 .pin-flag {
   margin-left: 8rpx;
   font-size: 20rpx;
+  color: var(--retro-accent-text);
 }
 
 .conversation-no {
   margin-top: 4rpx;
   font-size: 20rpx;
+  color: var(--retro-muted-text);
 }
 
 .conversation-message {
@@ -100,6 +129,7 @@
 
 .conversation-message-text {
   font-size: 23rpx;
+  color: var(--retro-body-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,140 +143,5 @@
 
 .conversation-time-text {
   font-size: 22rpx;
-}
-
-/* Skin layer: Retro Blue */
-.theme-retro-blue {
-  background: #dde4ee;
-  color: #1f2d3d;
-}
-
-.theme-retro-blue .retro-toolbar {
-  border-top: 1rpx solid #f2f7ff;
-  border-bottom: 1rpx solid #8894a6;
-  background: linear-gradient(180deg, #f5f8fd 0%, #d0d9e8 100%);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
-}
-
-.theme-retro-blue .retro-count {
-  color: #4c5e74;
-}
-
-.theme-retro-blue .conversation-board {
-  border: 1rpx solid #8694a8;
-  background: #edf2fb;
-  box-shadow: 0 1rpx 2rpx rgba(32, 45, 67, 0.18);
-}
-
-.theme-retro-blue .board-head {
-  border-top: 1rpx solid #f3f7ff;
-  border-bottom: 1rpx solid #8f9bb0;
-  background: linear-gradient(180deg, #eef4ff 0%, #c6d2e4 100%);
-  color: #3b4c63;
-}
-
-.theme-retro-blue .conversation-row {
-  border-bottom: 1rpx solid #c8d2e1;
-  background: #f9fbff;
-}
-
-.theme-retro-blue .conversation-row-even {
-  background: #f3f7ff;
-}
-
-.theme-retro-blue .conversation-row-pinned {
-  background: #e6eefc;
-}
-
-.theme-retro-blue .conversation-avatar {
-  border: 1rpx solid #8d9bae;
-  background: #ffffff;
-}
-
-.theme-retro-blue .conversation-name {
-  color: #1c2b3b;
-}
-
-.theme-retro-blue .pin-flag {
-  color: #2f5c9b;
-}
-
-.theme-retro-blue .conversation-no {
-  color: #6d7f96;
-}
-
-.theme-retro-blue .conversation-message-text {
-  color: #2f4055;
-}
-
-.theme-retro-blue .conversation-time-text {
-  color: #4d6078;
-}
-
-/* Skin layer: Retro Olive */
-.theme-retro-olive {
-  background: #dce8df;
-  color: #1f3226;
-}
-
-.theme-retro-olive .retro-toolbar {
-  border-top: 1rpx solid #edf6f0;
-  border-bottom: 1rpx solid #78907e;
-  background: linear-gradient(180deg, #edf6f0 0%, #c0d4c6 100%);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.75);
-}
-
-.theme-retro-olive .retro-count {
-  color: #4e6658;
-}
-
-.theme-retro-olive .conversation-board {
-  border: 1rpx solid #7f9787;
-  background: #eaf2ec;
-  box-shadow: 0 1rpx 2rpx rgba(33, 53, 41, 0.16);
-}
-
-.theme-retro-olive .board-head {
-  border-top: 1rpx solid #edf6f0;
-  border-bottom: 1rpx solid #859c8d;
-  background: linear-gradient(180deg, #e8f2ea 0%, #b7ccb9 100%);
-  color: #3d5746;
-}
-
-.theme-retro-olive .conversation-row {
-  border-bottom: 1rpx solid #c5d4c8;
-  background: #f7fbf8;
-}
-
-.theme-retro-olive .conversation-row-even {
-  background: #eff6f1;
-}
-
-.theme-retro-olive .conversation-row-pinned {
-  background: #dcecdf;
-}
-
-.theme-retro-olive .conversation-avatar {
-  border: 1rpx solid #839a8a;
-  background: #ffffff;
-}
-
-.theme-retro-olive .conversation-name {
-  color: #1e3326;
-}
-
-.theme-retro-olive .pin-flag {
-  color: #0f5b2c;
-}
-
-.theme-retro-olive .conversation-no {
-  color: #607566;
-}
-
-.theme-retro-olive .conversation-message-text {
-  color: #30493a;
-}
-
-.theme-retro-olive .conversation-time-text {
-  color: #486051;
+  color: var(--retro-muted-text-2);
 }

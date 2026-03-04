@@ -1,31 +1,78 @@
-.container {
-  padding: 30rpx;
+/* Layout layer */
+.community-page {
+  min-height: 100vh;
+  padding: 22rpx 18rpx;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
 }
 
-.header {
+.community-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20rpx;
+  justify-content: space-between;
+  padding: 16rpx 18rpx;
+  margin-bottom: 14rpx;
+  border: 1rpx solid var(--retro-toolbar-border);
+  background: var(--retro-toolbar-bg);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
-.title {
-  font-size: 40rpx;
-  font-weight: bold;
+.community-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
 }
 
-.post-item {
-  margin-bottom: 12rpx;
+.post-board {
+  display: flex;
+  flex-direction: column;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+}
+
+.post-row {
+  padding: 14rpx 16rpx;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.post-row:nth-child(even) {
+  background: var(--retro-row-even-bg);
 }
 
 .post-author {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  margin-bottom: 8rpx;
+}
+
+.post-avatar {
+  border: 1rpx solid var(--retro-avatar-border);
+}
+
+.post-author-info {
+  min-width: 0;
 }
 
 .post-author-name {
-  font-size: 28rpx;
-  font-weight: 500;
+  max-width: 420rpx;
+  font-size: 25rpx;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-author-no {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.post-content {
+  margin-top: 10rpx;
+  padding-left: 66rpx;
+  font-size: 26rpx;
+  line-height: 1.55;
+  color: var(--retro-body-text);
 }

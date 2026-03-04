@@ -37,6 +37,9 @@
       }
     ]
   },
+  "usingComponents": {
+    "retro-button": "/components/retro-button/retro-button"
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"

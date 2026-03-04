@@ -5,7 +5,6 @@
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-loading": "tdesign-miniprogram/loading/loading",
     "t-avatar": "tdesign-miniprogram/avatar/avatar",
-    "t-button": "tdesign-miniprogram/button/button",
     "t-swipe-cell": "tdesign-miniprogram/swipe-cell/swipe-cell"
   }
 }

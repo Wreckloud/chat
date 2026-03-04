@@ -7,7 +7,7 @@ const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
-const { getThemeContext, applyNavigationBar } = require('../../utils/theme')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
@@ -29,9 +29,13 @@ Page({
   SEND_TIMEOUT_MS: 8000,
 
   onLoad(options) {
+    if (!auth.requireLogin()) {
+      return
+    }
+
     const conversationId = options.conversationId
     if (!conversationId) {
-      toastError('会话ID不能为空', '会话ID不能为空')
+      toastError('会话ID不能为空')
       setTimeout(() => {
         wx.navigateBack()
       }, 1500)
@@ -59,6 +63,7 @@ Page({
   },
 
   onShow() {
+    if (!auth.requireLogin()) return
     this.applyTheme()
   },
 
@@ -90,7 +95,9 @@ Page({
     request.get('/conversations')
       .then(res => {
         const conversations = res.data || []
-        const conversation = conversations.find(c => c.conversationId === Number(this.data.conversationId))
+        const conversation = conversations.find(
+          c => Number(c.conversationId) === Number(this.data.conversationId)
+        )
         
         if (conversation) {
           const targetUser = {
@@ -173,7 +180,7 @@ Page({
     const content = this.data.inputMessage.trim()
 
     if (!content) {
-      toastError('消息内容不能为空', '消息内容不能为空')
+      toastError('消息内容不能为空')
       return
     }
 
@@ -254,11 +261,7 @@ Page({
   },
 
   applyTheme() {
-    const themeContext = getThemeContext()
-    this.setData({
-      themeClass: themeContext.themeClass
-    })
-    applyNavigationBar(themeContext.themeName)
+    applyPageTheme(this)
   },
 
   /**

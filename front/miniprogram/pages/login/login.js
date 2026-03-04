@@ -4,6 +4,7 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
@@ -18,7 +19,8 @@ Page({
     // 注册结果
     showResult: false,
     registeredWolfNo: '',
-    loading: false
+    loading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad() {
@@ -28,6 +30,10 @@ Page({
         url: '/pages/chat/chat'
       })
     }
+  },
+
+  onShow() {
+    this.applyTheme()
   },
 
   /**
@@ -99,12 +105,12 @@ Page({
     const { nickname, password } = this.data
 
     if (!nickname || !nickname.trim()) {
-      toastError('请输入行者名', '请输入行者名')
+      toastError('请输入行者名')
       return
     }
 
     if (!password || password.length < 6) {
-      toastError('密码至少6位', '密码至少6位')
+      toastError('密码至少6位')
       return
     }
 
@@ -145,12 +151,12 @@ Page({
     const { wolfNo, loginKey } = this.data
 
     if (!wolfNo) {
-      toastError('请输入狼藉号', '请输入狼藉号')
+      toastError('请输入狼藉号')
       return
     }
 
     if (!loginKey) {
-      toastError('请输入密码', '请输入密码')
+      toastError('请输入密码')
       return
     }
 
@@ -190,6 +196,10 @@ Page({
     wx.switchTab({
       url: '/pages/chat/chat'
     })
+  },
+
+  applyTheme() {
+    applyPageTheme(this)
   }
 })
 

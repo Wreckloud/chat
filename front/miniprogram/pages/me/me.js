@@ -4,25 +4,31 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError } = require('../../utils/ui')
+const { setThemeName, listThemes } = require('../../utils/theme')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
     userInfo: null,
-    loading: false
+    loading: false,
+    themeName: 'retro_blue',
+    themeClass: 'theme-retro-blue',
+    themeOptions: []
   },
 
   onLoad() {
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({ url: '/pages/login/login' })
+    if (!auth.requireLogin()) {
       return
     }
-    this.loadUserInfo()
+    this.setData({
+      themeOptions: listThemes()
+    })
   },
 
   onShow() {
-    if (auth.isLoggedIn()) {
-      this.loadUserInfo()
-    }
+    if (!auth.requireLogin()) return
+    this.applyTheme()
+    this.loadUserInfo()
   },
 
   async loadUserInfo() {
@@ -61,6 +67,29 @@ Page({
   goFollow() {
     wx.navigateTo({
       url: '/pages/follow/follow'
+    })
+  },
+
+  onSelectTheme(e) {
+    const themeName = e.currentTarget.dataset.theme
+    if (!themeName || themeName === this.data.themeName) {
+      return
+    }
+    setThemeName(themeName)
+    this.applyTheme(themeName)
+    wx.showToast({
+      title: '主题已切换',
+      icon: 'success'
+    })
+  },
+
+  applyTheme(themeName) {
+    applyPageTheme(this, {
+      themeName,
+      tabBar: true,
+      extraData: (themeContext) => ({
+        themeName: themeContext.themeName
+      })
     })
   }
 })

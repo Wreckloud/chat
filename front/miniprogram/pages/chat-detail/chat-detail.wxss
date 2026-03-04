@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
 }
 
 .record-toolbar {
@@ -10,6 +12,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 16rpx 22rpx;
+  border-top: 1rpx solid var(--retro-toolbar-top-border);
+  border-bottom: 1rpx solid var(--retro-toolbar-border);
+  background: var(--retro-toolbar-bg);
 }
 
 .record-toolbar-title {
@@ -23,6 +28,7 @@
 
 .record-toolbar-sub {
   font-size: 21rpx;
+  color: var(--retro-toolbar-sub-text);
 }
 
 .record-list {
@@ -32,7 +38,9 @@
 }
 
 .record-board {
-  box-shadow: 0 1rpx 2rpx rgba(28, 45, 69, 0.18);
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
 }
 
 .record-item {
@@ -49,6 +57,9 @@
   display: inline-block;
   padding: 4rpx 14rpx;
   font-size: 21rpx;
+  border: 1rpx solid var(--retro-divider-border);
+  background: var(--retro-divider-bg);
+  color: var(--retro-divider-text);
 }
 
 .record-row {
@@ -56,6 +67,16 @@
   align-items: flex-start;
   min-height: 92rpx;
   padding: 12rpx 14rpx;
+  border-top: 1rpx solid #ffffff;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.record-peer {
+  background: var(--retro-record-peer-bg);
+}
+
+.record-self {
+  background: var(--retro-record-self-bg);
 }
 
 .record-role {
@@ -67,12 +88,14 @@
 }
 
 .record-avatar {
+  border: 1rpx solid var(--retro-avatar-border);
   background: #ffffff;
 }
 
 .record-role-tag {
   margin-top: 6rpx;
   font-size: 19rpx;
+  color: var(--retro-muted-text);
 }
 
 .record-body {
@@ -83,6 +106,14 @@
   border-left: 4rpx solid;
 }
 
+.record-peer .record-body {
+  border-left-color: var(--retro-record-peer-line);
+}
+
+.record-self .record-body {
+  border-left-color: var(--retro-record-self-line);
+}
+
 .record-meta {
   display: flex;
   align-items: center;
@@ -91,11 +122,17 @@
 
 .record-name {
   font-size: 24rpx;
+  color: var(--retro-record-name);
+}
+
+.record-name-self {
+  color: var(--retro-record-name-self);
 }
 
 .record-text {
   font-size: 26rpx;
   line-height: 1.5;
+  color: var(--retro-record-text);
   word-break: break-all;
 }
 
@@ -104,6 +141,8 @@
   align-items: center;
   gap: 12rpx;
   padding: 14rpx 14rpx 16rpx;
+  border-top: 1rpx solid var(--retro-composer-border);
+  background: var(--retro-composer-bg);
 }
 
 .composer-label {
@@ -113,6 +152,9 @@
   align-items: center;
   justify-content: center;
   font-size: 22rpx;
+  border: 1rpx solid var(--retro-composer-label-border);
+  background: var(--retro-composer-label-bg);
+  color: var(--retro-composer-label-text);
 }
 
 .composer-input {
@@ -121,162 +163,4 @@
 
 .composer-send {
   flex-shrink: 0;
-}
-
-/* Skin layer: Retro Blue */
-.theme-retro-blue {
-  background: #dce4ef;
-  color: #24384c;
-}
-
-.theme-retro-blue .record-toolbar {
-  border-top: 1rpx solid #f4f8ff;
-  border-bottom: 1rpx solid #8b99ae;
-  background: linear-gradient(180deg, #f4f8ff 0%, #cfd8e8 100%);
-}
-
-.theme-retro-blue .record-toolbar-sub {
-  color: #60738a;
-}
-
-.theme-retro-blue .record-board {
-  border: 1rpx solid #8594a7;
-  background: #eff4fb;
-}
-
-.theme-retro-blue .record-divider-text {
-  border: 1rpx solid #a8b5c8;
-  background: #e3ebf8;
-  color: #576b85;
-}
-
-.theme-retro-blue .record-row {
-  border-top: 1rpx solid #ffffff;
-  border-bottom: 1rpx solid #c7d1df;
-}
-
-.theme-retro-blue .record-peer {
-  background: #f9fbff;
-}
-
-.theme-retro-blue .record-self {
-  background: #edf3fc;
-}
-
-.theme-retro-blue .record-avatar {
-  border: 1rpx solid #8998ad;
-}
-
-.theme-retro-blue .record-role-tag {
-  color: #62758d;
-}
-
-.theme-retro-blue .record-peer .record-body {
-  border-left-color: #9aa9bd;
-}
-
-.theme-retro-blue .record-self .record-body {
-  border-left-color: #6f8fb9;
-}
-
-.theme-retro-blue .record-name {
-  color: #2b4258;
-}
-
-.theme-retro-blue .record-name-self {
-  color: #2f4f79;
-}
-
-.theme-retro-blue .record-text {
-  color: #1d2f42;
-}
-
-.theme-retro-blue .composer-bar {
-  border-top: 1rpx solid #8d9bad;
-  background: linear-gradient(180deg, #eaf0f9 0%, #c7d2e4 100%);
-}
-
-.theme-retro-blue .composer-label {
-  border: 1rpx solid #8b99ad;
-  background: #f3f7fe;
-  color: #50637d;
-}
-
-/* Skin layer: Retro Olive */
-.theme-retro-olive {
-  background: #dae7de;
-  color: #233427;
-}
-
-.theme-retro-olive .record-toolbar {
-  border-top: 1rpx solid #edf6f0;
-  border-bottom: 1rpx solid #7d9383;
-  background: linear-gradient(180deg, #edf6f0 0%, #bfd3c5 100%);
-}
-
-.theme-retro-olive .record-toolbar-sub {
-  color: #567060;
-}
-
-.theme-retro-olive .record-board {
-  border: 1rpx solid #809889;
-  background: #eaf2ec;
-}
-
-.theme-retro-olive .record-divider-text {
-  border: 1rpx solid #9eb7a6;
-  background: #dce9e0;
-  color: #526d5d;
-}
-
-.theme-retro-olive .record-row {
-  border-top: 1rpx solid #ffffff;
-  border-bottom: 1rpx solid #c4d3c7;
-}
-
-.theme-retro-olive .record-peer {
-  background: #f7fbf8;
-}
-
-.theme-retro-olive .record-self {
-  background: #eaf4ed;
-}
-
-.theme-retro-olive .record-avatar {
-  border: 1rpx solid #859b8c;
-}
-
-.theme-retro-olive .record-role-tag {
-  color: #617768;
-}
-
-.theme-retro-olive .record-peer .record-body {
-  border-left-color: #97ad9d;
-}
-
-.theme-retro-olive .record-self .record-body {
-  border-left-color: #4e7f5f;
-}
-
-.theme-retro-olive .record-name {
-  color: #2d4537;
-}
-
-.theme-retro-olive .record-name-self {
-  color: #1f5a34;
-}
-
-.theme-retro-olive .record-text {
-  color: #24392d;
-}
-
-.theme-retro-olive .composer-bar {
-  border-top: 1rpx solid #7f9685;
-  background: linear-gradient(180deg, #e7f0ea 0%, #b7ccbe 100%);
-}
-
-.theme-retro-olive .composer-label {
-  border: 1rpx solid #819888;
-  background: #eef6f0;
-  color: #476253;
 }

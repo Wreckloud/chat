@@ -1,20 +1,26 @@
-<view class="container">
-  <view class="title">发布帖子</view>
+<view class="post-create-page {{themeClass}}">
+  <view class="editor-toolbar">
+    <view class="title">发布帖子</view>
+    <view class="hint">最多 500 字</view>
+  </view>
 
-  <t-textarea
-    placeholder="说点什么..."
-    value="{{content}}"
-    maxlength="500"
-    bind:input="onContentInput"
-    bind:change="onContentInput"
-  />
+  <view class="editor-card">
+    <t-textarea
+      placeholder="说点什么..."
+      value="{{content}}"
+      maxlength="500"
+      bind:input="onContentInput"
+      bind:change="onContentInput"
+    />
 
-  <t-button
-    theme="primary"
-    size="large"
-    block
-    loading="{{loading}}"
-    bindtap="handleSubmit">
-    发布
-  </t-button>
+    <retro-button
+      class="submit-btn"
+      theme="primary"
+      size="large"
+      block
+      loading="{{loading}}"
+      bindtap="handleSubmit">
+      发布
+    </retro-button>
+  </view>
 </view>

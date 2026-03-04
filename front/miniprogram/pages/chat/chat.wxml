@@ -10,12 +10,12 @@
     wx:elif="{{conversationList.length === 0}}"
     icon="chat"
     description="还没有聊天记录">
-    <t-button
+    <retro-button
       slot="actions"
       theme="primary"
       bindtap="goToMutual">
       去互关列表找行者
-    </t-button>
+    </retro-button>
   </t-empty>
 
   <view wx:else class="conversation-board">

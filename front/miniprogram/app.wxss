@@ -1,8 +1,154 @@
-/**
- * 全局样式 - 极简版本
- * 只保留基本功能样式
- */
-
 page {
-  background-color: #ffffff;
+  background-color: #dce4ef;
+  color: #1f2d3d;
+}
+
+.theme-retro-blue {
+  --retro-page-bg: #dce4ef;
+  --retro-page-text: #1f2d3d;
+  --retro-panel-bg: #eff4fb;
+  --retro-panel-border: #8a9ab0;
+  --retro-panel-shadow: 0 1rpx 2rpx rgba(31, 45, 64, 0.16);
+  --retro-toolbar-bg: linear-gradient(180deg, #f3f7fe 0%, #ccd7e7 100%);
+  --retro-toolbar-border: #8898ad;
+  --retro-toolbar-top-border: #f3f7ff;
+  --retro-toolbar-sub-text: #60738a;
+  --retro-link-text: #2f5c9b;
+  --retro-accent-text: #2f5c9b;
+  --retro-muted-text: #62758d;
+  --retro-muted-text-2: #4d6078;
+  --retro-body-text: #304459;
+  --retro-strong-text: #1c2b3b;
+  --retro-avatar-border: #8c9caf;
+  --retro-row-border: #c8d2e1;
+  --retro-row-even-bg: #f7faff;
+  --retro-row-pinned-bg: #e6eefc;
+  --retro-chip-bg: #e1ebf8;
+  --retro-chip-text: #2f5c9b;
+  --retro-board-head-bg: linear-gradient(180deg, #eef4ff 0%, #c6d2e4 100%);
+  --retro-board-head-top-border: #f3f7ff;
+  --retro-board-head-bottom-border: #8f9bb0;
+  --retro-board-head-text: #3b4c63;
+  --retro-tab-text: #475a72;
+  --retro-tab-active-bg: linear-gradient(180deg, #f3f7fe 0%, #d2deee 100%);
+  --retro-tab-active-text: #2f4e77;
+  --retro-tab-divider: #b8c5d7;
+  --retro-theme-item-bg: #f8fbff;
+  --retro-theme-item-border: #aebbd0;
+  --retro-theme-item-active-bg: #e7effb;
+  --retro-theme-item-active-border: #6284b3;
+  --retro-divider-bg: #e3ebf8;
+  --retro-divider-border: #a8b5c8;
+  --retro-divider-text: #576b85;
+  --retro-record-peer-bg: #f9fbff;
+  --retro-record-self-bg: #edf3fc;
+  --retro-record-peer-line: #9aa9bd;
+  --retro-record-self-line: #6f8fb9;
+  --retro-record-name: #2b4258;
+  --retro-record-name-self: #2f4f79;
+  --retro-record-text: #1d2f42;
+  --retro-composer-bg: linear-gradient(180deg, #eaf0f9 0%, #c7d2e4 100%);
+  --retro-composer-border: #8d9bad;
+  --retro-composer-label-bg: #f3f7fe;
+  --retro-composer-label-border: #8b99ad;
+  --retro-composer-label-text: #50637d;
+
+  --retro-btn-primary-start: #4a74b3;
+  --retro-btn-primary-end: #2f5c9b;
+  --retro-btn-primary-border: #2f5c9b;
+  --retro-btn-primary-outline-text: #2f5c9b;
+  --retro-btn-primary-outline-bg: #f5f8fd;
+
+  --retro-btn-default-start: #f7faff;
+  --retro-btn-default-end: #d7e0ee;
+  --retro-btn-default-border: #90a0b6;
+  --retro-btn-default-text: #2f4055;
+  --retro-btn-default-outline-text: #4f6179;
+  --retro-btn-default-outline-bg: #f7faff;
+
+  --retro-btn-danger-start: #e06672;
+  --retro-btn-danger-end: #bf4854;
+  --retro-btn-danger-border: #bf4854;
+  --retro-btn-danger-outline-text: #bf4854;
+  --retro-btn-danger-outline-bg: #fff8f9;
+
+  --retro-btn-primary-outline-spinner: rgba(47, 92, 155, 0.3);
+  --retro-btn-primary-outline-spinner-top: rgba(47, 92, 155, 1);
+  --retro-btn-default-spinner: rgba(79, 97, 121, 0.35);
+  --retro-btn-default-spinner-top: rgba(79, 97, 121, 1);
+}
+
+.theme-retro-olive {
+  --retro-page-bg: #dce8df;
+  --retro-page-text: #1f3226;
+  --retro-panel-bg: #eaf2ec;
+  --retro-panel-border: #819889;
+  --retro-panel-shadow: 0 1rpx 2rpx rgba(33, 52, 41, 0.15);
+  --retro-toolbar-bg: linear-gradient(180deg, #edf6f0 0%, #c0d4c6 100%);
+  --retro-toolbar-border: #7f9787;
+  --retro-toolbar-top-border: #edf6f0;
+  --retro-toolbar-sub-text: #567060;
+  --retro-link-text: #0f5b2c;
+  --retro-accent-text: #0f5b2c;
+  --retro-muted-text: #5f7567;
+  --retro-muted-text-2: #486051;
+  --retro-body-text: #2f4738;
+  --retro-strong-text: #1f3226;
+  --retro-avatar-border: #859b8c;
+  --retro-row-border: #c4d3c7;
+  --retro-row-even-bg: #f3f9f4;
+  --retro-row-pinned-bg: #dcecdf;
+  --retro-chip-bg: #dde9e0;
+  --retro-chip-text: #0f5b2c;
+  --retro-board-head-bg: linear-gradient(180deg, #e8f2ea 0%, #b7ccb9 100%);
+  --retro-board-head-top-border: #edf6f0;
+  --retro-board-head-bottom-border: #859c8d;
+  --retro-board-head-text: #3d5746;
+  --retro-tab-text: #486252;
+  --retro-tab-active-bg: linear-gradient(180deg, #edf6f0 0%, #c3d6c8 100%);
+  --retro-tab-active-text: #245137;
+  --retro-tab-divider: #b2c4b6;
+  --retro-theme-item-bg: #f7fbf8;
+  --retro-theme-item-border: #9db4a3;
+  --retro-theme-item-active-bg: #dfebe3;
+  --retro-theme-item-active-border: #4f7f60;
+  --retro-divider-bg: #dce9e0;
+  --retro-divider-border: #9eb7a6;
+  --retro-divider-text: #526d5d;
+  --retro-record-peer-bg: #f7fbf8;
+  --retro-record-self-bg: #eaf4ed;
+  --retro-record-peer-line: #97ad9d;
+  --retro-record-self-line: #4e7f5f;
+  --retro-record-name: #2d4537;
+  --retro-record-name-self: #1f5a34;
+  --retro-record-text: #24392d;
+  --retro-composer-bg: linear-gradient(180deg, #e7f0ea 0%, #b7ccbe 100%);
+  --retro-composer-border: #7f9685;
+  --retro-composer-label-bg: #eef6f0;
+  --retro-composer-label-border: #819888;
+  --retro-composer-label-text: #476253;
+
+  --retro-btn-primary-start: #1c6a39;
+  --retro-btn-primary-end: #0f522c;
+  --retro-btn-primary-border: #0f522c;
+  --retro-btn-primary-outline-text: #1b5e34;
+  --retro-btn-primary-outline-bg: #edf6f0;
+
+  --retro-btn-default-start: #f5faf7;
+  --retro-btn-default-end: #d5e4d9;
+  --retro-btn-default-border: #8ea595;
+  --retro-btn-default-text: #30493b;
+  --retro-btn-default-outline-text: #496354;
+  --retro-btn-default-outline-bg: #f5faf7;
+
+  --retro-btn-danger-start: #de6a72;
+  --retro-btn-danger-end: #bc4951;
+  --retro-btn-danger-border: #bc4951;
+  --retro-btn-danger-outline-text: #bc4951;
+  --retro-btn-danger-outline-bg: #fff8f8;
+
+  --retro-btn-primary-outline-spinner: rgba(27, 94, 52, 0.3);
+  --retro-btn-primary-outline-spinner-top: rgba(27, 94, 52, 1);
+  --retro-btn-default-spinner: rgba(73, 99, 84, 0.35);
+  --retro-btn-default-spinner-top: rgba(73, 99, 84, 1);
 }

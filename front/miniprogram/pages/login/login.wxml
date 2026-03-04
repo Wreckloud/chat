@@ -1,6 +1,6 @@
-<view class="container">
+<view class="container {{themeClass}}">
   <!-- 注册模式 -->
-  <view wx:if="{{mode === 'register'}}" class="register-container">
+  <view wx:if="{{mode === 'register'}}">
     <view class="header">
       <view class="title">注册</view>
     </view>
@@ -12,18 +12,18 @@
         <t-cell title="行者编号" note="{{registeredWolfNo}}" />
       </t-cell-group>
       
-      <t-button 
+      <retro-button 
         theme="primary" 
         size="large" 
         block 
         bindtap="handleConfirmRegister"
         class="confirm-btn">
         进入群落
-      </t-button>
+      </retro-button>
     </view>
 
     <!-- 注册表单 -->
-    <view wx:else class="register-form">
+    <view wx:else>
       <view class="register-card">
         <view class="form-content">
           <t-input
@@ -47,7 +47,7 @@
             class="form-input"
           />
 
-          <t-button 
+          <retro-button 
             theme="primary" 
             size="large" 
             block 
@@ -55,7 +55,7 @@
             bindtap="handleRegister"
             class="register-btn">
             注册
-          </t-button>
+          </retro-button>
 
           <view class="switch-mode">
             <text class="switch-link" bindtap="switchToLogin">已是行者？回到群落</text>
@@ -66,7 +66,7 @@
   </view>
 
   <!-- 登录模式 -->
-  <view wx:else class="login-container">
+  <view wx:else>
     <view class="header">
       <view class="title">登录</view>
     </view>
@@ -95,7 +95,7 @@
           class="form-input"
         />
 
-        <t-button 
+        <retro-button 
           theme="primary" 
           size="large" 
           block 
@@ -103,7 +103,7 @@
           bindtap="handleLogin"
           class="login-btn">
           登录
-        </t-button>
+        </retro-button>
 
         <view class="switch-mode">
           <text class="switch-link" bindtap="switchToRegister">没有账号？去注册</text>

@@ -7,7 +7,8 @@ const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { DEFAULT_AVATAR, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
-const { getThemeContext, getSwipeActionStyles, applyNavigationBar, applyTabBar } = require('../../utils/theme')
+const { getSwipeActionStyles } = require('../../utils/theme')
+const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
@@ -18,24 +19,17 @@ Page({
   },
 
   onLoad() {
-    // 检查登录状态
-    if (!auth.isLoggedIn()) {
-      wx.redirectTo({
-        url: '/pages/login/login'
-      })
+    if (!auth.requireLogin()) {
       return
     }
-
   },
 
   onShow() {
-    // 每次显示时刷新会话列表
-    if (auth.isLoggedIn()) {
-      this.applyTheme()
-      this.syncPinnedConversationIds()
-      this.initSocket()
-      this.loadConversations()
-    }
+    if (!auth.requireLogin()) return
+    this.applyTheme()
+    this.syncPinnedConversationIds()
+    this.initSocket()
+    this.loadConversations()
   },
 
   onHide() {
@@ -131,12 +125,12 @@ Page({
     }
 
     if (action.actionType === 'UNREAD') {
-      toastError('功能待实现', '功能待实现')
+      toastError('功能待实现')
       return
     }
 
     if (action.actionType === 'DELETE') {
-      toastError('功能待实现', '功能待实现')
+      toastError('功能待实现')
     }
   },
 
@@ -208,18 +202,19 @@ Page({
   },
 
   applyTheme() {
-    const themeContext = getThemeContext()
-    this.swipeActionStyles = getSwipeActionStyles(themeContext.themeName)
-    const list = (this.data.conversationList || []).map(item => ({
-      ...item,
-      swipeActions: this.buildSwipeActions(Boolean(item.pinned))
-    }))
-    this.setData({
-      themeClass: themeContext.themeClass,
-      conversationList: list
+    applyPageTheme(this, {
+      tabBar: true,
+      extraData: (themeContext) => {
+        this.swipeActionStyles = getSwipeActionStyles(themeContext.themeName)
+        const list = (this.data.conversationList || []).map(item => ({
+          ...item,
+          swipeActions: this.buildSwipeActions(Boolean(item.pinned))
+        }))
+        return {
+          conversationList: list
+        }
+      }
     })
-    applyNavigationBar(themeContext.themeName)
-    applyTabBar(themeContext.themeName)
   },
 
   sortConversationList(sourceList) {

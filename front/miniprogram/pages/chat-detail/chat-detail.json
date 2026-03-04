@@ -4,7 +4,6 @@
     "t-loading": "tdesign-miniprogram/loading/loading",
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-input": "tdesign-miniprogram/input/input",
-    "t-button": "tdesign-miniprogram/button/button",
     "t-avatar": "tdesign-miniprogram/avatar/avatar"
   }
 }
