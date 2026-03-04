@@ -47,6 +47,9 @@
       <retro-button theme="default" size="large" block bindtap="goFollow">
         关注列表
       </retro-button>
+      <retro-button theme="default" variant="outline" size="large" block bindtap="goChangePassword">
+        修改密码
+      </retro-button>
       <retro-button theme="danger" variant="outline" size="large" block bindtap="handleLogout">
         退出登录
       </retro-button>

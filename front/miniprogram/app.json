@@ -4,6 +4,7 @@
     "pages/chat-detail/chat-detail",
     "pages/community/community",
     "pages/me/me",
+    "pages/password/password",
     "pages/login/login",
     "pages/post-create/post-create",
     "pages/post-detail/post-detail",

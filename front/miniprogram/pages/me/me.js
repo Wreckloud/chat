@@ -70,6 +70,12 @@ Page({
     })
   },
 
+  goChangePassword() {
+    wx.navigateTo({
+      url: '/pages/password/password'
+    })
+  },
+
   onSelectTheme(e) {
     const themeName = e.currentTarget.dataset.theme
     if (!themeName || themeName === this.data.themeName) {

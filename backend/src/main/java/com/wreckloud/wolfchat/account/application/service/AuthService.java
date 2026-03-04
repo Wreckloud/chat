@@ -94,6 +94,39 @@ public class AuthService {
     }
 
     /**
+     * 修改登录密码
+     *
+     * @param userId 当前登录行者ID
+     * @param oldLoginKey 原密码（明文）
+     * @param newLoginKey 新密码（明文）
+     * @param confirmLoginKey 确认密码（明文）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, String oldLoginKey, String newLoginKey, String confirmLoginKey) {
+        WfUser user = wfUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BaseException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        if (UserStatus.DISABLED.equals(user.getStatus())) {
+            throw new BaseException(ErrorCode.USER_DISABLED);
+        }
+
+        if (!passwordEncoder.matches(oldLoginKey, user.getLoginKey())) {
+            throw new BaseException(ErrorCode.OLD_LOGIN_KEY_ERROR);
+        }
+
+        if (!newLoginKey.equals(confirmLoginKey)) {
+            throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
+        }
+
+        user.setLoginKey(passwordEncoder.encode(newLoginKey));
+        wfUserMapper.updateById(user);
+
+        log.info("行者修改密码成功: userId={}", userId);
+    }
+
+    /**
      * 构建登录响应 VO
      * 生成 JWT token 并封装用户信息
      *
