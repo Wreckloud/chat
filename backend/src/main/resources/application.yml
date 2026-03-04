@@ -4,27 +4,16 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
-    username: root
-    password: 1677
-
-  redis:
-    host: localhost
-    port: 6379
-    password: 1677
-    database: 0
-    timeout: 3000
+    url: ${DB_URL:jdbc:mysql://localhost:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1677}
 
   jackson:
     serialization:
       write-dates-as-timestamps: false
 
-  autoconfigure:
-    exclude:
-      - org.redisson.spring.starter.RedissonAutoConfiguration
-
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api
 
@@ -50,42 +39,26 @@ knife4j:
       - url: http://localhost:8080/api
         description: 本地环境
 
-# \u81EA\u5B9A\u4E49\u65E5\u5FD7\u76F8\u5173\u914D\u7F6E
+# 自定义日志相关配置
 project:
-  folder: D:/Temp/log
-
-# 号码池配置
-nopool:
-  # 可用号码数量阈值，低于此值自动补充
-  threshold: 10
-  # 自动补充时生成的号码数量
-  auto-generate-count: 50
-
-# 短信服务配置
-sms:
-  # 是否启用真实短信发送（false=模拟发送，打印到日志；true=真实发送，需要配置短信服务）
-  enabled: false
-  # TODO: 接入真实短信服务后，在此配置相关参数
-  # provider: aliyun  # 短信服务提供商：aliyun、tencent、yunpian等
-  # access-key: your-access-key
-  # secret-key: your-secret-key
-  # sign-name: 签名
-  # template-code: SMS_123456789
+  folder: ${PROJECT_LOG_FOLDER:D:/Temp/log}
 
 # JWT配置
 jwt:
-  # JWT密钥（生产环境请修改为更安全的密钥，至少32个字符）
-  secret: wolfchat-secret-key-2025-12-07-default-key-change-in-production-environment
+  # JWT密钥（生产环境请通过环境变量覆盖）
+  secret: ${JWT_SECRET:wolfchat-secret-key-2025-12-07-default-key-change-in-production-environment}
   # JWT过期时间（秒），默认7天（604800秒）
-  expiration: 604800
+  expiration: ${JWT_EXPIRATION:604800}
 
 log:
   root:
-    level: info
+    level: ${LOG_ROOT_LEVEL:info}
 
-# WolfChat 自定义配置
 wolfchat:
-  admin:
-    # 超级管理员WF号列表（逗号分隔）
-    # 这些用户拥有所有管理权限，无需修改数据库role字段
-    super-admin-wf-numbers: 1677820334
+  ws:
+    # WebSocket 允许的跨域来源模式
+    allowed-origin-patterns:
+      - http://localhost:*
+      - https://localhost:*
+      - https://servicewechat.com
+      - https://*.servicewechat.com
