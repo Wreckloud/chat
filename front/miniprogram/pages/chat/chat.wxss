@@ -3,8 +3,23 @@
   background-color: #f5f5f5;
 }
 
+.chat-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
 .chat-title {
   font-weight: 600;
+}
+
+.pin-tag {
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  background-color: #e8f3ff;
+  color: #1d4ed8;
+  font-size: 20rpx;
+  line-height: 28rpx;
 }
 
 

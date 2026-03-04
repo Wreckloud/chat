@@ -14,27 +14,35 @@
   </t-empty>
   
   <view wx:else>
-    <t-cell-group wx:for="{{conversationList}}" wx:key="conversationId">
-      <t-cell
-        description="{{item.lastMessage || '暂无消息'}}"
-        note="{{item.formattedTime || ''}}"
-        arrow
-        hover
-        bindtap="goChatDetail"
+    <t-cell-group>
+      <t-swipe-cell
+        wx:for="{{conversationList}}"
+        wx:key="conversationId"
+        right="{{item.swipeActions}}"
+        bind:click="onSwipeActionClick"
         data-id="{{item.conversationId}}">
-        <view slot="title" class="chat-title" catchtap="goUserProfile" data-item="{{item}}">
-          {{item.targetNickname || item.targetWolfNo}}
-        </view>
-        <t-avatar
-          slot="leftIcon"
-          size="small"
-          shape="round"
-          image="{{item.targetAvatar}}"
-          catchtap="goUserProfile"
-          data-item="{{item}}">
-          {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
-        </t-avatar>
-      </t-cell>
+        <t-cell
+          description="{{item.lastMessage || '暂无消息'}}"
+          note="{{item.formattedTime || ''}}"
+          arrow
+          hover
+          bindtap="goChatDetail"
+          data-id="{{item.conversationId}}">
+          <view slot="title" class="chat-title-row" catchtap="goUserProfile" data-item="{{item}}">
+            <view class="chat-title">{{item.targetNickname || item.targetWolfNo}}</view>
+            <view wx:if="{{item.pinned}}" class="pin-tag">置顶</view>
+          </view>
+          <t-avatar
+            slot="leftIcon"
+            size="small"
+            shape="round"
+            image="{{item.targetAvatar}}"
+            catchtap="goUserProfile"
+            data-item="{{item}}">
+            {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
+          </t-avatar>
+        </t-cell>
+      </t-swipe-cell>
     </t-cell-group>
   </view>
 </view>

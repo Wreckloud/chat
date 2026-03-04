@@ -6,7 +6,11 @@ const request = require('../../utils/request')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { DEFAULT_AVATAR, openUserProfile } = require('../../utils/user')
-const { toastError } = require('../../utils/ui')
+const { toastError, toastSuccess } = require('../../utils/ui')
+
+const PIN_ACTION_STYLE = 'color:#ffffff;background-color:#0a3e1e;'
+const UNREAD_ACTION_STYLE = 'color:#ffffff;background-color:#5e6d82;'
+const DELETE_ACTION_STYLE = 'color:#ffffff;background-color:#e34d59;'
 
 Page({
   data: {
@@ -23,7 +27,8 @@ Page({
       })
       return
     }
-    
+
+    this.syncPinnedConversationIds()
     // 加载会话列表
     this.loadConversations()
   },
@@ -31,11 +36,12 @@ Page({
   onShow() {
     // 每次显示时刷新会话列表
     if (auth.isLoggedIn()) {
+      this.syncPinnedConversationIds()
       this.loadConversations()
       this.initSocket()
     }
   },
-  
+
   onHide() {
     this.teardownSocket()
   },
@@ -48,20 +54,15 @@ Page({
    * 加载会话列表
    */
   loadConversations() {
-    if (this.data.loading) return
+    if (this.data.loading) return Promise.resolve()
 
     this.setData({ loading: true })
 
-    request.get('/conversations')
+    return request.get('/conversations')
       .then(res => {
-        const list = (res.data || []).map(item => ({
-          ...item,
-          targetAvatar: item.targetAvatar || DEFAULT_AVATAR,
-          formattedTime: item.lastMessageTime ? time.formatTime(item.lastMessageTime) : ''
-        }))
-        
+        const list = (res.data || []).map(item => this.formatConversationItem(item))
         this.setData({
-          conversationList: list,
+          conversationList: this.sortConversationList(list),
           loading: false
         })
       })
@@ -101,7 +102,7 @@ Page({
 
     const message = payload.data
     const list = this.data.conversationList.slice()
-    const idx = list.findIndex(item => item.conversationId === message.conversationId)
+    const idx = list.findIndex(item => Number(item.conversationId) === Number(message.conversationId))
 
     if (idx < 0) {
       this.loadConversations()
@@ -112,11 +113,131 @@ Page({
     item.lastMessage = message.content || item.lastMessage
     item.lastMessageTime = message.createTime
     item.formattedTime = time.formatTime(message.createTime)
+    item.swipeActions = this.buildSwipeActions(Boolean(item.pinned))
+    list[idx] = item
 
-    list.splice(idx, 1)
-    list.unshift(item)
+    this.setData({
+      conversationList: this.sortConversationList(list)
+    })
+  },
 
-    this.setData({ conversationList: list })
+  /**
+   * 右滑菜单操作
+   */
+  onSwipeActionClick(e) {
+    const conversationId = Number(e.currentTarget.dataset.id)
+    if (!conversationId) return
+
+    const action = e.detail || {}
+    if (action.actionType === 'PIN') {
+      this.togglePinConversation(conversationId)
+      return
+    }
+
+    if (action.actionType === 'UNREAD') {
+      toastError('功能待实现', '功能待实现')
+      return
+    }
+
+    if (action.actionType === 'DELETE') {
+      toastError('功能待实现', '功能待实现')
+    }
+  },
+
+  /**
+   * 切换置顶状态（前端本地实现）
+   */
+  togglePinConversation(conversationId) {
+    const pinnedSet = new Set(this.pinnedConversationIds || [])
+    const nextPinned = !pinnedSet.has(conversationId)
+
+    if (nextPinned) {
+      pinnedSet.add(conversationId)
+    } else {
+      pinnedSet.delete(conversationId)
+    }
+
+    const pinnedIds = Array.from(pinnedSet)
+    this.pinnedConversationIds = pinnedIds
+    this.savePinnedConversationIds(pinnedIds)
+
+    const list = (this.data.conversationList || []).map(item => {
+      if (Number(item.conversationId) !== conversationId) {
+        return item
+      }
+      return {
+        ...item,
+        pinned: nextPinned,
+        swipeActions: this.buildSwipeActions(nextPinned)
+      }
+    })
+
+    this.setData({
+      conversationList: this.sortConversationList(list)
+    })
+    toastSuccess(nextPinned ? '置顶成功' : '已取消置顶')
+  },
+
+  formatConversationItem(item) {
+    const conversationId = Number(item.conversationId)
+    const pinned = (this.pinnedConversationIds || []).includes(conversationId)
+    return {
+      ...item,
+      pinned: pinned,
+      targetAvatar: item.targetAvatar || DEFAULT_AVATAR,
+      formattedTime: item.lastMessageTime ? time.formatTime(item.lastMessageTime) : '',
+      swipeActions: this.buildSwipeActions(pinned)
+    }
+  },
+
+  buildSwipeActions(pinned) {
+    return [
+      {
+        text: pinned ? '取消置顶' : '置顶',
+        actionType: 'PIN',
+        style: PIN_ACTION_STYLE
+      },
+      {
+        text: '标为未读',
+        actionType: 'UNREAD',
+        style: UNREAD_ACTION_STYLE
+      },
+      {
+        text: '删除',
+        actionType: 'DELETE',
+        style: DELETE_ACTION_STYLE
+      }
+    ]
+  },
+
+  sortConversationList(sourceList) {
+    return (sourceList || []).slice().sort((a, b) => {
+      const pinDiff = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))
+      if (pinDiff !== 0) return pinDiff
+
+      const aTime = a.lastMessageTime || ''
+      const bTime = b.lastMessageTime || ''
+      if (aTime !== bTime) return bTime.localeCompare(aTime)
+      return Number(b.conversationId) - Number(a.conversationId)
+    })
+  },
+
+  syncPinnedConversationIds() {
+    const key = this.getPinnedStorageKey()
+    const saved = wx.getStorageSync(key)
+    this.pinnedConversationIds = Array.isArray(saved)
+      ? saved.map(id => Number(id)).filter(id => Number.isFinite(id))
+      : []
+  },
+
+  savePinnedConversationIds(pinnedIds) {
+    wx.setStorageSync(this.getPinnedStorageKey(), pinnedIds)
+  },
+
+  getPinnedStorageKey() {
+    const userInfo = auth.getUserInfo()
+    const userId = userInfo && userInfo.userId ? userInfo.userId : 0
+    return `wolfchat_chat_pins_${userId}`
   },
 
   /**
@@ -145,8 +266,9 @@ Page({
    * 下拉刷新
    */
   onPullDownRefresh() {
-    this.loadConversations()
-    wx.stopPullDownRefresh()
+    this.loadConversations().then(() => {
+      wx.stopPullDownRefresh()
+    })
   },
 
   /**
@@ -158,4 +280,3 @@ Page({
     })
   }
 })
-
