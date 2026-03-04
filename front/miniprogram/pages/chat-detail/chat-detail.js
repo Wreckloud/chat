@@ -7,6 +7,7 @@ const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
+const { getThemeContext, applyNavigationBar } = require('../../utils/theme')
 
 Page({
   data: {
@@ -20,8 +21,9 @@ Page({
     pageSize: 20,
     currentUserId: null,
     scrollTop: 0,
-    targetUser: null, // 对方用户信息
-    currentUser: null // 当前用户信息
+    targetUser: {}, // 对方用户信息
+    currentUser: {}, // 当前用户信息
+    themeClass: 'theme-retro-blue'
   },
 
   SEND_TIMEOUT_MS: 8000,
@@ -46,7 +48,7 @@ Page({
     this.setData({
       conversationId: numericConversationId,
       currentUserId: currentUserId,
-      currentUser: normalizeUser(userInfo)
+      currentUser: normalizeUser(userInfo) || {}
     })
 
     // 加载会话信息（获取对方用户信息）
@@ -54,6 +56,10 @@ Page({
     this.loadConversation()
     this.loadMessages()
     this.initSocket()
+  },
+
+  onShow() {
+    this.applyTheme()
   },
 
   onUnload() {
@@ -94,7 +100,7 @@ Page({
             avatar: conversation.targetAvatar
           }
           // 对方头像兜底，避免空白头像
-          const normalized = normalizeUser(targetUser)
+          const normalized = normalizeUser(targetUser) || {}
           this.setData({ targetUser: normalized })
           
           // 设置页面标题为对方昵称
@@ -245,6 +251,14 @@ Page({
     const user = this.data.targetUser
     if (!user || !user.userId) return
     openUserProfile(user)
+  },
+
+  applyTheme() {
+    const themeContext = getThemeContext()
+    this.setData({
+      themeClass: themeContext.themeClass
+    })
+    applyNavigationBar(themeContext.themeName)
   },
 
   /**

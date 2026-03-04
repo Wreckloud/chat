@@ -11,15 +11,15 @@
     "pages/user-detail/user-detail"
   ],
   "window": {
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#0a3e1e",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#536b87",
     "navigationBarTitleText": "WolfChat",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#0d0d0d"
+    "backgroundColor": "#dce4ef"
   },
   "tabBar": {
     "color": "#999999",
-    "selectedColor": "#0a3e1e",
+    "selectedColor": "#536b87",
     "backgroundColor": "#ffffff",
     "borderStyle": "black",
     "list": [

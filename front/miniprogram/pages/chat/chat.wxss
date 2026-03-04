@@ -1,26 +1,252 @@
-.chat-container {
-  height: 100vh;
-  background-color: #f5f5f5;
+/* Layout layer */
+.chat-page {
+  min-height: 100vh;
 }
 
-.chat-title-row {
+.retro-toolbar {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  justify-content: space-between;
+  padding: 18rpx 22rpx;
 }
 
-.chat-title {
+.retro-title {
+  font-size: 27rpx;
   font-weight: 600;
+  letter-spacing: 1rpx;
 }
 
-.pin-tag {
-  padding: 2rpx 10rpx;
-  border-radius: 8rpx;
-  background-color: #e8f3ff;
-  color: #1d4ed8;
+.retro-count {
+  font-size: 22rpx;
+}
+
+.conversation-board {
+  margin: 14rpx 12rpx 20rpx;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 14rpx;
+  font-size: 22rpx;
+}
+
+.board-head-user {
+  width: 44%;
+  padding-left: 6rpx;
+}
+
+.board-head-msg {
+  width: 36%;
+}
+
+.board-head-time {
+  width: 20%;
+  text-align: right;
+}
+
+.conversation-row {
+  display: flex;
+  align-items: center;
+  min-height: 112rpx;
+  padding: 10rpx 14rpx;
+}
+
+.conversation-user {
+  width: 44%;
+  display: flex;
+  align-items: center;
+}
+
+.conversation-avatar {
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+}
+
+.conversation-user-meta {
+  min-width: 0;
+  margin-left: 12rpx;
+}
+
+.conversation-user-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.conversation-name {
+  max-width: 180rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pin-flag {
+  margin-left: 8rpx;
   font-size: 20rpx;
-  line-height: 28rpx;
 }
 
+.conversation-no {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+}
 
+.conversation-message {
+  width: 36%;
+  min-width: 0;
+  padding-right: 10rpx;
+}
 
+.conversation-message-text {
+  font-size: 23rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-time {
+  width: 20%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.conversation-time-text {
+  font-size: 22rpx;
+}
+
+/* Skin layer: Retro Blue */
+.theme-retro-blue {
+  background: #dde4ee;
+  color: #1f2d3d;
+}
+
+.theme-retro-blue .retro-toolbar {
+  border-top: 1rpx solid #f2f7ff;
+  border-bottom: 1rpx solid #8894a6;
+  background: linear-gradient(180deg, #f5f8fd 0%, #d0d9e8 100%);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+}
+
+.theme-retro-blue .retro-count {
+  color: #4c5e74;
+}
+
+.theme-retro-blue .conversation-board {
+  border: 1rpx solid #8694a8;
+  background: #edf2fb;
+  box-shadow: 0 1rpx 2rpx rgba(32, 45, 67, 0.18);
+}
+
+.theme-retro-blue .board-head {
+  border-top: 1rpx solid #f3f7ff;
+  border-bottom: 1rpx solid #8f9bb0;
+  background: linear-gradient(180deg, #eef4ff 0%, #c6d2e4 100%);
+  color: #3b4c63;
+}
+
+.theme-retro-blue .conversation-row {
+  border-bottom: 1rpx solid #c8d2e1;
+  background: #f9fbff;
+}
+
+.theme-retro-blue .conversation-row-even {
+  background: #f3f7ff;
+}
+
+.theme-retro-blue .conversation-row-pinned {
+  background: #e6eefc;
+}
+
+.theme-retro-blue .conversation-avatar {
+  border: 1rpx solid #8d9bae;
+  background: #ffffff;
+}
+
+.theme-retro-blue .conversation-name {
+  color: #1c2b3b;
+}
+
+.theme-retro-blue .pin-flag {
+  color: #2f5c9b;
+}
+
+.theme-retro-blue .conversation-no {
+  color: #6d7f96;
+}
+
+.theme-retro-blue .conversation-message-text {
+  color: #2f4055;
+}
+
+.theme-retro-blue .conversation-time-text {
+  color: #4d6078;
+}
+
+/* Skin layer: Retro Olive */
+.theme-retro-olive {
+  background: #dce8df;
+  color: #1f3226;
+}
+
+.theme-retro-olive .retro-toolbar {
+  border-top: 1rpx solid #edf6f0;
+  border-bottom: 1rpx solid #78907e;
+  background: linear-gradient(180deg, #edf6f0 0%, #c0d4c6 100%);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.75);
+}
+
+.theme-retro-olive .retro-count {
+  color: #4e6658;
+}
+
+.theme-retro-olive .conversation-board {
+  border: 1rpx solid #7f9787;
+  background: #eaf2ec;
+  box-shadow: 0 1rpx 2rpx rgba(33, 53, 41, 0.16);
+}
+
+.theme-retro-olive .board-head {
+  border-top: 1rpx solid #edf6f0;
+  border-bottom: 1rpx solid #859c8d;
+  background: linear-gradient(180deg, #e8f2ea 0%, #b7ccb9 100%);
+  color: #3d5746;
+}
+
+.theme-retro-olive .conversation-row {
+  border-bottom: 1rpx solid #c5d4c8;
+  background: #f7fbf8;
+}
+
+.theme-retro-olive .conversation-row-even {
+  background: #eff6f1;
+}
+
+.theme-retro-olive .conversation-row-pinned {
+  background: #dcecdf;
+}
+
+.theme-retro-olive .conversation-avatar {
+  border: 1rpx solid #839a8a;
+  background: #ffffff;
+}
+
+.theme-retro-olive .conversation-name {
+  color: #1e3326;
+}
+
+.theme-retro-olive .pin-flag {
+  color: #0f5b2c;
+}
+
+.theme-retro-olive .conversation-no {
+  color: #607566;
+}
+
+.theme-retro-olive .conversation-message-text {
+  color: #30493a;
+}
+
+.theme-retro-olive .conversation-time-text {
+  color: #486051;
+}

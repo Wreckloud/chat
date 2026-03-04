@@ -3,20 +3,21 @@
  * @author Wreckloud
  * @date 2024-12-18
  */
-
-const auth = require('./utils/auth.js');
+const { getThemeName, applyTabBar } = require('./utils/theme')
 
 App({
   /**
    * 小程序初始化
    */
-  onLaunch(options) {
+  onLaunch() {
+    applyTabBar(getThemeName())
   },
 
   /**
    * 小程序显示
    */
   onShow() {
+    applyTabBar(getThemeName())
   },
 
   /**

@@ -7,16 +7,14 @@ const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { DEFAULT_AVATAR, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
-
-const PIN_ACTION_STYLE = 'color:#ffffff;background-color:#0a3e1e;'
-const UNREAD_ACTION_STYLE = 'color:#ffffff;background-color:#5e6d82;'
-const DELETE_ACTION_STYLE = 'color:#ffffff;background-color:#e34d59;'
+const { getThemeContext, getSwipeActionStyles, applyNavigationBar, applyTabBar } = require('../../utils/theme')
 
 Page({
   data: {
     // 会话列表数据
     conversationList: [],
-    loading: false
+    loading: false,
+    themeClass: 'theme-retro-blue'
   },
 
   onLoad() {
@@ -28,17 +26,15 @@ Page({
       return
     }
 
-    this.syncPinnedConversationIds()
-    // 加载会话列表
-    this.loadConversations()
   },
 
   onShow() {
     // 每次显示时刷新会话列表
     if (auth.isLoggedIn()) {
+      this.applyTheme()
       this.syncPinnedConversationIds()
-      this.loadConversations()
       this.initSocket()
+      this.loadConversations()
     }
   },
 
@@ -191,23 +187,39 @@ Page({
   },
 
   buildSwipeActions(pinned) {
+    const styles = this.swipeActionStyles || getSwipeActionStyles()
     return [
       {
         text: pinned ? '取消置顶' : '置顶',
         actionType: 'PIN',
-        style: PIN_ACTION_STYLE
+        style: styles.pin
       },
       {
         text: '标为未读',
         actionType: 'UNREAD',
-        style: UNREAD_ACTION_STYLE
+        style: styles.unread
       },
       {
         text: '删除',
         actionType: 'DELETE',
-        style: DELETE_ACTION_STYLE
+        style: styles.delete
       }
     ]
+  },
+
+  applyTheme() {
+    const themeContext = getThemeContext()
+    this.swipeActionStyles = getSwipeActionStyles(themeContext.themeName)
+    const list = (this.data.conversationList || []).map(item => ({
+      ...item,
+      swipeActions: this.buildSwipeActions(Boolean(item.pinned))
+    }))
+    this.setData({
+      themeClass: themeContext.themeClass,
+      conversationList: list
+    })
+    applyNavigationBar(themeContext.themeName)
+    applyTabBar(themeContext.themeName)
   },
 
   sortConversationList(sourceList) {
