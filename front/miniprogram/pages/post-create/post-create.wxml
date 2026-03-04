@@ -5,7 +5,7 @@
   </view>
 
   <view class="editor-card">
-    <t-textarea
+    <retro-textarea
       placeholder="说点什么..."
       value="{{content}}"
       maxlength="500"

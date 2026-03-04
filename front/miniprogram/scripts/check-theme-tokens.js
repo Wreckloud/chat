@@ -1,3 +1,8 @@
+/**
+ * 主题 token 一致性校验：
+ * 1. blue/olive 主题变量集合必须一致
+ * 2. 页面中使用到的变量必须在 app.wxss 中定义
+ */
 const fs = require('fs')
 const path = require('path')
 
@@ -22,6 +27,7 @@ function extractClassBlock(source, className) {
   }
 
   let depth = 0
+  // 使用括号深度切出主题 class 的完整内容，避免正则跨块误匹配
   for (let i = braceStart; i < source.length; i++) {
     const ch = source[i]
     if (ch === '{') depth += 1

@@ -93,4 +93,11 @@
 
 .comment-input {
   margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.comment-field {
+  flex: 1;
 }

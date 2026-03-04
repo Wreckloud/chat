@@ -1,7 +1,3 @@
 {
-  "usingComponents": {
-    "t-avatar": "tdesign-miniprogram/avatar/avatar",
-    "t-loading": "tdesign-miniprogram/loading/loading"
-  },
   "navigationBarTitleText": "行者主页"
 }

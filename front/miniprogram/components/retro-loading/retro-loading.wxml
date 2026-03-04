@@ -1,0 +1,7 @@
+<view class="retro-loading">
+  <view
+    class="retro-loading-spinner"
+    style="width: {{size}}; height: {{size}};">
+  </view>
+  <text wx:if="{{text}}" class="retro-loading-text">{{text}}</text>
+</view>

@@ -1,0 +1,24 @@
+<view
+  class="retro-swipe-cell"
+  bindtouchstart="onTouchStart"
+  bindtouchmove="onTouchMove"
+  bindtouchend="onTouchEnd"
+  bindtouchcancel="onTouchEnd">
+  <view class="retro-swipe-actions" style="width: {{maxOffset}}px;">
+    <view
+      wx:for="{{right}}"
+      wx:key="actionType"
+      class="retro-swipe-action"
+      style="{{item.style}}width: {{actionWidthPx}}px;"
+      data-index="{{index}}"
+      bindtap="onActionTap">
+      {{item.text}}
+    </view>
+  </view>
+
+  <view
+    class="retro-swipe-content {{dragging ? '' : 'with-transition'}}"
+    style="transform: translate3d({{offsetX}}px, 0, 0);">
+    <slot></slot>
+  </view>
+</view>

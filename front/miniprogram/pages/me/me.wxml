@@ -2,18 +2,24 @@
   <view wx:if="{{userInfo}}" class="content">
     <view class="user-card">
       <view class="avatar-section">
-        <t-avatar
+        <retro-avatar
           size="large"
           image="{{userInfo.avatar || ''}}"
           shape="round">
           {{userInfo.nickname ? userInfo.nickname.charAt(0) : '行'}}
-        </t-avatar>
+        </retro-avatar>
       </view>
 
-      <t-cell-group>
-        <t-cell title="狼藉" note="{{userInfo.wolfNo}}" arrow="{{false}}" />
-        <t-cell title="称谓" note="{{userInfo.nickname || userInfo.wolfNo}}" arrow="{{false}}" />
-      </t-cell-group>
+      <view class="profile-list">
+        <view class="profile-row">
+          <text class="profile-label">狼藉</text>
+          <text class="profile-value">{{userInfo.wolfNo}}</text>
+        </view>
+        <view class="profile-row">
+          <text class="profile-label">称谓</text>
+          <text class="profile-value">{{userInfo.nickname || userInfo.wolfNo}}</text>
+        </view>
+      </view>
     </view>
 
     <view class="theme-card">

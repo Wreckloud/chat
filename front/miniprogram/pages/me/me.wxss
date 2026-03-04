@@ -39,6 +39,38 @@
   margin-bottom: 14rpx;
 }
 
+.profile-list {
+  border: 1rpx solid var(--retro-row-border, #c8d2e1);
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 16rpx;
+  border-bottom: 1rpx solid var(--retro-row-border, #c8d2e1);
+}
+
+.profile-row:last-child {
+  border-bottom: none;
+}
+
+.profile-label {
+  font-size: 23rpx;
+  color: var(--retro-muted-text);
+}
+
+.profile-value {
+  max-width: 420rpx;
+  text-align: right;
+  font-size: 23rpx;
+  color: var(--retro-body-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .theme-list {
   display: flex;
   flex-direction: column;

@@ -1,0 +1,27 @@
+.retro-empty {
+  margin: 18rpx 12rpx;
+  padding: 36rpx 20rpx;
+  border: 1rpx dashed var(--retro-panel-border, #8a9ab0);
+  background: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  color: var(--retro-muted-text, #62758d);
+}
+
+.retro-empty-icon {
+  display: inline-block;
+  min-width: 108rpx;
+  padding: 4rpx 12rpx;
+  font-size: 20rpx;
+  letter-spacing: 2rpx;
+  border: 1rpx solid var(--retro-panel-border, #8a9ab0);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.retro-empty-desc {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+}
+
+.retro-empty-actions {
+  margin-top: 18rpx;
+}

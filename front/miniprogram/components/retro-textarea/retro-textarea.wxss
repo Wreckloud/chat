@@ -1,0 +1,19 @@
+.retro-textarea {
+  box-sizing: border-box;
+  padding: 12rpx 14rpx;
+  border: 1rpx solid var(--retro-panel-border, #8a9ab0);
+  background: #ffffff;
+  min-height: 210rpx;
+}
+
+.retro-textarea-core {
+  width: 100%;
+  min-height: 180rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--retro-page-text, #1f2d3d);
+}
+
+.is-disabled {
+  opacity: 0.65;
+}

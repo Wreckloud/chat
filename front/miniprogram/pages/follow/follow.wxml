@@ -5,18 +5,18 @@
     <view class="tab {{active === 'mutual' ? 'active' : ''}}" data-tab="mutual" bindtap="switchTab">互关</view>
   </view>
 
-  <t-empty wx:if="{{list.length === 0}}" description="暂无数据" />
+  <retro-empty wx:if="{{list.length === 0}}" description="暂无数据" />
 
   <view wx:else class="user-board">
     <view wx:for="{{list}}" wx:key="userId" class="user-row">
       <view class="user-main" bindtap="goUserProfile" data-user="{{item}}">
-        <t-avatar
+        <retro-avatar
           class="user-avatar"
           size="small"
           shape="round"
           image="{{item.avatar}}">
           {{item.nickname ? item.nickname.charAt(0) : '行'}}
-        </t-avatar>
+        </retro-avatar>
         <view class="user-meta">
           <view class="user-name-line">
             <text class="user-name">{{item.nickname || item.wolfNo}}</text>

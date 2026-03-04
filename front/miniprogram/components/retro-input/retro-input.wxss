@@ -1,0 +1,29 @@
+.retro-input {
+  height: 74rpx;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 16rpx;
+  border: 1rpx solid var(--retro-panel-border, #8a9ab0);
+  background: #ffffff;
+}
+
+.retro-input-label {
+  width: 92rpx;
+  margin-right: 10rpx;
+  font-size: 24rpx;
+  color: var(--retro-muted-text, #62758d);
+  flex-shrink: 0;
+}
+
+.retro-input-core {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  font-size: 24rpx;
+  color: var(--retro-page-text, #1f2d3d);
+}
+
+.is-disabled {
+  opacity: 0.65;
+}

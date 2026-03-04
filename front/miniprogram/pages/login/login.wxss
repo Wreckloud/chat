@@ -35,6 +35,34 @@
   margin-top: 26rpx;
 }
 
+.result-list {
+  border: 1rpx solid var(--retro-panel-border);
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 16rpx;
+  border-bottom: 1rpx solid var(--retro-row-border, #c8d2e1);
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+.result-label {
+  font-size: 23rpx;
+  color: var(--retro-body-text, #304459);
+}
+
+.result-note {
+  font-size: 23rpx;
+  color: var(--retro-strong-text, #1c2b3b);
+  font-weight: 600;
+}
+
 .form-content {
   padding: 6rpx 0;
 }
