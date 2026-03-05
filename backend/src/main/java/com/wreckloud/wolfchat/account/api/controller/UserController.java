@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.account.api.controller;
 import com.wreckloud.wolfchat.account.api.dto.BindEmailDTO;
 import com.wreckloud.wolfchat.account.api.dto.ChangePasswordDTO;
 import com.wreckloud.wolfchat.account.api.dto.SendBindEmailCodeDTO;
+import com.wreckloud.wolfchat.account.api.dto.UpdateOnboardingStatusDTO;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
@@ -84,6 +85,17 @@ public class UserController {
         Long userId = UserContext.getRequiredUserId();
         authService.bindEmail(userId, dto.getEmail(), dto.getVerifyCode());
         return Result.success("邮箱认证成功", null);
+    }
+
+    /**
+     * 更新新用户引导状态
+     */
+    @Operation(summary = "更新引导状态", description = "更新当前登录行者的新用户引导状态（需要登录）")
+    @PutMapping("/onboarding/status")
+    public Result<Void> updateOnboardingStatus(@RequestBody @Validated UpdateOnboardingStatusDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        userService.updateOnboardingStatus(userId, dto.getOnboardingStatus());
+        return Result.success("引导状态更新成功", null);
     }
 }
 

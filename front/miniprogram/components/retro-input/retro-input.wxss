@@ -8,19 +8,34 @@
   background: #ffffff;
 }
 
-.retro-input-label {
-  width: 92rpx;
+.retro-input-label-wrap {
+  width: 98rpx;
   margin-right: 10rpx;
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+
+.retro-input-label {
   font-size: 24rpx;
   color: var(--retro-muted-text, #62758d);
-  flex-shrink: 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.retro-input-required {
+  font-size: 22rpx;
+  color: #b54852;
+  line-height: 1;
+  transform: translateY(-1rpx);
 }
 
 .retro-input-main {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
 }
 
 .retro-input-core {
@@ -32,9 +47,9 @@
 }
 
 .retro-input-actions {
-  margin-left: 10rpx;
+  margin-left: 8rpx;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8rpx;
   flex-shrink: 0;
 }
@@ -44,6 +59,7 @@
   align-items: center;
   gap: 6rpx;
   max-width: 176rpx;
+  align-self: center;
 }
 
 .strength-bars {
@@ -54,7 +70,7 @@
 
 .strength-bar {
   width: 5rpx;
-  height: 16rpx;
+  height: 8rpx;
   border: 1rpx solid #9aa8bb;
   background: #e8edf3;
 }
@@ -64,7 +80,7 @@
 }
 
 .strength-bar-3 {
-  height: 8rpx;
+  height: 16rpx;
 }
 
 .strength-text {
@@ -104,13 +120,12 @@
 }
 
 .reveal-btn {
-  width: 40rpx;
-  height: 40rpx;
-  border: 1rpx solid var(--retro-panel-border, #8a9ab0);
-  background: #f4f7fb;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .eye-icon {
@@ -131,8 +146,7 @@
 }
 
 .is-revealing {
-  border-color: var(--retro-link-text, #2f5f97);
-  background: #e8f0fb;
+  opacity: 0.86;
 }
 
 .is-revealing .eye-icon {

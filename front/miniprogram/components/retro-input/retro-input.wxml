@@ -1,5 +1,10 @@
 <view class="retro-input {{disabled ? 'is-disabled' : ''}}">
-  <text wx:if="{{label}}" class="retro-input-label">{{label}}</text>
+  <view
+    wx:if="{{label}}"
+    class="retro-input-label-wrap">
+    <text class="retro-input-label">{{label}}</text>
+    <text wx:if="{{required}}" class="retro-input-required">*</text>
+  </view>
   <view class="retro-input-main">
     <input
       class="retro-input-core"
@@ -26,7 +31,7 @@
       <view
         wx:if="{{holdToReveal && type === 'password'}}"
         class="reveal-btn {{isRevealing ? 'is-revealing' : ''}}"
-        bindlongpress="onRevealStart"
+        bindtouchstart="onRevealStart"
         bindtouchend="onRevealEnd"
         bindtouchcancel="onRevealEnd">
         <view class="eye-icon">

@@ -25,6 +25,11 @@ public final class UserConverter {
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
         userVO.setStatus(user.getStatus());
+        userVO.setOnboardingStatus(user.getOnboardingStatus());
+        userVO.setOnboardingCompletedAt(user.getOnboardingCompletedAt());
+        userVO.setFirstLoginAt(user.getFirstLoginAt());
+        userVO.setLastLoginAt(user.getLastLoginAt());
+        userVO.setLoginCount(user.getLoginCount());
         return userVO;
     }
 

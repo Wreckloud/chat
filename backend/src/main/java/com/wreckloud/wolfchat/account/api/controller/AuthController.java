@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * @Description 认证控制器
  * @Author Wreckloud
@@ -31,9 +33,9 @@ public class AuthController {
 
     /**
      * 注册
-     * 用户输入行者名、密码、邮箱，系统分配狼藉号并注册
+     * 用户输入行者名、密码、可选邮箱，系统分配狼藉号并注册
      */
-    @Operation(summary = "注册", description = "输入行者名、密码、邮箱，系统分配狼藉号并注册")
+    @Operation(summary = "注册", description = "输入行者名、密码、可选邮箱，系统分配狼藉号并注册")
     @PostMapping("/register")
     public Result<LoginVO> register(@RequestBody @Validated RegisterDTO dto) {
         LoginVO loginVO = authService.register(dto.getNickname(), dto.getPassword(), dto.getEmail());
@@ -45,8 +47,8 @@ public class AuthController {
      */
     @Operation(summary = "登录", description = "使用账号（狼藉号或邮箱）+密码登录")
     @PostMapping("/login")
-    public Result<LoginVO> login(@RequestBody @Validated LoginDTO dto) {
-        LoginVO loginVO = authService.login(dto.getAccount(), dto.getLoginKey());
+    public Result<LoginVO> login(@RequestBody @Validated LoginDTO dto, HttpServletRequest request) {
+        LoginVO loginVO = authService.login(dto.getAccount(), dto.getLoginKey(), request);
         return Result.success("登录成功", loginVO);
     }
 

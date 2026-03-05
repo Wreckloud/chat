@@ -5,6 +5,7 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
+const { LOGIN_PAGE_COPY } = require('../../constants/copy')
 const {
   evaluatePasswordStrength,
   getPasswordStrengthInlineText
@@ -33,7 +34,8 @@ Page({
     showResult: false,
     registeredWolfNo: '',
     loading: false,
-    themeClass: 'theme-retro-blue'
+    themeClass: 'theme-retro-blue',
+    copy: LOGIN_PAGE_COPY
   },
 
   onLoad() {
@@ -139,41 +141,48 @@ Page({
     if (this.data.loading) return
 
     const { nickname, password, confirmPassword, email } = this.data
-
-    if (!nickname || !nickname.trim()) {
-      toastError('请输入行者名')
-      return
-    }
-
-    if (!password || password.length < 6) {
-      toastError('密码至少6位')
-      return
-    }
-
-    if (!confirmPassword) {
-      toastError('请确认密码')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      toastError('两次输入的密码不一致')
-      return
-    }
-
+    const copy = LOGIN_PAGE_COPY
+    const normalizedNickname = (nickname || '').trim()
+    const normalizedPassword = (password || '').trim()
+    const normalizedConfirmPassword = (confirmPassword || '').trim()
     const normalizedEmail = (email || '').trim()
-    if (!this.isValidEmail(normalizedEmail)) {
-      toastError('请输入正确的邮箱')
+
+    if (!normalizedNickname) {
+      toastError(copy.validation.nicknameRequired)
+      return
+    }
+
+    if (!normalizedPassword || normalizedPassword.length < 6) {
+      toastError(copy.validation.passwordMinLength)
+      return
+    }
+
+    if (!normalizedConfirmPassword) {
+      toastError(copy.validation.confirmPasswordRequired)
+      return
+    }
+
+    if (normalizedPassword !== normalizedConfirmPassword) {
+      toastError(copy.validation.registerPasswordMismatch)
+      return
+    }
+
+    if (normalizedEmail && !this.isValidEmail(normalizedEmail)) {
+      toastError(copy.validation.invalidEmail)
       return
     }
 
     this.setData({ loading: true })
 
     try {
-      const res = await request.post('/auth/register', {
-        nickname: nickname.trim(),
-        password: password.trim(),
-        email: normalizedEmail
-      })
+      const payload = {
+        nickname: normalizedNickname,
+        password: normalizedPassword
+      }
+      if (normalizedEmail) {
+        payload.email = normalizedEmail
+      }
+      const res = await request.post('/auth/register', payload)
 
       if (res.code === 0 && res.data) {
         // 保存 token 和用户信息
@@ -186,10 +195,10 @@ Page({
           registeredWolfNo: res.data.userInfo.wolfNo
         })
 
-        toastSuccess('注册成功')
+        toastSuccess(copy.toast.registerSuccess)
       }
     } catch (error) {
-      toastError(error, '注册失败')
+      toastError(error, copy.toast.registerFail)
     } finally {
       this.setData({ loading: false })
     }
@@ -202,14 +211,17 @@ Page({
     if (this.data.loading) return
 
     const { account, loginKey } = this.data
+    const copy = LOGIN_PAGE_COPY
+    const normalizedAccount = (account || '').trim()
+    const normalizedLoginKey = (loginKey || '').trim()
 
-    if (!account || !account.trim()) {
-      toastError('请输入狼藉号或邮箱')
+    if (!normalizedAccount) {
+      toastError(copy.validation.accountRequired)
       return
     }
 
-    if (!loginKey) {
-      toastError('请输入密码')
+    if (!normalizedLoginKey) {
+      toastError(copy.validation.loginPasswordRequired)
       return
     }
 
@@ -217,8 +229,8 @@ Page({
 
     try {
       const res = await request.post('/auth/login', {
-        account: account.trim(),
-        loginKey: loginKey.trim()
+        account: normalizedAccount,
+        loginKey: normalizedLoginKey
       })
 
       if (res.code === 0 && res.data) {
@@ -226,7 +238,7 @@ Page({
         auth.setToken(res.data.token)
         auth.setUserInfo(res.data.userInfo)
 
-        toastSuccess('登录成功')
+        toastSuccess(copy.toast.loginSuccess)
 
         // 跳转到聊天首页
         setTimeout(() => {
@@ -236,7 +248,7 @@ Page({
         }, 1000)
       }
     } catch (error) {
-      toastError(error, '登录失败')
+      toastError(error, copy.toast.loginFail)
     } finally {
       this.setData({ loading: false })
     }

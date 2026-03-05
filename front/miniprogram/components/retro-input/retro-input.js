@@ -39,6 +39,10 @@ Component({
     metaText: {
       type: String,
       value: ''
+    },
+    required: {
+      type: Boolean,
+      value: false
     }
   },
 
@@ -56,6 +60,9 @@ Component({
   lifetimes: {
     attached() {
       this.syncInputType()
+    },
+    detached() {
+      this.clearRevealTimer()
     }
   },
 
@@ -74,13 +81,21 @@ Component({
       if (!(this.properties.holdToReveal && this.properties.type === 'password')) {
         return
       }
-      this.setData({
-        isRevealing: true,
-        inputType: 'text'
-      })
+      if (this.properties.disabled) {
+        return
+      }
+      this.clearRevealTimer()
+      this.revealTimer = setTimeout(() => {
+        this.revealTimer = null
+        this.setData({
+          isRevealing: true,
+          inputType: 'text'
+        })
+      }, 140)
     },
 
     onRevealEnd() {
+      this.clearRevealTimer()
       if (!this.data.isRevealing) {
         return
       }
@@ -88,6 +103,13 @@ Component({
         isRevealing: false,
         inputType: this.properties.type
       })
+    },
+
+    clearRevealTimer() {
+      if (this.revealTimer) {
+        clearTimeout(this.revealTimer)
+        this.revealTimer = null
+      }
     },
 
     // 透传原生 input 事件，保持页面层调用方式一致

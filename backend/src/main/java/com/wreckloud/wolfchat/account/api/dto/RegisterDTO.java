@@ -3,7 +3,6 @@ package com.wreckloud.wolfchat.account.api.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
@@ -25,8 +24,7 @@ public class RegisterDTO {
     @Schema(description = "登录密码（长度6-64位）", example = "123456", required = true)
     private String password;
 
-    @NotBlank(message = "邮箱不能为空")
-    @Email(message = "邮箱格式不正确")
-    @Schema(description = "邮箱", example = "user@example.com", required = true)
+    @Size(max = 128, message = "邮箱长度不能超过128个字符")
+    @Schema(description = "邮箱（选填）", example = "user@example.com", required = false)
     private String email;
 }

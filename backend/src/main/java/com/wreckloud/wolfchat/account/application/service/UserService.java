@@ -1,10 +1,12 @@
 package com.wreckloud.wolfchat.account.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
+import com.wreckloud.wolfchat.account.domain.enums.OnboardingStatus;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
@@ -126,6 +129,30 @@ public class UserService {
         WfUser user = getByEmailOrThrow(email);
         checkEnabled(user);
         return user;
+    }
+
+    /**
+     * 更新当前用户新用户引导状态
+     */
+    public void updateOnboardingStatus(Long userId, OnboardingStatus onboardingStatus) {
+        if (onboardingStatus == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        WfUser user = getEnabledByIdOrThrow(userId);
+        LocalDateTime now = LocalDateTime.now();
+
+        LambdaUpdateWrapper<WfUser> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfUser::getId, user.getId())
+                .set(WfUser::getOnboardingStatus, onboardingStatus);
+        if (OnboardingStatus.PENDING.equals(onboardingStatus)) {
+            updateWrapper.set(WfUser::getOnboardingCompletedAt, null);
+        } else {
+            updateWrapper.set(WfUser::getOnboardingCompletedAt, now);
+        }
+        int updateRows = wfUserMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 
     /**

@@ -1,6 +1,13 @@
 -- WolfChat 数据库初始化脚本
 -- 仅包含建表语句，不包含测试数据
 -- 号码池会自动补充（当 UNUSED 数量低于 10 个时，系统会自动补充 50 个）
+-- 注意：本脚本使用 CREATE TABLE IF NOT EXISTS，不会修改已存在旧表结构。
+-- 若需要按当前版本重建库结构，请先手动删除目标数据库（或旧表）后再执行本脚本。
+
+CREATE DATABASE IF NOT EXISTS `wolf_chat`
+    DEFAULT CHARACTER SET utf8mb4
+    COLLATE utf8mb4_general_ci;
+USE `wolf_chat`;
 
 -- 狼藉号池表
 CREATE TABLE IF NOT EXISTS `wf_no_pool` (
@@ -25,13 +32,39 @@ CREATE TABLE IF NOT EXISTS `wf_user` (
     `nickname` VARCHAR(64) DEFAULT NULL COMMENT '行者名（行者在群落中的称呼，将被其他行者看到，注册后可修改）',
     `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL-正常，DISABLED-禁用',
+    `onboarding_status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '新用户引导状态：PENDING/COMPLETED/SKIPPED',
+    `onboarding_completed_at` DATETIME DEFAULT NULL COMMENT '引导完成时间',
+    `first_login_at` DATETIME DEFAULT NULL COMMENT '首次登录时间',
+    `last_login_at` DATETIME DEFAULT NULL COMMENT '最近登录时间',
+    `login_count` INT NOT NULL DEFAULT 0 COMMENT '登录次数',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_wolf_no` (`wolf_no`),
     UNIQUE KEY `uk_email` (`email`),
-    KEY `idx_status` (`status`)
+    KEY `idx_status` (`status`),
+    KEY `idx_onboarding_status` (`onboarding_status`),
+    KEY `idx_last_login_at` (`last_login_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者表';
+
+-- 登录记录表
+CREATE TABLE IF NOT EXISTS `wf_login_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT DEFAULT NULL COMMENT '用户ID（未匹配到用户时为空）',
+    `login_method` VARCHAR(20) NOT NULL COMMENT '登录方式：WOLF_NO/EMAIL/UNKNOWN',
+    `login_result` VARCHAR(20) NOT NULL COMMENT '登录结果：SUCCESS/FAIL',
+    `fail_code` INT DEFAULT NULL COMMENT '失败错误码（成功为空）',
+    `account_mask` VARCHAR(128) DEFAULT NULL COMMENT '脱敏登录账号',
+    `ip` VARCHAR(64) DEFAULT NULL COMMENT '客户端IP',
+    `user_agent` VARCHAR(255) DEFAULT NULL COMMENT 'User-Agent',
+    `client_type` VARCHAR(32) DEFAULT NULL COMMENT '客户端类型',
+    `client_version` VARCHAR(32) DEFAULT NULL COMMENT '客户端版本',
+    `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_login_time` (`user_id`, `login_time`),
+    KEY `idx_result_login_time` (`login_result`, `login_time`),
+    KEY `idx_login_time` (`login_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录记录表';
 
 -- 邮箱验证码表
 CREATE TABLE IF NOT EXISTS `wf_email_code` (
