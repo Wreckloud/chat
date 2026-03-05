@@ -165,6 +165,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
             return;
         }
+        if (!sessionUserService.isSessionUserExists(userId)) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
+            sessionManager.removeSession(session);
+            return;
+        }
 
         if (!validateSendRequest(session, request, clientMsgId)) {
             return;

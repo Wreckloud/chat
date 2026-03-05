@@ -2,6 +2,7 @@ package com.wreckloud.wolfchat.common.security.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
+import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,9 +47,17 @@ public class SessionUserService {
         return exists;
     }
 
+    public void invalidateUserCache(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        userExistCache.remove(userId);
+    }
+
     private boolean queryUserExists(Long userId) {
         LambdaQueryWrapper<WfUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfUser::getId, userId);
+        queryWrapper.eq(WfUser::getId, userId)
+                .eq(WfUser::getStatus, UserStatus.NORMAL);
         return wfUserMapper.selectCount(queryWrapper) > 0;
     }
 }

@@ -1,5 +1,7 @@
 package com.wreckloud.wolfchat.chat.websocket.session;
 
+import com.wreckloud.wolfchat.common.security.service.SessionUserService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -17,7 +19,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class WsSessionManager {
+    private final SessionUserService sessionUserService;
+
     private final Map<Long, Set<WebSocketSession>> userSessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserMap = new ConcurrentHashMap<>();
 
@@ -53,6 +58,10 @@ public class WsSessionManager {
     }
 
     public int sendToUser(Long userId, String payload) {
+        if (!sessionUserService.isSessionUserExists(userId)) {
+            removeUserSessions(userId);
+            return 0;
+        }
         Set<WebSocketSession> sessions = userSessions.get(userId);
         if (sessions == null || sessions.isEmpty()) {
             return 0;
@@ -73,5 +82,23 @@ public class WsSessionManager {
             }
         }
         return successCount;
+    }
+
+    private void removeUserSessions(Long userId) {
+        Set<WebSocketSession> sessions = userSessions.remove(userId);
+        if (sessions == null || sessions.isEmpty()) {
+            return;
+        }
+        for (WebSocketSession session : sessions) {
+            sessionUserMap.remove(session.getId());
+            try {
+                if (session.isOpen()) {
+                    session.close();
+                }
+            } catch (IOException e) {
+                log.warn("WS 关闭会话失败: userId={}, sessionId={}, error={}", userId, session.getId(), e.getMessage());
+            }
+        }
+        log.info("WS 清理用户会话: userId={}, count={}", userId, sessions.size());
     }
 }

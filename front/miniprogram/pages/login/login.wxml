@@ -123,6 +123,10 @@
           class="form-input"
         />
 
+        <view class="assist-row">
+          <text class="assist-link" bindtap="goResetPassword">{{copy.login.forgotPassword}}</text>
+        </view>
+
         <retro-button
           theme="primary"
           size="large"

@@ -33,7 +33,7 @@ public class UserVO {
     @Schema(description = "头像URL")
     private String avatar;
 
-    @Schema(description = "状态：NORMAL-正常，DISABLED-禁用")
+    @Schema(description = "状态：NORMAL-正常，DISABLED-禁用或已注销")
     private UserStatus status;
 
     @Schema(description = "新用户引导状态：PENDING/COMPLETED/SKIPPED")

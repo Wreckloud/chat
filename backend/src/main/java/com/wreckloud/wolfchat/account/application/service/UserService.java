@@ -16,8 +16,10 @@ import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserProfileMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -37,9 +39,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+    private static final String DELETED_NICKNAME_PREFIX = "已注销用户";
+
     private final WfUserMapper wfUserMapper;
     private final WfUserProfileMapper wfUserProfileMapper;
     private final WfUserAuthMapper wfUserAuthMapper;
+    private final UserAuthService userAuthService;
+    private final SessionUserService sessionUserService;
 
     /**
      * 根据行者ID获取用户信息 VO
@@ -142,6 +148,37 @@ public class UserService {
         if (insertRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
         }
+    }
+
+    /**
+     * 注销当前用户（测试期：立即生效）
+     * 逻辑删除用户，清空敏感资料，禁用并归档认证标识
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deactivateCurrentUser(Long userId) {
+        WfUser user = getEnabledByIdOrThrow(userId);
+
+        LambdaUpdateWrapper<WfUser> userUpdateWrapper = new LambdaUpdateWrapper<>();
+        userUpdateWrapper.eq(WfUser::getId, userId)
+                .set(WfUser::getStatus, UserStatus.DISABLED);
+        int userUpdateRows = wfUserMapper.update(null, userUpdateWrapper);
+        if (userUpdateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+
+        LambdaUpdateWrapper<WfUserProfile> profileUpdateWrapper = new LambdaUpdateWrapper<>();
+        profileUpdateWrapper.eq(WfUserProfile::getUserId, userId)
+                .set(WfUserProfile::getNickname, buildDeletedNickname(user.getId()))
+                .set(WfUserProfile::getAvatar, null)
+                .set(WfUserProfile::getSignature, null)
+                .set(WfUserProfile::getBio, null);
+        int profileUpdateRows = wfUserProfileMapper.update(null, profileUpdateWrapper);
+        if (profileUpdateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+
+        userAuthService.disableAndArchiveAllAuthByUserId(userId);
+        sessionUserService.invalidateUserCache(userId);
     }
 
     /**
@@ -269,6 +306,10 @@ public class UserService {
                 .eq(WfUserAuth::getEnabled, true)
                 .last("LIMIT 1");
         return wfUserAuthMapper.selectOne(queryWrapper);
+    }
+
+    private String buildDeletedNickname(Long userId) {
+        return DELETED_NICKNAME_PREFIX + "#" + userId;
     }
 
 }

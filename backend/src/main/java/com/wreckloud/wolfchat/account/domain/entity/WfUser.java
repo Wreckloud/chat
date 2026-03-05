@@ -54,7 +54,7 @@ public class WfUser {
     private String avatar;
 
     /**
-     * 状态：NORMAL-正常，DISABLED-禁用
+     * 状态：NORMAL-正常，DISABLED-禁用或已注销
      */
     private UserStatus status;
 

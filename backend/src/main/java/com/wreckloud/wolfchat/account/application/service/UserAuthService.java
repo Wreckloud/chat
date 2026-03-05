@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -23,6 +24,8 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class UserAuthService {
+    private static final String DELETED_IDENTIFIER_PREFIX = "DELETED";
+
     private final WfUserAuthMapper wfUserAuthMapper;
 
     public void createWolfNoPasswordAuth(Long userId, String wolfNo, String credentialHash) {
@@ -62,6 +65,10 @@ public class UserAuthService {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
         }
         return auth;
+    }
+
+    public WfUserAuth findAnyEmailAuthByUserId(Long userId) {
+        return findAnyByUserIdAndType(userId, UserAuthType.EMAIL_PASSWORD);
     }
 
     public void touchLoginAt(Long authId) {
@@ -124,6 +131,32 @@ public class UserAuthService {
         }
     }
 
+    public void disableAndArchiveAllAuthByUserId(Long userId) {
+        if (userId == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        LambdaQueryWrapper<WfUserAuth> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfUserAuth::getUserId, userId);
+        List<WfUserAuth> authList = wfUserAuthMapper.selectList(queryWrapper);
+        if (authList.isEmpty()) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+
+        for (WfUserAuth auth : authList) {
+            LambdaUpdateWrapper<WfUserAuth> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(WfUserAuth::getId, auth.getId())
+                    .set(WfUserAuth::getAuthIdentifier, buildDeletedIdentifier(auth))
+                    .set(WfUserAuth::getCredentialHash, "")
+                    .set(WfUserAuth::getVerified, false)
+                    .set(WfUserAuth::getEnabled, false)
+                    .set(WfUserAuth::getLastLoginAt, null);
+            int updateRows = wfUserAuthMapper.update(null, updateWrapper);
+            if (updateRows != 1) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
+        }
+    }
+
     private WfUserAuth findByUserIdAndType(Long userId, UserAuthType authType) {
         if (userId == null || authType == null) {
             throw new BaseException(ErrorCode.PARAM_ERROR);
@@ -173,5 +206,9 @@ public class UserAuthService {
 
     private String normalizeEmailIdentifier(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String buildDeletedIdentifier(WfUserAuth auth) {
+        return DELETED_IDENTIFIER_PREFIX + "_U" + auth.getUserId() + "_A" + auth.getId();
     }
 }

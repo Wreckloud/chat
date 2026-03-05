@@ -1,0 +1,40 @@
+<view class="container {{themeClass}}">
+  <view class="header">
+    <view class="title">{{copy.headerTitle}}</view>
+    <view class="sub-title">{{copy.headerSubtitle}}</view>
+  </view>
+
+  <view class="status-card">
+    <view class="status-row">
+      <text class="status-label">{{copy.status.label}}</text>
+      <text class="status-tag status-tag-{{statusType}}">{{statusText}}</text>
+    </view>
+    <view class="status-email">{{statusEmail}}</view>
+    <view class="status-hint">{{statusHint}}</view>
+  </view>
+
+  <view class="form-card">
+    <retro-input
+      label="{{copy.fields.emailLabel}}"
+      placeholder="{{copy.fields.emailPlaceholder}}"
+      value="{{emailInput}}"
+      disabled="{{emailInputDisabled}}"
+      maxlength="{{128}}"
+      bind:input="onEmailInput"
+      bind:change="onEmailInput"
+      class="email-input"
+    />
+
+    <retro-button
+      wx:if="{{canSendLink}}"
+      theme="primary"
+      size="large"
+      block
+      loading="{{submitting}}"
+      bindtap="handleSendVerifyLink">
+      {{submitText}}
+    </retro-button>
+
+    <view class="dev-hint">{{copy.hint}}</view>
+  </view>
+</view>

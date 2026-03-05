@@ -38,12 +38,24 @@ Page({
     copy: LOGIN_PAGE_COPY
   },
 
-  onLoad() {
+  onLoad(options) {
     // 检查是否已登录
     if (auth.isLoggedIn()) {
       wx.switchTab({
         url: '/pages/chat/chat'
       })
+      return
+    }
+
+    const nextData = {}
+    if (options && (options.mode === 'login' || options.mode === 'register')) {
+      nextData.mode = options.mode
+    }
+    if (options && options.account) {
+      nextData.account = decodeURIComponent(options.account)
+    }
+    if (Object.keys(nextData).length > 0) {
+      this.setData(nextData)
     }
   },
 
@@ -131,6 +143,15 @@ Page({
   onLoginKeyInput(e) {
     this.setData({
       loginKey: e.detail.value || ''
+    })
+  },
+
+  goResetPassword() {
+    const account = (this.data.account || '').trim()
+    const maybeEmail = this.isValidEmail(account)
+    const query = maybeEmail ? `?email=${encodeURIComponent(account)}` : ''
+    wx.navigateTo({
+      url: `/pages/reset-password/reset-password${query}`
     })
   },
 

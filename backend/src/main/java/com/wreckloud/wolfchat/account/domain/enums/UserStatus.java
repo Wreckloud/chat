@@ -17,7 +17,7 @@ public enum UserStatus {
     NORMAL("NORMAL"),
 
     /**
-     * 禁用
+     * 禁用或已注销
      */
     DISABLED("DISABLED");
 

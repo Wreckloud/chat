@@ -19,6 +19,14 @@
           <text class="profile-label">称谓</text>
           <text class="profile-value">{{userInfo.nickname || userInfo.wolfNo}}</text>
         </view>
+        <view class="profile-row">
+          <text class="profile-label">邮箱</text>
+          <text class="profile-value">{{userInfo.email || '未绑定'}}</text>
+        </view>
+        <view class="profile-row">
+          <text class="profile-label">邮箱状态</text>
+          <text class="profile-value">{{userInfo.email ? (userInfo.emailVerified ? '已认证' : '待认证') : '未绑定'}}</text>
+        </view>
       </view>
     </view>
 
@@ -47,11 +55,17 @@
       <retro-button theme="default" size="large" block bindtap="goFollow">
         关注列表
       </retro-button>
+      <retro-button theme="default" variant="outline" size="large" block bindtap="goEmailManage">
+        邮箱管理
+      </retro-button>
       <retro-button theme="default" variant="outline" size="large" block bindtap="goChangePassword">
         修改密码
       </retro-button>
-      <retro-button theme="danger" variant="outline" size="large" block bindtap="handleLogout">
+      <retro-button theme="default" variant="outline" size="large" block bindtap="handleLogout">
         退出登录
+      </retro-button>
+      <retro-button theme="danger" variant="outline" size="large" block bindtap="handleDeactivateAccount">
+        注销账号（测试）
       </retro-button>
     </view>
   </view>

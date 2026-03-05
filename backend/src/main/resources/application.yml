@@ -8,6 +8,12 @@ spring:
     username: root
     password: 1677
 
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password: 1677
+    database: 0
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -62,3 +68,8 @@ wolfchat:
       - https://localhost:*
       - https://servicewechat.com
       - https://*.servicewechat.com
+  email:
+    # 邮箱认证链接地址（控制台会打印完整链接）
+    verify-url: http://localhost:8080/api/auth/email/verify
+    # 重置密码链接地址（控制台会打印完整链接）
+    reset-password-url: http://localhost:8080/api/auth/password/reset

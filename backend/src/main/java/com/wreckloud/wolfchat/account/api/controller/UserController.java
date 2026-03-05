@@ -1,8 +1,7 @@
 package com.wreckloud.wolfchat.account.api.controller;
 
-import com.wreckloud.wolfchat.account.api.dto.BindEmailDTO;
 import com.wreckloud.wolfchat.account.api.dto.ChangePasswordDTO;
-import com.wreckloud.wolfchat.account.api.dto.SendBindEmailCodeDTO;
+import com.wreckloud.wolfchat.account.api.dto.SendBindEmailLinkDTO;
 import com.wreckloud.wolfchat.account.api.dto.UpdateOnboardingStatusDTO;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
@@ -14,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -66,25 +66,14 @@ public class UserController {
     }
 
     /**
-     * 发送邮箱认证/绑定验证码
+     * 发送邮箱认证链接
      */
-    @Operation(summary = "发送邮箱认证码", description = "给当前待认证邮箱发送验证码（需要登录）")
-    @PostMapping("/email-code/send")
-    public Result<Void> sendBindEmailCode(@RequestBody @Validated SendBindEmailCodeDTO dto) {
+    @Operation(summary = "发送邮箱认证链接", description = "给当前待认证邮箱发送认证链接（需要登录）")
+    @PostMapping("/email-link/send")
+    public Result<Void> sendBindEmailVerifyLink(@RequestBody @Validated SendBindEmailLinkDTO dto) {
         Long userId = UserContext.getRequiredUserId();
-        authService.sendBindEmailCode(userId, dto.getEmail());
-        return Result.success("验证码已发送", null);
-    }
-
-    /**
-     * 认证/绑定邮箱
-     */
-    @Operation(summary = "认证邮箱", description = "校验验证码并认证邮箱（需要登录）")
-    @PutMapping("/email/bind")
-    public Result<Void> bindEmail(@RequestBody @Validated BindEmailDTO dto) {
-        Long userId = UserContext.getRequiredUserId();
-        authService.bindEmail(userId, dto.getEmail(), dto.getVerifyCode());
-        return Result.success("邮箱认证成功", null);
+        authService.sendBindEmailVerifyLink(userId, dto.getEmail());
+        return Result.success("认证链接已发送", null);
     }
 
     /**
@@ -96,6 +85,17 @@ public class UserController {
         Long userId = UserContext.getRequiredUserId();
         userService.updateOnboardingStatus(userId, dto.getOnboardingStatus());
         return Result.success("引导状态更新成功", null);
+    }
+
+    /**
+     * 注销当前账号
+     */
+    @Operation(summary = "注销当前账号", description = "测试期立即注销当前账号（需要登录）")
+    @DeleteMapping("/me")
+    public Result<Void> deactivateCurrentUser() {
+        Long userId = UserContext.getRequiredUserId();
+        userService.deactivateCurrentUser(userId);
+        return Result.success("账号已注销", null);
     }
 }
 

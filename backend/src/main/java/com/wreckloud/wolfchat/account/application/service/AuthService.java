@@ -5,7 +5,6 @@ import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.domain.entity.WfUserAuth;
-import com.wreckloud.wolfchat.account.domain.enums.EmailCodeScene;
 import com.wreckloud.wolfchat.account.domain.enums.LoginMethod;
 import com.wreckloud.wolfchat.account.domain.enums.LoginResult;
 import com.wreckloud.wolfchat.account.domain.enums.OnboardingStatus;
@@ -42,7 +41,8 @@ public class AuthService {
 
     private final WfUserMapper wfUserMapper;
     private final WolfNoService wolfNoService;
-    private final EmailCodeService emailCodeService;
+    private final EmailVerifyLinkService emailVerifyLinkService;
+    private final PasswordResetLinkService passwordResetLinkService;
     private final LoginRecordService loginRecordService;
     private final UserService userService;
     private final UserAuthService userAuthService;
@@ -85,7 +85,7 @@ public class AuthService {
         userAuthService.createWolfNoPasswordAuth(user.getId(), wolfNo, credentialHash);
         if (normalizedEmail != null) {
             userAuthService.createEmailPasswordAuth(user.getId(), normalizedEmail, credentialHash, false);
-            emailCodeService.sendCode(normalizedEmail, EmailCodeScene.BIND_EMAIL);
+            emailVerifyLinkService.sendBindVerifyLink(user.getId(), normalizedEmail);
         }
 
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
@@ -148,37 +148,46 @@ public class AuthService {
     }
 
     /**
-     * 发送重置密码验证码
+     * 发送重置密码链接
      */
-    public void sendResetPasswordCode(String email) {
+    public void sendResetPasswordLink(String email) {
         String normalizedEmail = normalizeEmail(email);
         WfUserAuth emailAuth = getEnabledEmailAuthOrThrow(normalizedEmail);
         requireEmailVerified(emailAuth);
         userService.getEnabledByIdOrThrow(emailAuth.getUserId());
-        emailCodeService.sendCode(normalizedEmail, EmailCodeScene.RESET_PASSWORD);
+        passwordResetLinkService.sendResetLink(emailAuth.getUserId(), normalizedEmail);
     }
 
     /**
-     * 通过邮箱验证码重置密码
+     * 判断重置密码链接 token 是否可用
+     */
+    public boolean isResetPasswordTokenAvailable(String token) {
+        return passwordResetLinkService.isTokenAvailable(token);
+    }
+
+    /**
+     * 通过邮箱重置链接重置密码
      */
     @Transactional(rollbackFor = Exception.class)
-    public void resetPasswordByEmail(String email, String verifyCode, String newLoginKey, String confirmLoginKey) {
-        String normalizedEmail = normalizeEmail(email);
+    public void resetPasswordByToken(String token, String newLoginKey, String confirmLoginKey) {
         String normalizedNewLoginKey = normalizeLoginKey(newLoginKey);
         String normalizedConfirmLoginKey = normalizeLoginKey(confirmLoginKey);
-
-        WfUserAuth emailAuth = getEnabledEmailAuthOrThrow(normalizedEmail);
-        requireEmailVerified(emailAuth);
-        userService.getEnabledByIdOrThrow(emailAuth.getUserId());
 
         if (!normalizedNewLoginKey.equals(normalizedConfirmLoginKey)) {
             throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
         }
 
-        emailCodeService.verifyAndConsume(normalizedEmail, EmailCodeScene.RESET_PASSWORD, verifyCode);
+        PasswordResetLinkService.ResetTarget resetTarget = passwordResetLinkService.verifyAndConsumeToken(token);
+        WfUserAuth emailAuth = getEnabledEmailAuthOrThrow(resetTarget.getEmail());
+        requireEmailVerified(emailAuth);
+        if (!emailAuth.getUserId().equals(resetTarget.getUserId())) {
+            throw new BaseException(ErrorCode.PASSWORD_RESET_LINK_INVALID);
+        }
+        userService.getEnabledByIdOrThrow(emailAuth.getUserId());
+
         userAuthService.updateAllPasswordCredentialByUserId(emailAuth.getUserId(), encodeLoginKey(normalizedNewLoginKey));
 
-        log.info("邮箱重置密码成功: email={}, userId={}", normalizedEmail, emailAuth.getUserId());
+        log.info("链接重置密码成功: email={}, userId={}", resetTarget.getEmail(), emailAuth.getUserId());
     }
 
     /**
@@ -209,30 +218,31 @@ public class AuthService {
     }
 
     /**
-     * 发送绑定邮箱验证码
+     * 发送绑定邮箱认证链接
      */
-    public void sendBindEmailCode(Long userId, String email) {
+    public void sendBindEmailVerifyLink(Long userId, String email) {
         String normalizedEmail = normalizeEmail(email);
         userService.getEnabledByIdOrThrow(userId);
         checkEmailCanBind(userId, normalizedEmail);
-        emailCodeService.sendCode(normalizedEmail, EmailCodeScene.BIND_EMAIL);
+        emailVerifyLinkService.sendBindVerifyLink(userId, normalizedEmail);
     }
 
     /**
-     * 绑定邮箱
+     * 校验认证链接并完成邮箱认证
      */
     @Transactional(rollbackFor = Exception.class)
-    public void bindEmail(Long userId, String email, String verifyCode) {
-        String normalizedEmail = normalizeEmail(email);
+    public void verifyBindEmailByToken(String token) {
+        EmailVerifyLinkService.VerifyTarget verifyTarget = emailVerifyLinkService.verifyAndConsumeToken(token);
+
+        Long userId = verifyTarget.getUserId();
+        String normalizedEmail = normalizeEmail(verifyTarget.getEmail());
         userService.getEnabledByIdOrThrow(userId);
         checkEmailCanBind(userId, normalizedEmail);
-
-        emailCodeService.verifyAndConsume(normalizedEmail, EmailCodeScene.BIND_EMAIL, verifyCode);
 
         WfUserAuth wolfAuth = userAuthService.getWolfNoPasswordAuthByUserIdOrThrow(userId);
         userAuthService.bindEmailPasswordAuth(userId, normalizedEmail, wolfAuth.getCredentialHash());
 
-        log.info("邮箱绑定成功: userId={}, email={}", userId, normalizedEmail);
+        log.info("邮箱认证成功: userId={}, email={}", userId, normalizedEmail);
     }
 
     /**
@@ -271,6 +281,11 @@ public class AuthService {
     }
 
     private void checkEmailCanBind(Long currentUserId, String email) {
+        WfUserAuth currentEmailAuth = userAuthService.findAnyEmailAuthByUserId(currentUserId);
+        if (currentEmailAuth != null && !email.equals(currentEmailAuth.getAuthIdentifier())) {
+            throw new BaseException(ErrorCode.EMAIL_REBIND_NOT_ALLOWED);
+        }
+
         WfUserAuth existing = userAuthService.findAnyByTypeAndIdentifier(UserAuthType.EMAIL_PASSWORD, email);
         if (existing != null && !existing.getUserId().equals(currentUserId)) {
             throw new BaseException(ErrorCode.EMAIL_ALREADY_USED);

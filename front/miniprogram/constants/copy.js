@@ -28,6 +28,7 @@ const LOGIN_PAGE_COPY = {
     accountPlaceholder: '请输入狼藉号或邮箱',
     passwordLabel: '密码',
     passwordPlaceholder: '请输入密码',
+    forgotPassword: '忘记密码？',
     submitButton: '登录',
     switchToRegister: '还未加入？去注册'
   },
@@ -73,8 +74,65 @@ const PASSWORD_PAGE_COPY = {
   }
 }
 
+const RESET_PASSWORD_PAGE_COPY = {
+  headerTitle: '找回密码',
+  headerSubtitle: '向已认证邮箱发送重置链接',
+  fields: {
+    emailLabel: '邮箱',
+    emailPlaceholder: '请输入已认证邮箱'
+  },
+  actions: {
+    sendLink: '发送重置链接',
+    backToLogin: '返回登录'
+  },
+  hint: '开发模式下，重置链接将打印在后端控制台日志中。',
+  validation: {
+    emailRequired: '请输入邮箱',
+    invalidEmail: '请输入正确的邮箱'
+  },
+  toast: {
+    sendSuccess: '重置链接已发送',
+    sendFail: '发送重置链接失败'
+  }
+}
+
+const EMAIL_BIND_PAGE_COPY = {
+  headerTitle: '邮箱管理',
+  headerSubtitle: '绑定后可使用邮箱登录与重置密码',
+  status: {
+    label: '当前邮箱',
+    unbound: '未绑定',
+    pending: '待认证',
+    verified: '已认证',
+    unboundHint: '当前未绑定邮箱，建议尽快绑定以提升账号安全性。',
+    pendingHint: '邮箱已设置，完成认证后才能用于邮箱登录。',
+    verifiedHint: '邮箱已认证，可用于邮箱登录与密码找回，不支持换绑。'
+  },
+  fields: {
+    emailLabel: '邮箱',
+    emailPlaceholder: '请输入邮箱'
+  },
+  actions: {
+    sendLink: '发送认证链接',
+    resendLink: '重新发送认证链接',
+    verifiedLocked: '邮箱已认证'
+  },
+  hint: '开发模式下，认证链接将打印在后端控制台日志中。',
+  validation: {
+    emailRequired: '请输入邮箱',
+    invalidEmail: '请输入正确的邮箱'
+  },
+  toast: {
+    sendSuccess: '认证链接已发送',
+    sendFail: '发送失败',
+    loadFail: '加载失败'
+  }
+}
+
 module.exports = {
   PASSWORD_STRENGTH_COPY,
   LOGIN_PAGE_COPY,
-  PASSWORD_PAGE_COPY
+  PASSWORD_PAGE_COPY,
+  RESET_PASSWORD_PAGE_COPY,
+  EMAIL_BIND_PAGE_COPY
 }

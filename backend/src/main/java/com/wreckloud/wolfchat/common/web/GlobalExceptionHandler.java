@@ -4,11 +4,13 @@ import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.BadSqlGrammarException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.ConstraintViolationException;
 
 /**
@@ -19,6 +21,7 @@ import javax.validation.ConstraintViolationException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final String LOGIN_PATH = "/auth/login";
 
     /**
      * 处理自定义业务异常
@@ -33,10 +36,27 @@ public class GlobalExceptionHandler {
      * 处理参数相关异常
      */
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class, IllegalArgumentException.class})
-    public Result<?> handleParamException(Exception e) {
+    public Result<?> handleParamException(Exception e, HttpServletRequest request) {
         String message = resolveParamErrorMessage(e);
+        if (isLoginRequest(request)) {
+            log.warn("登录参数异常: {}", message);
+            return Result.error(ErrorCode.LOGIN_FAILED);
+        }
         log.warn("参数异常: {}", message);
         return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
+    }
+
+    /**
+     * 处理请求体解析异常
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request) {
+        if (isLoginRequest(request)) {
+            log.warn("登录请求体异常: {}", e.getMessage());
+            return Result.error(ErrorCode.LOGIN_FAILED);
+        }
+        log.warn("请求体异常: {}", e.getMessage());
+        return Result.error(ErrorCode.PARAM_ERROR);
     }
 
     /**
@@ -83,5 +103,15 @@ public class GlobalExceptionHandler {
         }
 
         return ErrorCode.PARAM_ERROR.getMessage();
+    }
+
+    private boolean isLoginRequest(HttpServletRequest request) {
+        if (request == null) {
+            return false;
+        }
+        String contextPath = request.getContextPath();
+        String requestUri = request.getRequestURI();
+        String loginRequestUri = (contextPath == null ? "" : contextPath) + LOGIN_PATH;
+        return loginRequestUri.equals(requestUri);
     }
 }
