@@ -30,25 +30,22 @@ public class WfUser {
     private String wolfNo;
 
     /**
-     * 登录密码哈希（BCrypt）
-     */
-    private String loginKey;
-
-    /**
-     * 邮箱（唯一）
-     */
-    private String email;
-
-    /**
-     * 邮箱是否已认证
-     */
-    private Boolean emailVerified;
-
-    /**
      * 行者名（用户的昵称）
      */
     @TableField(exist = false)
     private String nickname;
+
+    /**
+     * 邮箱（由认证表聚合）
+     */
+    @TableField(exist = false)
+    private String email;
+
+    /**
+     * 邮箱是否已认证（由认证表聚合）
+     */
+    @TableField(exist = false)
+    private Boolean emailVerified;
 
     /**
      * 头像URL

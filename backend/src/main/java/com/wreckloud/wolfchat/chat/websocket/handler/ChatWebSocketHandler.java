@@ -11,6 +11,7 @@ import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import com.wreckloud.wolfchat.chat.websocket.session.WsSessionManager;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final JwtUtil jwtUtil;
     private final MessageService messageService;
     private final WsSessionManager sessionManager;
+    private final SessionUserService sessionUserService;
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
@@ -110,6 +112,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         Long userId = jwtUtil.getUserIdFromToken(token);
         if (userId == null) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return null;
+        }
+        if (!sessionUserService.isSessionUserExists(userId)) {
             sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }

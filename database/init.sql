@@ -1,8 +1,6 @@
 -- WolfChat 数据库初始化脚本
 -- 仅包含建表语句，不包含测试数据
 -- 号码池会自动补充（当 UNUSED 数量低于 10 个时，系统会自动补充 50 个）
--- 注意：本脚本使用 CREATE TABLE IF NOT EXISTS，不会修改已存在旧表结构。
--- 若需要按当前版本重建库结构，请先手动删除目标数据库（或旧表）后再执行本脚本。
 
 CREATE DATABASE IF NOT EXISTS `wolf_chat`
     DEFAULT CHARACTER SET utf8mb4
@@ -19,18 +17,13 @@ CREATE TABLE IF NOT EXISTS `wf_no_pool` (
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_wolf_no` (`wolf_no`),
-    KEY `idx_status` (`status`)
+    KEY `idx_status_id` (`status`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='狼藉号池表';
 
 -- 行者用户表
 CREATE TABLE IF NOT EXISTS `wf_user` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `wolf_no` VARCHAR(10) NOT NULL COMMENT '狼藉号（唯一标识）',
-    `login_key` VARCHAR(64) NOT NULL COMMENT '登录密码哈希（BCrypt）',
-    `email` VARCHAR(128) DEFAULT NULL COMMENT '邮箱（唯一）',
-    `email_verified` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '邮箱是否已认证：0-否，1-是',
-    `nickname` VARCHAR(64) DEFAULT NULL COMMENT '行者名（行者在群落中的称呼，将被其他行者看到，注册后可修改）',
-    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL-正常，DISABLED-禁用',
     `onboarding_status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '新用户引导状态：PENDING/COMPLETED/SKIPPED',
     `onboarding_completed_at` DATETIME DEFAULT NULL COMMENT '引导完成时间',
@@ -41,11 +34,44 @@ CREATE TABLE IF NOT EXISTS `wf_user` (
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_wolf_no` (`wolf_no`),
-    UNIQUE KEY `uk_email` (`email`),
     KEY `idx_status` (`status`),
     KEY `idx_onboarding_status` (`onboarding_status`),
     KEY `idx_last_login_at` (`last_login_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者表';
+
+-- 行者认证表
+CREATE TABLE IF NOT EXISTS `wf_user_auth` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `auth_type` VARCHAR(32) NOT NULL COMMENT '认证类型：WOLF_NO_PASSWORD/EMAIL_PASSWORD',
+    `auth_identifier` VARCHAR(128) NOT NULL COMMENT '认证标识（狼藉号/邮箱）',
+    `credential_hash` VARCHAR(100) NOT NULL COMMENT '认证凭据哈希（密码）',
+    `verified` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已认证：0-否，1-是',
+    `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用：0-否，1-是',
+    `last_login_at` DATETIME DEFAULT NULL COMMENT '最近登录时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_type_identifier` (`auth_type`, `auth_identifier`),
+    UNIQUE KEY `uk_user_type` (`user_id`, `auth_type`),
+    KEY `idx_user_enabled` (`user_id`, `enabled`),
+    KEY `idx_type_enabled` (`auth_type`, `enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者认证表';
+
+-- 行者资料表
+CREATE TABLE IF NOT EXISTS `wf_user_profile` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID（唯一）',
+    `nickname` VARCHAR(64) NOT NULL COMMENT '行者名（公开显示）',
+    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
+    `signature` VARCHAR(255) DEFAULT NULL COMMENT '个性签名',
+    `bio` VARCHAR(1000) DEFAULT NULL COMMENT '个人简介',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_id` (`user_id`),
+    KEY `idx_nickname` (`nickname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者资料表';
 
 -- 登录记录表
 CREATE TABLE IF NOT EXISTS `wf_login_record` (
@@ -66,22 +92,25 @@ CREATE TABLE IF NOT EXISTS `wf_login_record` (
     KEY `idx_login_time` (`login_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录记录表';
 
--- 邮箱验证码表
-CREATE TABLE IF NOT EXISTS `wf_email_code` (
+-- 邮箱验证码使用 Redis 存储（不落库）
+
+-- 行者封禁记录表
+CREATE TABLE IF NOT EXISTS `wf_user_ban_record` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `email` VARCHAR(128) NOT NULL COMMENT '邮箱',
-    `scene` VARCHAR(32) NOT NULL COMMENT '场景：BIND_EMAIL/RESET_PASSWORD',
-    `verify_code` VARCHAR(6) NOT NULL COMMENT '验证码',
-    `used` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已使用：0-否，1-是',
-    `expire_time` DATETIME NOT NULL COMMENT '过期时间',
-    `used_time` DATETIME DEFAULT NULL COMMENT '使用时间',
+    `user_id` BIGINT NOT NULL COMMENT '被封禁用户ID',
+    `operator_user_id` BIGINT NOT NULL COMMENT '操作人用户ID',
+    `reason` VARCHAR(500) NOT NULL COMMENT '封禁原因',
+    `start_time` DATETIME NOT NULL COMMENT '封禁开始时间',
+    `end_time` DATETIME DEFAULT NULL COMMENT '封禁结束时间（为空表示永久封禁）',
+    `status` VARCHAR(20) NOT NULL COMMENT '记录状态：ACTIVE/LIFTED/EXPIRED',
+    `lifted_at` DATETIME DEFAULT NULL COMMENT '解除时间',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    KEY `idx_email_scene_time` (`email`, `scene`, `create_time`),
-    KEY `idx_email_scene_used` (`email`, `scene`, `used`),
-    KEY `idx_expire_time` (`expire_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮箱验证码表';
+    KEY `idx_user_time` (`user_id`, `start_time`),
+    KEY `idx_status_time` (`status`, `start_time`),
+    KEY `idx_operator_time` (`operator_user_id`, `start_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者封禁记录表';
 
 -- 关注关系表
 CREATE TABLE IF NOT EXISTS `wf_follow` (

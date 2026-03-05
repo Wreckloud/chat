@@ -6,9 +6,14 @@ import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
+import com.wreckloud.wolfchat.account.domain.entity.WfUserAuth;
+import com.wreckloud.wolfchat.account.domain.entity.WfUserProfile;
 import com.wreckloud.wolfchat.account.domain.enums.OnboardingStatus;
+import com.wreckloud.wolfchat.account.domain.enums.UserAuthType;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
+import com.wreckloud.wolfchat.account.infra.mapper.WfUserAuthMapper;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
+import com.wreckloud.wolfchat.account.infra.mapper.WfUserProfileMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -16,9 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -31,6 +38,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
     private final WfUserMapper wfUserMapper;
+    private final WfUserProfileMapper wfUserProfileMapper;
+    private final WfUserAuthMapper wfUserAuthMapper;
 
     /**
      * 根据行者ID获取用户信息 VO
@@ -57,7 +66,7 @@ public class UserService {
         if (user == null) {
             throw new BaseException(ErrorCode.USER_NOT_FOUND);
         }
-        return user;
+        return attachUserExtOrThrow(user);
     }
 
     /**
@@ -69,12 +78,12 @@ public class UserService {
         }
 
         LambdaQueryWrapper<WfUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfUser::getWolfNo, wolfNo);
+        queryWrapper.eq(WfUser::getWolfNo, wolfNo.trim());
         WfUser user = wfUserMapper.selectOne(queryWrapper);
         if (user == null) {
             throw new BaseException(ErrorCode.WOLF_NO_NOT_FOUND);
         }
-        return user;
+        return attachUserExtOrThrow(user);
     }
 
     /**
@@ -91,42 +100,6 @@ public class UserService {
      */
     public WfUser getEnabledByWolfNoOrThrow(String wolfNo) {
         WfUser user = getByWolfNoOrThrow(wolfNo);
-        checkEnabled(user);
-        return user;
-    }
-
-    /**
-     * 根据邮箱查询行者实体，未找到返回 null
-     */
-    public WfUser findByEmail(String email) {
-        if (!StringUtils.hasText(email)) {
-            return null;
-        }
-        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
-        LambdaQueryWrapper<WfUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfUser::getEmail, normalizedEmail);
-        return wfUserMapper.selectOne(queryWrapper);
-    }
-
-    /**
-     * 根据邮箱获取行者实体，不存在抛异常
-     */
-    public WfUser getByEmailOrThrow(String email) {
-        if (!StringUtils.hasText(email)) {
-            throw new BaseException(ErrorCode.PARAM_ERROR);
-        }
-        WfUser user = findByEmail(email);
-        if (user == null) {
-            throw new BaseException(ErrorCode.EMAIL_NOT_BOUND);
-        }
-        return user;
-    }
-
-    /**
-     * 根据邮箱获取可用账号（状态必须为 NORMAL）
-     */
-    public WfUser getEnabledByEmailOrThrow(String email) {
-        WfUser user = getByEmailOrThrow(email);
         checkEnabled(user);
         return user;
     }
@@ -156,14 +129,37 @@ public class UserService {
     }
 
     /**
+     * 创建用户资料
+     */
+    public void createProfile(Long userId, String nickname) {
+        if (userId == null || !StringUtils.hasText(nickname)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        WfUserProfile profile = new WfUserProfile();
+        profile.setUserId(userId);
+        profile.setNickname(nickname.trim());
+        int insertRows = wfUserProfileMapper.insert(profile);
+        if (insertRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+    }
+
+    /**
      * 批量查询行者并按 userId 建立映射
      */
     public Map<Long, WfUser> getUserMap(Collection<Long> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        return wfUserMapper.selectBatchIds(userIds).stream()
-                .collect(Collectors.toMap(WfUser::getId, user -> user));
+
+        List<WfUser> users = wfUserMapper.selectBatchIds(userIds);
+        Map<Long, WfUser> userMap = users.stream()
+                .collect(Collectors.toMap(WfUser::getId, user -> user, (left, right) -> left));
+
+        List<WfUser> userList = new ArrayList<>(userMap.values());
+        attachProfilesOrThrow(userList);
+        attachEmailAuthSummary(userList);
+        return userMap;
     }
 
     private void checkEnabled(WfUser user) {
@@ -171,4 +167,108 @@ public class UserService {
             throw new BaseException(ErrorCode.USER_DISABLED);
         }
     }
+
+    private WfUser attachUserExtOrThrow(WfUser user) {
+        attachProfileOrThrow(user);
+        attachEmailAuthSummary(user);
+        return user;
+    }
+
+    private void attachProfileOrThrow(WfUser user) {
+        LambdaQueryWrapper<WfUserProfile> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfUserProfile::getUserId, user.getId());
+        WfUserProfile profile = wfUserProfileMapper.selectOne(queryWrapper);
+        if (profile == null) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+        user.setNickname(profile.getNickname());
+        user.setAvatar(profile.getAvatar());
+    }
+
+    private void attachProfilesOrThrow(List<WfUser> users) {
+        if (users == null || users.isEmpty()) {
+            return;
+        }
+
+        List<Long> ids = users.stream()
+                .map(WfUser::getId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<WfUserProfile> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(WfUserProfile::getUserId, ids);
+        List<WfUserProfile> profiles = wfUserProfileMapper.selectList(queryWrapper);
+        if (profiles.size() != ids.size()) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+
+        Map<Long, WfUserProfile> profileMap = profiles.stream()
+                .collect(Collectors.toMap(WfUserProfile::getUserId, profile -> profile));
+
+        for (WfUser user : users) {
+            WfUserProfile profile = profileMap.get(user.getId());
+            if (profile == null) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
+            user.setNickname(profile.getNickname());
+            user.setAvatar(profile.getAvatar());
+        }
+    }
+
+    private void attachEmailAuthSummary(WfUser user) {
+        WfUserAuth emailAuth = findEnabledEmailAuthByUserId(user.getId());
+        if (emailAuth == null) {
+            user.setEmail(null);
+            user.setEmailVerified(false);
+            return;
+        }
+        user.setEmail(emailAuth.getAuthIdentifier());
+        user.setEmailVerified(Boolean.TRUE.equals(emailAuth.getVerified()));
+    }
+
+    private void attachEmailAuthSummary(List<WfUser> users) {
+        if (users == null || users.isEmpty()) {
+            return;
+        }
+
+        List<Long> ids = users.stream()
+                .map(WfUser::getId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<WfUserAuth> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(WfUserAuth::getUserId, ids)
+                .eq(WfUserAuth::getAuthType, UserAuthType.EMAIL_PASSWORD)
+                .eq(WfUserAuth::getEnabled, true);
+        List<WfUserAuth> emailAuthList = wfUserAuthMapper.selectList(queryWrapper);
+
+        Map<Long, WfUserAuth> emailAuthMap = new HashMap<>();
+        for (WfUserAuth auth : emailAuthList) {
+            WfUserAuth old = emailAuthMap.put(auth.getUserId(), auth);
+            if (old != null) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
+        }
+
+        for (WfUser user : users) {
+            WfUserAuth auth = emailAuthMap.get(user.getId());
+            if (auth == null) {
+                user.setEmail(null);
+                user.setEmailVerified(false);
+                continue;
+            }
+            user.setEmail(auth.getAuthIdentifier());
+            user.setEmailVerified(Boolean.TRUE.equals(auth.getVerified()));
+        }
+    }
+
+    private WfUserAuth findEnabledEmailAuthByUserId(Long userId) {
+        LambdaQueryWrapper<WfUserAuth> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfUserAuth::getUserId, userId)
+                .eq(WfUserAuth::getAuthType, UserAuthType.EMAIL_PASSWORD)
+                .eq(WfUserAuth::getEnabled, true)
+                .last("LIMIT 1");
+        return wfUserAuthMapper.selectOne(queryWrapper);
+    }
+
 }

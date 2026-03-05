@@ -3,6 +3,7 @@
  */
 const config = require('./config')
 const auth = require('./auth')
+const AUTH_ERROR_CODES = [2001, 2002, 2003]
 
 /**
  * 发起请求
@@ -33,12 +34,17 @@ function request(options) {
       success(res) {
         // HTTP 状态码 200-299 视为成功
         if (res.statusCode >= 200 && res.statusCode < 300) {
+          const responseData = res.data || {}
+          const code = responseData.code
+
           // 检查业务状态码
-          if (res.data.code === 0) {
-            resolve(res.data)
+          if (code === 0) {
+            resolve(responseData)
           } else {
-            // 业务错误
-            reject(new Error(res.data.message || '请求失败'))
+            if (AUTH_ERROR_CODES.includes(code)) {
+              auth.handleAuthExpired()
+            }
+            reject(new Error(responseData.message || '请求失败'))
           }
         } else {
           // HTTP 错误

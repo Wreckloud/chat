@@ -78,6 +78,12 @@
 			<artifactId>spring-boot-starter-aop</artifactId>
 		</dependency>
 
+		<!-- Redis（邮箱验证码等轻量时效数据） -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
 		<!-- 密码哈希（BCrypt） -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>

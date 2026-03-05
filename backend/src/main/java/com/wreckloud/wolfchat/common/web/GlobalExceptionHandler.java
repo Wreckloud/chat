@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.common.web;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,6 +37,15 @@ public class GlobalExceptionHandler {
         String message = resolveParamErrorMessage(e);
         log.warn("参数异常: {}", message);
         return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
+    }
+
+    /**
+     * 处理数据库结构不匹配异常
+     */
+    @ExceptionHandler(BadSqlGrammarException.class)
+    public Result<?> handleBadSqlGrammarException(BadSqlGrammarException e) {
+        log.error("数据库结构异常", e);
+        return Result.error(ErrorCode.DATABASE_ERROR.getCode(), "数据库结构不匹配，请重新执行最新的初始化脚本");
     }
 
     /**
