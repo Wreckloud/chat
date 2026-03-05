@@ -1,5 +1,5 @@
 .retro-input {
-  height: 74rpx;
+  min-height: 74rpx;
   display: flex;
   align-items: center;
   box-sizing: border-box;
@@ -16,12 +16,131 @@
   flex-shrink: 0;
 }
 
+.retro-input-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 .retro-input-core {
   flex: 1;
   min-width: 0;
   height: 72rpx;
   font-size: 24rpx;
   color: var(--retro-page-text, #1f2d3d);
+}
+
+.retro-input-actions {
+  margin-left: 10rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-shrink: 0;
+}
+
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  max-width: 176rpx;
+}
+
+.strength-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2rpx;
+}
+
+.strength-bar {
+  width: 5rpx;
+  height: 16rpx;
+  border: 1rpx solid #9aa8bb;
+  background: #e8edf3;
+}
+
+.strength-bar-2 {
+  height: 12rpx;
+}
+
+.strength-bar-3 {
+  height: 8rpx;
+}
+
+.strength-text {
+  font-size: 20rpx;
+  color: var(--retro-muted-text, #62758d);
+  white-space: nowrap;
+}
+
+.strength-weak .strength-bar-1 {
+  border-color: #b54852;
+  background: rgba(229, 124, 135, 0.4);
+}
+
+.strength-weak .strength-text {
+  color: #9f3c47;
+}
+
+.strength-medium .strength-bar-1,
+.strength-medium .strength-bar-2 {
+  border-color: #8a6a23;
+  background: rgba(207, 176, 103, 0.45);
+}
+
+.strength-medium .strength-text {
+  color: #7a5c1c;
+}
+
+.strength-strong .strength-bar-1,
+.strength-strong .strength-bar-2,
+.strength-strong .strength-bar-3 {
+  border-color: #2d7a46;
+  background: rgba(127, 197, 147, 0.5);
+}
+
+.strength-strong .strength-text {
+  color: #25653a;
+}
+
+.reveal-btn {
+  width: 40rpx;
+  height: 40rpx;
+  border: 1rpx solid var(--retro-panel-border, #8a9ab0);
+  background: #f4f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-icon {
+  width: 22rpx;
+  height: 14rpx;
+  border: 2rpx solid #6f8098;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-core {
+  width: 6rpx;
+  height: 6rpx;
+  border-radius: 50%;
+  background: #6f8098;
+}
+
+.is-revealing {
+  border-color: var(--retro-link-text, #2f5f97);
+  background: #e8f0fb;
+}
+
+.is-revealing .eye-icon {
+  border-color: var(--retro-link-text, #2f5f97);
+}
+
+.is-revealing .eye-core {
+  background: var(--retro-link-text, #2f5f97);
 }
 
 .is-disabled {

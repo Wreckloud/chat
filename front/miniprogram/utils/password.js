@@ -37,6 +37,20 @@ function evaluatePasswordStrength(password) {
   }
 }
 
+function getPasswordStrengthInlineText(level) {
+  if (level === 'weak') {
+    return '弱 · 建议混合字符'
+  }
+  if (level === 'medium') {
+    return '中 · 可加符号'
+  }
+  if (level === 'strong') {
+    return '强 · 可用'
+  }
+  return ''
+}
+
 module.exports = {
-  evaluatePasswordStrength
+  evaluatePasswordStrength,
+  getPasswordStrengthInlineText
 }

@@ -55,17 +55,24 @@
             placeholder="请输入密码（至少6位）"
             type="password"
             value="{{password}}"
+            hold-to-reveal="{{true}}"
+            meta-level="{{passwordStrengthLevel}}"
+            meta-text="{{passwordStrengthInlineText}}"
             bind:input="onPasswordInput"
             bind:change="onPasswordInput"
             class="form-input"
           />
 
-          <view wx:if="{{password}}" class="password-strength">
-            <text class="strength-tag strength-{{passwordStrengthLevel}}">
-              {{passwordStrengthLevel === 'strong' ? '强' : (passwordStrengthLevel === 'medium' ? '中' : '弱')}}
-            </text>
-            <text class="strength-text">{{passwordStrengthText}}</text>
-          </view>
+          <retro-input
+            label="确认"
+            placeholder="请再次输入密码"
+            type="password"
+            value="{{confirmPassword}}"
+            hold-to-reveal="{{true}}"
+            bind:input="onConfirmPasswordInput"
+            bind:change="onConfirmPasswordInput"
+            class="form-input"
+          />
 
           <retro-button
             theme="primary"
@@ -107,6 +114,7 @@
           placeholder="请输入密码"
           type="password"
           value="{{loginKey}}"
+          hold-to-reveal="{{true}}"
           bind:input="onLoginKeyInput"
           bind:change="onLoginKeyInput"
           class="form-input"

@@ -94,7 +94,10 @@ public class AuthService {
         WfUser user;
         String accountType;
         String normalizedLoginKey = normalizeLoginKey(loginKey);
-        String normalizedAccount = account == null ? "" : account.trim();
+        if (!StringUtils.hasText(account)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        String normalizedAccount = account.trim();
         if (isEmailAccount(normalizedAccount)) {
             String normalizedEmail = normalizeEmail(normalizedAccount);
             user = userService.getEnabledByEmailOrThrow(normalizedEmail);

@@ -5,7 +5,10 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
-const { evaluatePasswordStrength } = require('../../utils/password')
+const {
+  evaluatePasswordStrength,
+  getPasswordStrengthInlineText
+} = require('../../utils/password')
 
 Page({
   data: {
@@ -13,7 +16,7 @@ Page({
     newLoginKey: '',
     confirmLoginKey: '',
     passwordStrengthLevel: '',
-    passwordStrengthText: '',
+    passwordStrengthInlineText: '',
     loading: false,
     themeClass: 'theme-retro-blue'
   },
@@ -41,7 +44,7 @@ Page({
     this.setData({
       newLoginKey,
       passwordStrengthLevel: strength.level,
-      passwordStrengthText: strength.text
+      passwordStrengthInlineText: getPasswordStrengthInlineText(strength.level)
     })
   },
 

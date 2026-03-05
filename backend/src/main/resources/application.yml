@@ -4,16 +4,16 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:1677}
+    url: jdbc:mysql://localhost:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: root
+    password: 1677
 
   jackson:
     serialization:
       write-dates-as-timestamps: false
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: 8080
   servlet:
     context-path: /api
 
@@ -41,18 +41,18 @@ knife4j:
 
 # 自定义日志相关配置
 project:
-  folder: ${PROJECT_LOG_FOLDER:D:/Temp/log}
+  folder: D:/Temp/log
 
 # JWT配置
 jwt:
-  # JWT密钥（生产环境请通过环境变量覆盖）
-  secret: ${JWT_SECRET:wolfchat-secret-key-2025-12-07-default-key-change-in-production-environment}
+  # JWT密钥
+  secret: wolfchat-secret-key-2025-12-07-default-key-change-in-production-environment
   # JWT过期时间（秒），默认7天（604800秒）
-  expiration: ${JWT_EXPIRATION:604800}
+  expiration: 604800
 
 log:
   root:
-    level: ${LOG_ROOT_LEVEL:info}
+    level: info
 
 wolfchat:
   ws:
@@ -62,3 +62,15 @@ wolfchat:
       - https://localhost:*
       - https://servicewechat.com
       - https://*.servicewechat.com
+  email-code:
+    cleanup:
+      # 是否启用邮箱验证码过期清理任务
+      enabled: true
+      # 每天凌晨 03:15 执行
+      cron: 0 15 3 * * ?
+      # 过期后保留天数（便于短期排查）
+      retain-days: 7
+      # 单批删除数量
+      batch-size: 500
+      # 单次任务最大批次数
+      max-batches: 20

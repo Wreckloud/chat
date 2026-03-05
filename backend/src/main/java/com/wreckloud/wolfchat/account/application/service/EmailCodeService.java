@@ -163,4 +163,25 @@ public class EmailCodeService {
                 VERIFY_CODE_EXPIRE_MINUTES
         );
     }
+
+    /**
+     * 清理过期验证码
+     *
+     * @param retainDays 过期后保留天数
+     * @param batchSize  单批删除条数
+     * @param maxBatches 最大批次数
+     * @return 实际删除条数
+     */
+    public int cleanupExpiredCodes(int retainDays, int batchSize, int maxBatches) {
+        LocalDateTime deadline = LocalDateTime.now().minusDays(retainDays);
+        int totalDeleted = 0;
+        for (int i = 0; i < maxBatches; i++) {
+            int deleted = wfEmailCodeMapper.deleteExpiredBefore(deadline, batchSize);
+            totalDeleted += deleted;
+            if (deleted < batchSize) {
+                break;
+            }
+        }
+        return totalDeleted;
+    }
 }

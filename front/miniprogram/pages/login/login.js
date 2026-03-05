@@ -5,7 +5,10 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
-const { evaluatePasswordStrength } = require('../../utils/password')
+const {
+  evaluatePasswordStrength,
+  getPasswordStrengthInlineText
+} = require('../../utils/password')
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -17,9 +20,10 @@ Page({
     // 注册表单
     nickname: '',
     password: '',
+    confirmPassword: '',
     email: '',
     passwordStrengthLevel: '',
-    passwordStrengthText: '',
+    passwordStrengthInlineText: '',
 
     // 登录表单
     account: '',
@@ -64,9 +68,10 @@ Page({
       mode: 'register',
       nickname: '',
       password: '',
+      confirmPassword: '',
       email: '',
       passwordStrengthLevel: '',
-      passwordStrengthText: '',
+      passwordStrengthInlineText: '',
       showResult: false,
       registeredWolfNo: ''
     })
@@ -90,7 +95,13 @@ Page({
     this.setData({
       password: password,
       passwordStrengthLevel: strength.level,
-      passwordStrengthText: strength.text
+      passwordStrengthInlineText: getPasswordStrengthInlineText(strength.level)
+    })
+  },
+
+  onConfirmPasswordInput(e) {
+    this.setData({
+      confirmPassword: e.detail.value || ''
     })
   },
 
@@ -127,7 +138,7 @@ Page({
   async handleRegister() {
     if (this.data.loading) return
 
-    const { nickname, password, email } = this.data
+    const { nickname, password, confirmPassword, email } = this.data
 
     if (!nickname || !nickname.trim()) {
       toastError('请输入行者名')
@@ -136,6 +147,16 @@ Page({
 
     if (!password || password.length < 6) {
       toastError('密码至少6位')
+      return
+    }
+
+    if (!confirmPassword) {
+      toastError('请确认密码')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toastError('两次输入的密码不一致')
       return
     }
 

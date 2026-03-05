@@ -6,7 +6,7 @@ No third-party UI library is required.
 ## Components
 - `retro-button`: themed button with size/variant/loading states.
 - `retro-avatar`: avatar with image fallback slot text.
-- `retro-input`: single-line input with optional left label.
+- `retro-input`: single-line input with optional left label, inline strength hint, and hold-to-reveal password eye.
 - `retro-textarea`: multi-line textarea wrapper.
 - `retro-empty`: empty-state block with optional action slot.
 - `retro-loading`: loading spinner with optional text.

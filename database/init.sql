@@ -33,28 +33,6 @@ CREATE TABLE IF NOT EXISTS `wf_user` (
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者表';
 
--- 兼容已存在的旧表结构（MySQL 8.0.33 支持 ADD COLUMN IF NOT EXISTS）
-ALTER TABLE `wf_user`
-    ADD COLUMN IF NOT EXISTS `email` VARCHAR(128) DEFAULT NULL COMMENT '邮箱（唯一）' AFTER `login_key`,
-    ADD COLUMN IF NOT EXISTS `email_verified` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '邮箱是否已认证：0-否，1-是' AFTER `email`;
-
--- 若旧表缺少邮箱唯一索引，动态补齐
-SET @uk_email_count := (
-    SELECT COUNT(1)
-    FROM INFORMATION_SCHEMA.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'wf_user'
-      AND COLUMN_NAME = 'email'
-      AND NON_UNIQUE = 0
-);
-SET @uk_email_sql := IF(@uk_email_count = 0,
-    'ALTER TABLE `wf_user` ADD UNIQUE KEY `uk_email` (`email`)',
-    'SELECT 1'
-);
-PREPARE stmt_uk_email FROM @uk_email_sql;
-EXECUTE stmt_uk_email;
-DEALLOCATE PREPARE stmt_uk_email;
-
 -- 邮箱验证码表
 CREATE TABLE IF NOT EXISTS `wf_email_code` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -68,7 +46,8 @@ CREATE TABLE IF NOT EXISTS `wf_email_code` (
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     KEY `idx_email_scene_time` (`email`, `scene`, `create_time`),
-    KEY `idx_email_scene_used` (`email`, `scene`, `used`)
+    KEY `idx_email_scene_used` (`email`, `scene`, `used`),
+    KEY `idx_expire_time` (`expire_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮箱验证码表';
 
 -- 关注关系表
