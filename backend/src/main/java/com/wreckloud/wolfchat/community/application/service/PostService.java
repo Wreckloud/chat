@@ -36,6 +36,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PostService {
+    private static final long MIN_PAGE = 1L;
+    private static final long MIN_PAGE_SIZE = 1L;
+    private static final long MAX_PAGE_SIZE = 50L;
+
     private final WfPostMapper wfPostMapper;
     private final WfCommentMapper wfCommentMapper;
     private final UserService userService;
@@ -63,6 +67,8 @@ public class PostService {
      * 获取帖子列表
      */
     public PostPageVO listPosts(long page, long size) {
+        validatePageParams(page, size);
+
         Page<WfPost> pageReq = new Page<>(page, size);
         LambdaQueryWrapper<WfPost> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfPost::getStatus, PostStatus.NORMAL)
@@ -148,6 +154,12 @@ public class PostService {
             list.add(toCommentVO(comment, user));
         }
         return list;
+    }
+
+    private void validatePageParams(long page, long size) {
+        if (page < MIN_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("分页参数不合法，page>=1 且 size 在1-50之间");
+        }
     }
 
     private PostVO toPostVO(WfPost post, WfUser user) {

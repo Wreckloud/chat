@@ -31,9 +31,9 @@ Component({
       if (this.data.disabled || this.data.loading) {
         return
       }
-      this.triggerEvent('tap', e.detail, {
-        bubbles: true,
-        composed: true
+      this.triggerEvent('tap', e.detail || {}, {
+        bubbles: false,
+        composed: false
       })
     }
   }

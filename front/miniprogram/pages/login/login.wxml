@@ -2,29 +2,29 @@
   <!-- 注册模式 -->
   <view wx:if="{{mode === 'register'}}">
     <view class="header">
-      <view class="title">注册</view>
+      <view class="title">{{copy.register.title}}</view>
     </view>
 
     <!-- 显示注册结果 -->
     <view wx:if="{{showResult}}" class="result-container">
       <view class="result-list">
         <view class="result-row">
-          <text class="result-label">注册成功</text>
-          <text class="result-note">您的行者编号</text>
+          <text class="result-label">{{copy.register.resultTitle}}</text>
+          <text class="result-note">{{copy.register.resultDesc}}</text>
         </view>
         <view class="result-row">
-          <text class="result-label">行者编号</text>
+          <text class="result-label">{{copy.register.resultNoLabel}}</text>
           <text class="result-note">{{registeredWolfNo}}</text>
         </view>
       </view>
-      
-      <retro-button 
-        theme="primary" 
-        size="large" 
-        block 
+
+      <retro-button
+        theme="primary"
+        size="large"
+        block
         bindtap="handleConfirmRegister"
         class="confirm-btn">
-        进入群落
+        {{copy.register.resultConfirmButton}}
       </retro-button>
     </view>
 
@@ -33,43 +33,62 @@
       <view class="register-card">
         <view class="form-content">
           <retro-input
-            label="称谓"
-            placeholder="被其他行者所记住的称呼"
+            label="{{copy.register.nicknameLabel}}"
+            placeholder="{{copy.register.nicknamePlaceholder}}"
             value="{{nickname}}"
+            required="{{true}}"
             bind:input="onNicknameInput"
             bind:change="onNicknameInput"
             class="form-input"
           />
 
           <retro-input
-            label="密码"
-            placeholder="请输入密码（至少6位）"
+            label="{{copy.register.emailLabel}}"
+            placeholder="{{copy.register.emailPlaceholder}}"
+            value="{{email}}"
+            bind:input="onEmailInput"
+            bind:change="onEmailInput"
+            class="form-input"
+          />
+
+          <retro-input
+            label="{{copy.register.passwordLabel}}"
+            placeholder="{{copy.register.passwordPlaceholder}}"
             type="password"
             value="{{password}}"
+            hold-to-reveal="{{true}}"
+            meta-level="{{passwordStrengthLevel}}"
+            meta-text="{{passwordStrengthInlineText}}"
+            required="{{true}}"
             bind:input="onPasswordInput"
             bind:change="onPasswordInput"
             class="form-input"
           />
 
-          <view wx:if="{{password}}" class="password-strength">
-            <text class="strength-tag strength-{{passwordStrengthLevel}}">
-              {{passwordStrengthLevel === 'strong' ? '强' : (passwordStrengthLevel === 'medium' ? '中' : '弱')}}
-            </text>
-            <text class="strength-text">{{passwordStrengthText}}</text>
-          </view>
+          <retro-input
+            label="{{copy.register.confirmPasswordLabel}}"
+            placeholder="{{copy.register.confirmPasswordPlaceholder}}"
+            type="password"
+            value="{{confirmPassword}}"
+            hold-to-reveal="{{true}}"
+            required="{{true}}"
+            bind:input="onConfirmPasswordInput"
+            bind:change="onConfirmPasswordInput"
+            class="form-input"
+          />
 
-          <retro-button 
-            theme="primary" 
-            size="large" 
-            block 
+          <retro-button
+            theme="primary"
+            size="large"
+            block
             loading="{{loading}}"
             bindtap="handleRegister"
             class="register-btn">
-            注册
+            {{copy.register.submitButton}}
           </retro-button>
 
           <view class="switch-mode">
-            <text class="switch-link" bindtap="switchToLogin">已是行者？回到群落</text>
+            <text class="switch-link" bindtap="switchToLogin">{{copy.register.switchToLogin}}</text>
           </view>
         </view>
       </view>
@@ -79,43 +98,43 @@
   <!-- 登录模式 -->
   <view wx:else>
     <view class="header">
-      <view class="title">登录</view>
+      <view class="title">{{copy.login.title}}</view>
     </view>
 
     <view class="login-card">
       <view class="form-content">
         <retro-input
-          label="狼藉"
-          placeholder="请输入狼藉号"
-          type="number"
-          value="{{wolfNo}}"
-          bind:input="onWolfNoInput"
-          bind:change="onWolfNoInput"
+          label="{{copy.login.accountLabel}}"
+          placeholder="{{copy.login.accountPlaceholder}}"
+          value="{{account}}"
+          bind:input="onAccountInput"
+          bind:change="onAccountInput"
           class="form-input"
         />
 
         <retro-input
-          label="密码"
-          placeholder="请输入密码"
+          label="{{copy.login.passwordLabel}}"
+          placeholder="{{copy.login.passwordPlaceholder}}"
           type="password"
           value="{{loginKey}}"
+          hold-to-reveal="{{true}}"
           bind:input="onLoginKeyInput"
           bind:change="onLoginKeyInput"
           class="form-input"
         />
 
-        <retro-button 
-          theme="primary" 
-          size="large" 
-          block 
+        <retro-button
+          theme="primary"
+          size="large"
+          block
           loading="{{loading}}"
           bindtap="handleLogin"
           class="login-btn">
-          登录
+          {{copy.login.submitButton}}
         </retro-button>
 
         <view class="switch-mode">
-          <text class="switch-link" bindtap="switchToRegister">没有账号？去注册</text>
+          <text class="switch-link" bindtap="switchToRegister">{{copy.login.switchToRegister}}</text>
         </view>
       </view>
     </view>

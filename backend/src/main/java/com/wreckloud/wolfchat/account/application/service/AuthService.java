@@ -4,6 +4,12 @@ import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
+import com.wreckloud.wolfchat.account.domain.entity.WfUserAuth;
+import com.wreckloud.wolfchat.account.domain.enums.EmailCodeScene;
+import com.wreckloud.wolfchat.account.domain.enums.LoginMethod;
+import com.wreckloud.wolfchat.account.domain.enums.LoginResult;
+import com.wreckloud.wolfchat.account.domain.enums.OnboardingStatus;
+import com.wreckloud.wolfchat.account.domain.enums.UserAuthType;
 import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -14,7 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * @Description 认证服务
@@ -25,62 +36,149 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    private static final int LOGIN_KEY_MIN_LENGTH = 6;
+    private static final int LOGIN_KEY_MAX_LENGTH = 64;
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+
     private final WfUserMapper wfUserMapper;
     private final WolfNoService wolfNoService;
+    private final EmailCodeService emailCodeService;
+    private final LoginRecordService loginRecordService;
     private final UserService userService;
+    private final UserAuthService userAuthService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
     /**
      * 注册
-     * 用户输入行者名和密码，系统分配狼藉号，创建行者，返回 token
+     * 用户输入行者名、密码、可选邮箱，系统分配狼藉号，创建行者，返回 token
      *
      * @param nickname 行者名（行者在群落中的称呼）
      * @param password 密码
+     * @param email 邮箱（选填）
      * @return 登录响应（包含 token、userInfo）
      */
     @Transactional(rollbackFor = Exception.class)
-    public LoginVO register(String nickname, String password) {
-        // 1. 分配狼藉号（先分配，userId暂时为null）
+    public LoginVO register(String nickname, String password, String email) {
+        String normalizedEmail = normalizeOptionalEmail(email);
+        String normalizedLoginKey = normalizeLoginKey(password);
+        if (normalizedEmail != null
+                && userAuthService.findAnyByTypeAndIdentifier(UserAuthType.EMAIL_PASSWORD, normalizedEmail) != null) {
+            throw new BaseException(ErrorCode.EMAIL_ALREADY_USED);
+        }
+
         String wolfNo = wolfNoService.allocateWolfNo(null);
 
-        // 2. 创建行者
         WfUser user = new WfUser();
         user.setWolfNo(wolfNo);
-        user.setLoginKey(encodeLoginKey(password));
-        user.setNickname(nickname);
         user.setStatus(UserStatus.NORMAL);
+        user.setOnboardingStatus(OnboardingStatus.PENDING);
+        user.setLoginCount(0);
         int insertRows = wfUserMapper.insert(user);
         if (insertRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
         }
 
-        // 3. 更新号码池中的 userId（分配时userId为null，现在更新为实际userId）
+        userService.createProfile(user.getId(), nickname);
+
+        String credentialHash = encodeLoginKey(normalizedLoginKey);
+        userAuthService.createWolfNoPasswordAuth(user.getId(), wolfNo, credentialHash);
+        if (normalizedEmail != null) {
+            userAuthService.createEmailPasswordAuth(user.getId(), normalizedEmail, credentialHash, false);
+            emailCodeService.sendCode(normalizedEmail, EmailCodeScene.BIND_EMAIL);
+        }
+
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
 
-        // 4. 构建并返回登录响应
-        log.info("行者注册成功: wolfNo={}, nickname={}, userId={}", wolfNo, nickname, user.getId());
-        return buildLoginVO(user);
+        log.info("行者注册成功: wolfNo={}, nickname={}, email={}, userId={}", wolfNo, nickname, normalizedEmail, user.getId());
+        return buildLoginVO(userService.getByIdOrThrow(user.getId()));
     }
 
     /**
      * 登录
-     * 验证狼藉号+密码，返回 token
+     * 验证账号+密码，返回 token
      *
-     * @param wolfNo  狼藉号
+     * @param account 登录账号（支持狼藉号或邮箱）
      * @param loginKey 登录密码（明文）
+     * @param request HTTP 请求
      * @return 登录响应（包含 token、userInfo，不包含 loginKey）
      */
-    public LoginVO login(String wolfNo, String loginKey) {
-        // 1. 查询可用行者
-        WfUser user = userService.getEnabledByWolfNoOrThrow(wolfNo);
+    public LoginVO login(String account, String loginKey, HttpServletRequest request) {
+        WfUser user = null;
+        WfUserAuth auth = null;
+        String normalizedAccount = normalizeAccount(account);
+        LoginMethod loginMethod = resolveLoginMethod(normalizedAccount);
+        try {
+            String normalizedLoginKey = normalizeLoginKey(loginKey);
+            if (!StringUtils.hasText(normalizedAccount)) {
+                throw new BaseException(ErrorCode.PARAM_ERROR);
+            }
 
-        // 2. 验证密码（BCrypt）
-        verifyLoginKey(loginKey, user.getLoginKey(), ErrorCode.LOGIN_KEY_ERROR);
+            if (LoginMethod.EMAIL.equals(loginMethod)) {
+                String normalizedEmail = normalizeEmail(normalizedAccount);
+                auth = getEnabledEmailAuthOrThrow(normalizedEmail);
+                requireEmailVerified(auth);
+                user = userService.getEnabledByIdOrThrow(auth.getUserId());
+            } else {
+                user = userService.getEnabledByWolfNoOrThrow(normalizedAccount);
+                auth = userAuthService.getWolfNoPasswordAuthByUserIdOrThrow(user.getId());
+            }
 
-        // 3. 构建并返回登录响应
-        log.info("行者登录成功: wolfNo={}, userId={}", wolfNo, user.getId());
-        return buildLoginVO(user);
+            verifyLoginKey(normalizedLoginKey, auth.getCredentialHash(), ErrorCode.LOGIN_KEY_ERROR);
+            refreshLoginStats(user);
+            userAuthService.touchLoginAt(auth.getId());
+            recordLoginSafely(user.getId(), loginMethod, LoginResult.SUCCESS, null, normalizedAccount, request);
+
+            log.info("行者登录成功: method={}, account={}, userId={}", loginMethod.getValue(), normalizedAccount, user.getId());
+            return buildLoginVO(user);
+        } catch (BaseException e) {
+            recordLoginSafely(user == null ? null : user.getId(), loginMethod, LoginResult.FAIL, e.getCode(), normalizedAccount, request);
+            throw e;
+        } catch (Exception e) {
+            recordLoginSafely(
+                    user == null ? null : user.getId(),
+                    loginMethod,
+                    LoginResult.FAIL,
+                    ErrorCode.SYSTEM_ERROR.getCode(),
+                    normalizedAccount,
+                    request
+            );
+            throw e;
+        }
+    }
+
+    /**
+     * 发送重置密码验证码
+     */
+    public void sendResetPasswordCode(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        WfUserAuth emailAuth = getEnabledEmailAuthOrThrow(normalizedEmail);
+        requireEmailVerified(emailAuth);
+        userService.getEnabledByIdOrThrow(emailAuth.getUserId());
+        emailCodeService.sendCode(normalizedEmail, EmailCodeScene.RESET_PASSWORD);
+    }
+
+    /**
+     * 通过邮箱验证码重置密码
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPasswordByEmail(String email, String verifyCode, String newLoginKey, String confirmLoginKey) {
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedNewLoginKey = normalizeLoginKey(newLoginKey);
+        String normalizedConfirmLoginKey = normalizeLoginKey(confirmLoginKey);
+
+        WfUserAuth emailAuth = getEnabledEmailAuthOrThrow(normalizedEmail);
+        requireEmailVerified(emailAuth);
+        userService.getEnabledByIdOrThrow(emailAuth.getUserId());
+
+        if (!normalizedNewLoginKey.equals(normalizedConfirmLoginKey)) {
+            throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
+        }
+
+        emailCodeService.verifyAndConsume(normalizedEmail, EmailCodeScene.RESET_PASSWORD, verifyCode);
+        userAuthService.updateAllPasswordCredentialByUserId(emailAuth.getUserId(), encodeLoginKey(normalizedNewLoginKey));
+
+        log.info("邮箱重置密码成功: email={}, userId={}", normalizedEmail, emailAuth.getUserId());
     }
 
     /**
@@ -93,20 +191,48 @@ public class AuthService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(Long userId, String oldLoginKey, String newLoginKey, String confirmLoginKey) {
-        WfUser user = userService.getEnabledByIdOrThrow(userId);
-        verifyLoginKey(oldLoginKey, user.getLoginKey(), ErrorCode.OLD_LOGIN_KEY_ERROR);
+        String normalizedOldLoginKey = normalizeLoginKey(oldLoginKey);
+        String normalizedNewLoginKey = normalizeLoginKey(newLoginKey);
+        String normalizedConfirmLoginKey = normalizeLoginKey(confirmLoginKey);
 
-        if (!newLoginKey.equals(confirmLoginKey)) {
+        userService.getEnabledByIdOrThrow(userId);
+        WfUserAuth wolfAuth = userAuthService.getWolfNoPasswordAuthByUserIdOrThrow(userId);
+        verifyLoginKey(normalizedOldLoginKey, wolfAuth.getCredentialHash(), ErrorCode.OLD_LOGIN_KEY_ERROR);
+
+        if (!normalizedNewLoginKey.equals(normalizedConfirmLoginKey)) {
             throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
         }
 
-        user.setLoginKey(encodeLoginKey(newLoginKey));
-        int updateRows = wfUserMapper.updateById(user);
-        if (updateRows != 1) {
-            throw new BaseException(ErrorCode.DATABASE_ERROR);
-        }
+        userAuthService.updateAllPasswordCredentialByUserId(userId, encodeLoginKey(normalizedNewLoginKey));
 
         log.info("行者修改密码成功: userId={}", userId);
+    }
+
+    /**
+     * 发送绑定邮箱验证码
+     */
+    public void sendBindEmailCode(Long userId, String email) {
+        String normalizedEmail = normalizeEmail(email);
+        userService.getEnabledByIdOrThrow(userId);
+        checkEmailCanBind(userId, normalizedEmail);
+        emailCodeService.sendCode(normalizedEmail, EmailCodeScene.BIND_EMAIL);
+    }
+
+    /**
+     * 绑定邮箱
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void bindEmail(Long userId, String email, String verifyCode) {
+        String normalizedEmail = normalizeEmail(email);
+        userService.getEnabledByIdOrThrow(userId);
+        checkEmailCanBind(userId, normalizedEmail);
+
+        emailCodeService.verifyAndConsume(normalizedEmail, EmailCodeScene.BIND_EMAIL, verifyCode);
+
+        WfUserAuth wolfAuth = userAuthService.getWolfNoPasswordAuthByUserIdOrThrow(userId);
+        userAuthService.bindEmailPasswordAuth(userId, normalizedEmail, wolfAuth.getCredentialHash());
+
+        log.info("邮箱绑定成功: userId={}, email={}", userId, normalizedEmail);
     }
 
     /**
@@ -117,10 +243,8 @@ public class AuthService {
      * @return 登录响应
      */
     private LoginVO buildLoginVO(WfUser user) {
-        // 生成 JWT token
         String token = jwtUtil.generateToken(user.getId(), user.getWolfNo());
 
-        // 构建响应
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(token);
 
@@ -140,5 +264,111 @@ public class AuthService {
         }
     }
 
-}
+    private void requireEmailVerified(WfUserAuth emailAuth) {
+        if (!Boolean.TRUE.equals(emailAuth.getVerified())) {
+            throw new BaseException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+    }
 
+    private void checkEmailCanBind(Long currentUserId, String email) {
+        WfUserAuth existing = userAuthService.findAnyByTypeAndIdentifier(UserAuthType.EMAIL_PASSWORD, email);
+        if (existing != null && !existing.getUserId().equals(currentUserId)) {
+            throw new BaseException(ErrorCode.EMAIL_ALREADY_USED);
+        }
+    }
+
+    private boolean isEmailAccount(String account) {
+        return account != null && account.contains("@");
+    }
+
+    private LoginMethod resolveLoginMethod(String account) {
+        if (!StringUtils.hasText(account)) {
+            return LoginMethod.UNKNOWN;
+        }
+        return isEmailAccount(account) ? LoginMethod.EMAIL : LoginMethod.WOLF_NO;
+    }
+
+    private String normalizeAccount(String account) {
+        if (!StringUtils.hasText(account)) {
+            return null;
+        }
+        return account.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        return normalizedEmail;
+    }
+
+    private String normalizeOptionalEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+        return normalizeEmail(email);
+    }
+
+    private void refreshLoginStats(WfUser user) {
+        LocalDateTime now = LocalDateTime.now();
+        if (user.getFirstLoginAt() == null) {
+            user.setFirstLoginAt(now);
+        }
+        user.setLastLoginAt(now);
+        Integer loginCount = user.getLoginCount();
+        if (loginCount == null) {
+            user.setLoginCount(1);
+        } else {
+            user.setLoginCount(loginCount + 1);
+        }
+        int updateRows = wfUserMapper.updateById(user);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+    }
+
+    private WfUserAuth getEnabledEmailAuthOrThrow(String normalizedEmail) {
+        WfUserAuth emailAuth = userAuthService.findByTypeAndIdentifier(UserAuthType.EMAIL_PASSWORD, normalizedEmail);
+        if (emailAuth == null) {
+            throw new BaseException(ErrorCode.EMAIL_NOT_BOUND);
+        }
+        return emailAuth;
+    }
+
+    private void recordLoginSafely(
+            Long userId,
+            LoginMethod loginMethod,
+            LoginResult loginResult,
+            Integer failCode,
+            String account,
+            HttpServletRequest request
+    ) {
+        try {
+            loginRecordService.record(userId, loginMethod, loginResult, failCode, account, request);
+        } catch (Exception e) {
+            log.error(
+                    "登录记录写入失败: userId={}, method={}, result={}, account={}",
+                    userId,
+                    loginMethod == null ? null : loginMethod.getValue(),
+                    loginResult == null ? null : loginResult.getValue(),
+                    account,
+                    e
+            );
+        }
+    }
+
+    private String normalizeLoginKey(String loginKey) {
+        if (!StringUtils.hasText(loginKey)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        String normalizedLoginKey = loginKey.trim();
+        if (normalizedLoginKey.length() < LOGIN_KEY_MIN_LENGTH || normalizedLoginKey.length() > LOGIN_KEY_MAX_LENGTH) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        return normalizedLoginKey;
+    }
+}

@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -87,18 +86,61 @@ public class WolfNoService {
      * 从号码池随机获取一个 UNUSED 号码
      */
     private WfNoPool getRandomUnusedWolfNo() {
-        // 查询所有 UNUSED 状态的号码
-        LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED);
-        List<WfNoPool> unusedList = wfNoPoolMapper.selectList(queryWrapper);
-
-        if (unusedList.isEmpty()) {
+        Long minUnusedId = getUnusedBoundaryId(true);
+        if (minUnusedId == null) {
+            return null;
+        }
+        Long maxUnusedId = getUnusedBoundaryId(false);
+        if (maxUnusedId == null) {
             return null;
         }
 
-        // 随机选择一个
-        int index = ThreadLocalRandom.current().nextInt(unusedList.size());
-        return unusedList.get(index);
+        long randomStartId = ThreadLocalRandom.current().nextLong(minUnusedId, maxUnusedId + 1);
+        WfNoPool candidate = getFirstUnusedAfterOrEqual(randomStartId);
+        if (candidate != null) {
+            return candidate;
+        }
+        return getFirstUnusedBefore(randomStartId);
+    }
+
+    private Long getUnusedBoundaryId(boolean min) {
+        LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED);
+        if (min) {
+            queryWrapper.orderByAsc(WfNoPool::getId);
+        } else {
+            queryWrapper.orderByDesc(WfNoPool::getId);
+        }
+        queryWrapper.last("LIMIT 1");
+        WfNoPool target = wfNoPoolMapper.selectOne(queryWrapper);
+        if (target == null) {
+            return null;
+        }
+        return target.getId();
+    }
+
+    private WfNoPool getFirstUnusedAfterOrEqual(Long startId) {
+        if (startId == null) {
+            return null;
+        }
+        LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED)
+                .ge(WfNoPool::getId, startId)
+                .orderByAsc(WfNoPool::getId)
+                .last("LIMIT 1");
+        return wfNoPoolMapper.selectOne(queryWrapper);
+    }
+
+    private WfNoPool getFirstUnusedBefore(Long startId) {
+        if (startId == null) {
+            return null;
+        }
+        LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED)
+                .lt(WfNoPool::getId, startId)
+                .orderByDesc(WfNoPool::getId)
+                .last("LIMIT 1");
+        return wfNoPoolMapper.selectOne(queryWrapper);
     }
 
     /**

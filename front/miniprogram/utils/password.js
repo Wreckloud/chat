@@ -1,3 +1,5 @@
+const { PASSWORD_STRENGTH_COPY } = require('../constants/copy')
+
 /**
  * 评估密码强度（仅提示，不阻止提交）
  * 规则：长度<6或字符类型过少为弱；2类为中；3类及以上为强
@@ -6,8 +8,7 @@ function evaluatePasswordStrength(password) {
   const source = password || ''
   if (!source) {
     return {
-      level: '',
-      text: ''
+      level: ''
     }
   }
 
@@ -19,24 +20,35 @@ function evaluatePasswordStrength(password) {
 
   if (source.length < 6 || score <= 1) {
     return {
-      level: 'weak',
-      text: '强度偏弱，建议至少 8 位并混合字母和数字'
+      level: 'weak'
     }
   }
 
   if (score <= 2) {
     return {
-      level: 'medium',
-      text: '强度中等，可加入大写字母或符号提高安全性'
+      level: 'medium'
     }
   }
 
   return {
-    level: 'strong',
-    text: '强度较高，当前密码可用'
+    level: 'strong'
   }
 }
 
+function getPasswordStrengthInlineText(level) {
+  if (level === 'weak') {
+    return PASSWORD_STRENGTH_COPY.weakInline
+  }
+  if (level === 'medium') {
+    return PASSWORD_STRENGTH_COPY.mediumInline
+  }
+  if (level === 'strong') {
+    return PASSWORD_STRENGTH_COPY.strongInline
+  }
+  return ''
+}
+
 module.exports = {
-  evaluatePasswordStrength
+  evaluatePasswordStrength,
+  getPasswordStrengthInlineText
 }

@@ -5,6 +5,7 @@ const TOKEN_KEY = 'wolfchat_token'
 const USER_INFO_KEY = 'wolfchat_user_info'
 const LOGIN_PAGE_URL = '/pages/login/login'
 const { DEFAULT_AVATAR } = require('./user')
+let authRedirecting = false
 
 const auth = {
   /**
@@ -85,6 +86,28 @@ const auth = {
   logout() {
     this.removeToken()
     this.removeUserInfo()
+  },
+
+  /**
+   * 登录态失效处理（清理本地并跳转登录）
+   */
+  handleAuthExpired() {
+    this.logout()
+    if (authRedirecting) {
+      return
+    }
+    const pages = getCurrentPages()
+    const currentPage = pages[pages.length - 1]
+    if (currentPage && currentPage.route === 'pages/login/login') {
+      return
+    }
+    authRedirecting = true
+    wx.reLaunch({
+      url: LOGIN_PAGE_URL,
+      complete() {
+        authRedirecting = false
+      }
+    })
   }
 }
 

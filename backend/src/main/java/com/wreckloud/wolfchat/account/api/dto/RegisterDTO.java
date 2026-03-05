@@ -23,4 +23,8 @@ public class RegisterDTO {
     @Size(min = 6, max = 64, message = "密码长度必须在6-64个字符之间")
     @Schema(description = "登录密码（长度6-64位）", example = "123456", required = true)
     private String password;
+
+    @Size(max = 128, message = "邮箱长度不能超过128个字符")
+    @Schema(description = "邮箱（选填）", example = "user@example.com", required = false)
+    private String email;
 }

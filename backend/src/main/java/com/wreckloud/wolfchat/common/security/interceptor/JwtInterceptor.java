@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.common.security.interceptor;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
+import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 @RequiredArgsConstructor
 public class JwtInterceptor implements HandlerInterceptor {
     private final JwtUtil jwtUtil;
+    private final SessionUserService sessionUserService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -41,6 +43,9 @@ public class JwtInterceptor implements HandlerInterceptor {
         Long userId = jwtUtil.getUserIdFromToken(token);
         String wolfNo = jwtUtil.getWolfNoFromToken(token);
         if (userId == null || !StringUtils.hasText(wolfNo)) {
+            throw new BaseException(ErrorCode.TOKEN_INVALID);
+        }
+        if (!sessionUserService.isSessionUserExists(userId)) {
             throw new BaseException(ErrorCode.TOKEN_INVALID);
         }
         UserContext.setUserId(userId);

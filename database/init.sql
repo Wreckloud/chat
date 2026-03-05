@@ -2,9 +2,13 @@
 -- 仅包含建表语句，不包含测试数据
 -- 号码池会自动补充（当 UNUSED 数量低于 10 个时，系统会自动补充 50 个）
 
+CREATE DATABASE IF NOT EXISTS `wolf_chat`
+    DEFAULT CHARACTER SET utf8mb4
+    COLLATE utf8mb4_general_ci;
+USE `wolf_chat`;
+
 -- 狼藉号池表
-DROP TABLE IF EXISTS `wf_no_pool`;
-CREATE TABLE `wf_no_pool` (
+CREATE TABLE IF NOT EXISTS `wf_no_pool` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `wolf_no` VARCHAR(10) NOT NULL COMMENT '狼藉号（10位，首位1-9，避免前导0）',
     `status` VARCHAR(20) NOT NULL DEFAULT 'UNUSED' COMMENT '状态：UNUSED-未使用，USED-已使用，RESERVED-预留',
@@ -13,28 +17,103 @@ CREATE TABLE `wf_no_pool` (
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_wolf_no` (`wolf_no`),
-    KEY `idx_status` (`status`)
+    KEY `idx_status_id` (`status`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='狼藉号池表';
 
 -- 行者用户表
-DROP TABLE IF EXISTS `wf_user`;
-CREATE TABLE `wf_user` (
+CREATE TABLE IF NOT EXISTS `wf_user` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `wolf_no` VARCHAR(10) NOT NULL COMMENT '狼藉号（唯一标识）',
-    `login_key` VARCHAR(64) NOT NULL COMMENT '登录密码哈希（BCrypt）',
-    `nickname` VARCHAR(64) DEFAULT NULL COMMENT '行者名（行者在群落中的称呼，将被其他行者看到，注册后可修改）',
-    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL-正常，DISABLED-禁用',
+    `onboarding_status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '新用户引导状态：PENDING/COMPLETED/SKIPPED',
+    `onboarding_completed_at` DATETIME DEFAULT NULL COMMENT '引导完成时间',
+    `first_login_at` DATETIME DEFAULT NULL COMMENT '首次登录时间',
+    `last_login_at` DATETIME DEFAULT NULL COMMENT '最近登录时间',
+    `login_count` INT NOT NULL DEFAULT 0 COMMENT '登录次数',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_wolf_no` (`wolf_no`),
-    KEY `idx_status` (`status`)
+    KEY `idx_status` (`status`),
+    KEY `idx_onboarding_status` (`onboarding_status`),
+    KEY `idx_last_login_at` (`last_login_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者表';
 
+-- 行者认证表
+CREATE TABLE IF NOT EXISTS `wf_user_auth` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `auth_type` VARCHAR(32) NOT NULL COMMENT '认证类型：WOLF_NO_PASSWORD/EMAIL_PASSWORD',
+    `auth_identifier` VARCHAR(128) NOT NULL COMMENT '认证标识（狼藉号/邮箱）',
+    `credential_hash` VARCHAR(100) NOT NULL COMMENT '认证凭据哈希（密码）',
+    `verified` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已认证：0-否，1-是',
+    `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用：0-否，1-是',
+    `last_login_at` DATETIME DEFAULT NULL COMMENT '最近登录时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_type_identifier` (`auth_type`, `auth_identifier`),
+    UNIQUE KEY `uk_user_type` (`user_id`, `auth_type`),
+    KEY `idx_user_enabled` (`user_id`, `enabled`),
+    KEY `idx_type_enabled` (`auth_type`, `enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者认证表';
+
+-- 行者资料表
+CREATE TABLE IF NOT EXISTS `wf_user_profile` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID（唯一）',
+    `nickname` VARCHAR(64) NOT NULL COMMENT '行者名（公开显示）',
+    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
+    `signature` VARCHAR(255) DEFAULT NULL COMMENT '个性签名',
+    `bio` VARCHAR(1000) DEFAULT NULL COMMENT '个人简介',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_id` (`user_id`),
+    KEY `idx_nickname` (`nickname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者资料表';
+
+-- 登录记录表
+CREATE TABLE IF NOT EXISTS `wf_login_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT DEFAULT NULL COMMENT '用户ID（未匹配到用户时为空）',
+    `login_method` VARCHAR(20) NOT NULL COMMENT '登录方式：WOLF_NO/EMAIL/UNKNOWN',
+    `login_result` VARCHAR(20) NOT NULL COMMENT '登录结果：SUCCESS/FAIL',
+    `fail_code` INT DEFAULT NULL COMMENT '失败错误码（成功为空）',
+    `account_mask` VARCHAR(128) DEFAULT NULL COMMENT '脱敏登录账号',
+    `ip` VARCHAR(64) DEFAULT NULL COMMENT '客户端IP',
+    `user_agent` VARCHAR(255) DEFAULT NULL COMMENT 'User-Agent',
+    `client_type` VARCHAR(32) DEFAULT NULL COMMENT '客户端类型',
+    `client_version` VARCHAR(32) DEFAULT NULL COMMENT '客户端版本',
+    `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_login_time` (`user_id`, `login_time`),
+    KEY `idx_result_login_time` (`login_result`, `login_time`),
+    KEY `idx_login_time` (`login_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录记录表';
+
+-- 邮箱验证码使用 Redis 存储（不落库）
+
+-- 行者封禁记录表
+CREATE TABLE IF NOT EXISTS `wf_user_ban_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '被封禁用户ID',
+    `operator_user_id` BIGINT NOT NULL COMMENT '操作人用户ID',
+    `reason` VARCHAR(500) NOT NULL COMMENT '封禁原因',
+    `start_time` DATETIME NOT NULL COMMENT '封禁开始时间',
+    `end_time` DATETIME DEFAULT NULL COMMENT '封禁结束时间（为空表示永久封禁）',
+    `status` VARCHAR(20) NOT NULL COMMENT '记录状态：ACTIVE/LIFTED/EXPIRED',
+    `lifted_at` DATETIME DEFAULT NULL COMMENT '解除时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_time` (`user_id`, `start_time`),
+    KEY `idx_status_time` (`status`, `start_time`),
+    KEY `idx_operator_time` (`operator_user_id`, `start_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者封禁记录表';
+
 -- 关注关系表
-DROP TABLE IF EXISTS `wf_follow`;
-CREATE TABLE `wf_follow` (
+CREATE TABLE IF NOT EXISTS `wf_follow` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `follower_id` BIGINT NOT NULL COMMENT '关注者ID',
     `followee_id` BIGINT NOT NULL COMMENT '被关注者ID',
@@ -48,8 +127,7 @@ CREATE TABLE `wf_follow` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='关注关系表';
 
 -- 帖子表
-DROP TABLE IF EXISTS `wf_post`;
-CREATE TABLE `wf_post` (
+CREATE TABLE IF NOT EXISTS `wf_post` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '帖子ID',
     `user_id` BIGINT NOT NULL COMMENT '发布者ID',
     `content` TEXT NOT NULL COMMENT '帖子内容',
@@ -64,8 +142,7 @@ CREATE TABLE `wf_post` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子表';
 
 -- 评论表
-DROP TABLE IF EXISTS `wf_comment`;
-CREATE TABLE `wf_comment` (
+CREATE TABLE IF NOT EXISTS `wf_comment` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '评论ID',
     `post_id` BIGINT NOT NULL COMMENT '帖子ID',
     `user_id` BIGINT NOT NULL COMMENT '评论者ID',
@@ -79,8 +156,7 @@ CREATE TABLE `wf_comment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
 -- 会话表
-DROP TABLE IF EXISTS `wf_conversation`;
-CREATE TABLE `wf_conversation` (
+CREATE TABLE IF NOT EXISTS `wf_conversation` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `user_a_id` BIGINT NOT NULL COMMENT '会话参与者A（较小的用户ID）',
     `user_b_id` BIGINT NOT NULL COMMENT '会话参与者B（较大的用户ID）',
@@ -97,8 +173,7 @@ CREATE TABLE `wf_conversation` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
 
 -- 消息表
-DROP TABLE IF EXISTS `wf_message`;
-CREATE TABLE `wf_message` (
+CREATE TABLE IF NOT EXISTS `wf_message` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `conversation_id` BIGINT NOT NULL COMMENT '所属会话ID',
     `sender_id` BIGINT NOT NULL COMMENT '发送者ID',

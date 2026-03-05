@@ -1,14 +1,43 @@
 <view class="retro-input {{disabled ? 'is-disabled' : ''}}">
-  <text wx:if="{{label}}" class="retro-input-label">{{label}}</text>
-  <input
-    class="retro-input-core"
-    type="{{type}}"
-    value="{{value}}"
-    placeholder="{{placeholder}}"
-    disabled="{{disabled}}"
-    maxlength="{{maxlength}}"
-    confirm-type="{{confirmType}}"
-    bindinput="onInput"
-    bindchange="onChange"
-    bindconfirm="onConfirm" />
+  <view
+    wx:if="{{label}}"
+    class="retro-input-label-wrap">
+    <text class="retro-input-label">{{label}}</text>
+    <text wx:if="{{required}}" class="retro-input-required">*</text>
+  </view>
+  <view class="retro-input-main">
+    <input
+      class="retro-input-core"
+      type="{{inputType}}"
+      value="{{value}}"
+      placeholder="{{placeholder}}"
+      disabled="{{disabled}}"
+      maxlength="{{maxlength}}"
+      confirm-type="{{confirmType}}"
+      bindinput="onInput"
+      bindchange="onChange"
+      bindconfirm="onConfirm" />
+
+    <view wx:if="{{metaText || (holdToReveal && type === 'password')}}" class="retro-input-actions">
+      <view wx:if="{{metaText}}" class="strength strength-{{metaLevel}}">
+        <view class="strength-bars">
+          <view class="strength-bar strength-bar-1"></view>
+          <view class="strength-bar strength-bar-2"></view>
+          <view class="strength-bar strength-bar-3"></view>
+        </view>
+        <text class="strength-text">{{metaText}}</text>
+      </view>
+
+      <view
+        wx:if="{{holdToReveal && type === 'password'}}"
+        class="reveal-btn {{isRevealing ? 'is-revealing' : ''}}"
+        bindtouchstart="onRevealStart"
+        bindtouchend="onRevealEnd"
+        bindtouchcancel="onRevealEnd">
+        <view class="eye-icon">
+          <view class="eye-core"></view>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>

@@ -5,7 +5,11 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
-const { evaluatePasswordStrength } = require('../../utils/password')
+const { PASSWORD_PAGE_COPY } = require('../../constants/copy')
+const {
+  evaluatePasswordStrength,
+  getPasswordStrengthInlineText
+} = require('../../utils/password')
 
 Page({
   data: {
@@ -13,9 +17,10 @@ Page({
     newLoginKey: '',
     confirmLoginKey: '',
     passwordStrengthLevel: '',
-    passwordStrengthText: '',
+    passwordStrengthInlineText: '',
     loading: false,
-    themeClass: 'theme-retro-blue'
+    themeClass: 'theme-retro-blue',
+    copy: PASSWORD_PAGE_COPY
   },
 
   onLoad() {
@@ -41,7 +46,7 @@ Page({
     this.setData({
       newLoginKey,
       passwordStrengthLevel: strength.level,
-      passwordStrengthText: strength.text
+      passwordStrengthInlineText: getPasswordStrengthInlineText(strength.level)
     })
   },
 
@@ -57,29 +62,30 @@ Page({
     const oldLoginKey = this.data.oldLoginKey.trim()
     const newLoginKey = this.data.newLoginKey.trim()
     const confirmLoginKey = this.data.confirmLoginKey.trim()
+    const copy = PASSWORD_PAGE_COPY
 
     if (!oldLoginKey) {
-      toastError('请输入原密码')
+      toastError(copy.validation.oldRequired)
       return
     }
 
     if (!newLoginKey) {
-      toastError('请输入新密码')
+      toastError(copy.validation.newRequired)
       return
     }
 
     if (newLoginKey.length < 6) {
-      toastError('新密码至少6位')
+      toastError(copy.validation.newMinLength)
       return
     }
 
     if (!confirmLoginKey) {
-      toastError('请确认新密码')
+      toastError(copy.validation.confirmRequired)
       return
     }
 
     if (newLoginKey !== confirmLoginKey) {
-      toastError('两次输入的新密码不一致')
+      toastError(copy.validation.newMismatch)
       return
     }
 
@@ -92,7 +98,7 @@ Page({
         confirmLoginKey
       })
       if (res.code === 0) {
-        toastSuccess('密码已修改，请重新登录')
+        toastSuccess(copy.toast.success)
         auth.logout()
         setTimeout(() => {
           wx.reLaunch({
@@ -101,7 +107,7 @@ Page({
         }, 1000)
       }
     } catch (error) {
-      toastError(error, '修改失败')
+      toastError(error, copy.toast.fail)
     } finally {
       this.setData({ loading: false })
     }

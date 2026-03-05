@@ -3,6 +3,7 @@
  */
 const config = require('./config')
 const auth = require('./auth')
+const AUTH_ERROR_CODES = [2001, 2002, 2003]
 
 let socketOpen = false
 let connecting = false
@@ -38,6 +39,11 @@ function initEvents() {
       payload = JSON.parse(res.data)
     } catch (e) {
       console.error('WS 消息解析失败:', e)
+      return
+    }
+
+    if (payload && payload.type === 'ERROR' && AUTH_ERROR_CODES.includes(payload.code)) {
+      auth.handleAuthExpired()
       return
     }
     listeners.forEach((handler) => handler(payload))
