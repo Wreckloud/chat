@@ -51,7 +51,7 @@ public class PostService {
     public PostVO createPost(Long userId, CreatePostDTO dto) {
         WfPost post = new WfPost();
         post.setUserId(userId);
-        post.setContent(dto.getContent());
+        post.setContent(dto.getContent().trim());
         post.setRoomId(dto.getRoomId());
         post.setStatus(PostStatus.NORMAL);
         int insertRows = wfPostMapper.insert(post);
@@ -80,7 +80,7 @@ public class PostService {
                 .map(WfPost::getUserId)
                 .collect(Collectors.toList()));
 
-        List<PostVO> list = new ArrayList<>();
+        List<PostVO> list = new ArrayList<>(records.size());
         for (WfPost post : records) {
             WfUser user = userMap.get(post.getUserId());
             list.add(toPostVO(post, user));
@@ -98,10 +98,7 @@ public class PostService {
      * 获取帖子详情
      */
     public PostDetailVO getPostDetail(Long postId) {
-        WfPost post = wfPostMapper.selectById(postId);
-        if (post == null || PostStatus.DELETED.equals(post.getStatus())) {
-            throw new BaseException(ErrorCode.POST_NOT_FOUND);
-        }
+        WfPost post = getNormalPostOrThrow(postId);
 
         WfUser user = userService.getByIdOrThrow(post.getUserId());
         PostVO postVO = toPostVO(post, user);
@@ -118,15 +115,12 @@ public class PostService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void addComment(Long userId, Long postId, CreateCommentDTO dto) {
-        WfPost post = wfPostMapper.selectById(postId);
-        if (post == null || PostStatus.DELETED.equals(post.getStatus())) {
-            throw new BaseException(ErrorCode.POST_NOT_FOUND);
-        }
+        getNormalPostOrThrow(postId);
 
         WfComment comment = new WfComment();
         comment.setPostId(postId);
         comment.setUserId(userId);
-        comment.setContent(dto.getContent());
+        comment.setContent(dto.getContent().trim());
         comment.setStatus(CommentStatus.NORMAL);
         int insertRows = wfCommentMapper.insert(comment);
         if (insertRows != 1) {
@@ -148,7 +142,7 @@ public class PostService {
                 .map(WfComment::getUserId)
                 .collect(Collectors.toList()));
 
-        List<CommentVO> list = new ArrayList<>();
+        List<CommentVO> list = new ArrayList<>(comments.size());
         for (WfComment comment : comments) {
             WfUser user = userMap.get(comment.getUserId());
             list.add(toCommentVO(comment, user));
@@ -160,6 +154,14 @@ public class PostService {
         if (page < MIN_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException("分页参数不合法，page>=1 且 size 在1-50之间");
         }
+    }
+
+    private WfPost getNormalPostOrThrow(Long postId) {
+        WfPost post = wfPostMapper.selectById(postId);
+        if (post == null || PostStatus.DELETED.equals(post.getStatus())) {
+            throw new BaseException(ErrorCode.POST_NOT_FOUND);
+        }
+        return post;
     }
 
     private PostVO toPostVO(WfPost post, WfUser user) {

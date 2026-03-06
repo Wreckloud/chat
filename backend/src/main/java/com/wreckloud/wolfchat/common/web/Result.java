@@ -27,54 +27,38 @@ public class Result<T> {
     private T data;
 
     /**
-     * 成功响应（无数据）
-     */
-    public static <T> Result<T> success() {
-        Result<T> result = new Result<>();
-        result.setCode(0);
-        result.setMessage("操作成功");
-        return result;
-    }
-
-    /**
      * 成功响应（带数据）
      */
     public static <T> Result<T> success(T data) {
-        Result<T> result = new Result<>();
-        result.setCode(0);
-        result.setMessage("操作成功");
-        result.setData(data);
-        return result;
+        return build(0, "操作成功", data);
     }
 
     /**
      * 成功响应（自定义消息）
      */
     public static <T> Result<T> success(String message, T data) {
-        Result<T> result = new Result<>();
-        result.setCode(0);
-        result.setMessage(message);
-        result.setData(data);
-        return result;
+        return build(0, message, data);
     }
 
     /**
      * 失败响应
      */
     public static <T> Result<T> error(Integer code, String message) {
-        Result<T> result = new Result<>();
-        result.setCode(code);
-        result.setMessage(message);
-        return result;
+        return build(code, message, null);
     }
 
     /**
      * 失败响应（使用错误码枚举）
      */
     public static <T> Result<T> error(ErrorCode errorCode) {
+        return build(errorCode.getCode(), errorCode.getMessage(), null);
+    }
+
+    private static <T> Result<T> build(Integer code, String message, T data) {
         Result<T> result = new Result<>();
-        result.setCode(errorCode.getCode());
-        result.setMessage(errorCode.getMessage());
+        result.setCode(code);
+        result.setMessage(message);
+        result.setData(data);
         return result;
     }
 }

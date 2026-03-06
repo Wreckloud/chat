@@ -117,7 +117,6 @@ Page({
         }
       })
       .catch(err => {
-        console.error('加载会话信息失败:', err)
         toastError(err, '加载失败')
       })
   },
@@ -158,7 +157,6 @@ Page({
         }
       })
       .catch(err => {
-        console.error('加载消息失败:', err)
         toastError(err, '加载失败')
         this.setData({ loading: false })
       })

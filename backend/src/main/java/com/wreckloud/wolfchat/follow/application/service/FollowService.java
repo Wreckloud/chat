@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,24 +41,15 @@ public class FollowService {
             throw new BaseException(ErrorCode.FOLLOW_SELF);
         }
 
-        userService.getByIdOrThrow(followeeId);
+        userService.getEnabledByIdOrThrow(followeeId);
 
-        LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfFollow::getFollowerId, followerId)
-                .eq(WfFollow::getFolloweeId, followeeId);
-        WfFollow follow = wfFollowMapper.selectOne(queryWrapper);
+        WfFollow follow = findFollowRecord(followerId, followeeId);
 
         if (follow != null) {
             if (FollowStatus.FOLLOWING.equals(follow.getStatus())) {
                 throw new BaseException(ErrorCode.FOLLOW_ALREADY);
             }
-            LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(WfFollow::getId, follow.getId())
-                    .set(WfFollow::getStatus, FollowStatus.FOLLOWING);
-            int updateRows = wfFollowMapper.update(null, updateWrapper);
-            if (updateRows != 1) {
-                throw new BaseException(ErrorCode.DATABASE_ERROR);
-            }
+            updateFollowStatusById(follow.getId(), FollowStatus.FOLLOWING);
             return;
         }
 
@@ -76,29 +68,18 @@ public class FollowService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void unfollow(Long followerId, Long followeeId) {
-        LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfFollow::getFollowerId, followerId)
-                .eq(WfFollow::getFolloweeId, followeeId)
-                .eq(WfFollow::getStatus, FollowStatus.FOLLOWING);
-        WfFollow follow = wfFollowMapper.selectOne(queryWrapper);
+        WfFollow follow = findActiveFollowRecord(followerId, followeeId);
         if (follow == null) {
             throw new BaseException(ErrorCode.FOLLOW_NOT_FOUND);
         }
-
-        LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfFollow::getId, follow.getId())
-                .set(WfFollow::getStatus, FollowStatus.UNFOLLOWED);
-        int updateRows = wfFollowMapper.update(null, updateWrapper);
-        if (updateRows != 1) {
-            throw new BaseException(ErrorCode.DATABASE_ERROR);
-        }
+        updateFollowStatusById(follow.getId(), FollowStatus.UNFOLLOWED);
     }
 
     /**
      * 获取关注列表
      */
     public List<FollowUserVO> getFollowing(Long userId) {
-        List<WfFollow> following = getFollowingRecords(userId);
+        List<WfFollow> following = listActiveFollowRecordsByFollower(userId);
         Set<Long> followerSet = getFollowerIds(userId);
         List<Long> userIds = following.stream()
                 .map(WfFollow::getFolloweeId)
@@ -110,7 +91,7 @@ public class FollowService {
      * 获取粉丝列表
      */
     public List<FollowUserVO> getFollowers(Long userId) {
-        List<WfFollow> followers = getFollowerRecords(userId);
+        List<WfFollow> followers = listActiveFollowRecordsByFollowee(userId);
         Set<Long> followingSet = getFollowingIds(userId);
         List<Long> userIds = followers.stream()
                 .map(WfFollow::getFollowerId)
@@ -122,18 +103,18 @@ public class FollowService {
      * 获取互关列表
      */
     public List<FollowUserVO> getMutual(Long userId) {
-        Set<Long> followingSet = getFollowingIds(userId);
+        List<WfFollow> following = listActiveFollowRecordsByFollower(userId);
         Set<Long> followerSet = getFollowerIds(userId);
-
-        followingSet.retainAll(followerSet);
-        if (followingSet.isEmpty()) {
-            return new ArrayList<>();
+        List<Long> mutualUserIds = following.stream()
+                .map(WfFollow::getFolloweeId)
+                .filter(followerSet::contains)
+                .collect(Collectors.toList());
+        if (mutualUserIds.isEmpty()) {
+            return Collections.emptyList();
         }
-
-        Map<Long, WfUser> userMap = userService.getUserMap(followingSet);
-
+        Map<Long, WfUser> userMap = userService.getUserMap(mutualUserIds);
         List<FollowUserVO> result = new ArrayList<>();
-        for (Long id : followingSet) {
+        for (Long id : mutualUserIds) {
             WfUser user = userMap.get(id);
             if (user != null) {
                 result.add(toFollowUserVO(user, true));
@@ -149,23 +130,29 @@ public class FollowService {
         if (userId1.equals(userId2)) {
             return false;
         }
-        boolean user1FollowsUser2 = checkFollowStatus(userId1, userId2, FollowStatus.FOLLOWING);
-        boolean user2FollowsUser1 = checkFollowStatus(userId2, userId1, FollowStatus.FOLLOWING);
+        boolean user1FollowsUser2 = findActiveFollowRecord(userId1, userId2) != null;
+        boolean user2FollowsUser1 = findActiveFollowRecord(userId2, userId1) != null;
         return user1FollowsUser2 && user2FollowsUser1;
     }
 
-    /**
-     * 检查关注状态
-     */
-    private boolean checkFollowStatus(Long followerId, Long followeeId, FollowStatus status) {
+    private WfFollow findFollowRecord(Long followerId, Long followeeId) {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFollowerId, followerId)
                 .eq(WfFollow::getFolloweeId, followeeId)
-                .eq(WfFollow::getStatus, status);
-        return wfFollowMapper.selectCount(queryWrapper) > 0;
+                .last("LIMIT 1");
+        return wfFollowMapper.selectOne(queryWrapper);
     }
 
-    private List<WfFollow> getFollowingRecords(Long userId) {
+    private WfFollow findActiveFollowRecord(Long followerId, Long followeeId) {
+        LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfFollow::getFollowerId, followerId)
+                .eq(WfFollow::getFolloweeId, followeeId)
+                .eq(WfFollow::getStatus, FollowStatus.FOLLOWING)
+                .last("LIMIT 1");
+        return wfFollowMapper.selectOne(queryWrapper);
+    }
+
+    private List<WfFollow> listActiveFollowRecordsByFollower(Long userId) {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFollowerId, userId)
                 .eq(WfFollow::getStatus, FollowStatus.FOLLOWING)
@@ -173,7 +160,7 @@ public class FollowService {
         return wfFollowMapper.selectList(queryWrapper);
     }
 
-    private List<WfFollow> getFollowerRecords(Long userId) {
+    private List<WfFollow> listActiveFollowRecordsByFollowee(Long userId) {
         LambdaQueryWrapper<WfFollow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfFollow::getFolloweeId, userId)
                 .eq(WfFollow::getStatus, FollowStatus.FOLLOWING)
@@ -182,25 +169,25 @@ public class FollowService {
     }
 
     private Set<Long> getFollowingIds(Long userId) {
-        return getFollowingRecords(userId).stream()
+        return listActiveFollowRecordsByFollower(userId).stream()
                 .map(WfFollow::getFolloweeId)
                 .collect(Collectors.toSet());
     }
 
     private Set<Long> getFollowerIds(Long userId) {
-        return getFollowerRecords(userId).stream()
+        return listActiveFollowRecordsByFollowee(userId).stream()
                 .map(WfFollow::getFollowerId)
                 .collect(Collectors.toSet());
     }
 
     private List<FollowUserVO> buildFollowUsers(List<Long> userIds, Set<Long> mutualBase) {
         if (userIds.isEmpty()) {
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
 
         Map<Long, WfUser> userMap = userService.getUserMap(userIds);
 
-        List<FollowUserVO> result = new ArrayList<>();
+        List<FollowUserVO> result = new ArrayList<>(userIds.size());
         for (Long id : userIds) {
             WfUser user = userMap.get(id);
             if (user != null) {
@@ -209,6 +196,16 @@ public class FollowService {
             }
         }
         return result;
+    }
+
+    private void updateFollowStatusById(Long followId, FollowStatus status) {
+        LambdaUpdateWrapper<WfFollow> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfFollow::getId, followId)
+                .set(WfFollow::getStatus, status);
+        int updateRows = wfFollowMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
     }
 
     private FollowUserVO toFollowUserVO(WfUser user, boolean mutual) {

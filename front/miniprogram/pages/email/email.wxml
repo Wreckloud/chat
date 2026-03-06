@@ -21,7 +21,6 @@
       disabled="{{emailInputDisabled}}"
       maxlength="{{128}}"
       bind:input="onEmailInput"
-      bind:change="onEmailInput"
       class="email-input"
     />
 

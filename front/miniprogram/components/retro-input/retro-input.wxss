@@ -57,9 +57,10 @@
 .strength {
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  max-width: 176rpx;
+  gap: 8rpx;
+  width: 186rpx;
   align-self: center;
+  flex-shrink: 0;
 }
 
 .strength-bars {
@@ -86,7 +87,11 @@
 .strength-text {
   font-size: 20rpx;
   color: var(--retro-muted-text, #62758d);
+  width: 132rpx;
+  text-align: left;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .strength-weak .strength-bar-1 {
@@ -120,12 +125,13 @@
 }
 
 .reveal-btn {
-  width: 72rpx;
+  width: 76rpx;
   height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .eye-icon {

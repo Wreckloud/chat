@@ -254,13 +254,7 @@ public class UserService {
 
     private void attachEmailAuthSummary(WfUser user) {
         WfUserAuth emailAuth = findEnabledEmailAuthByUserId(user.getId());
-        if (emailAuth == null) {
-            user.setEmail(null);
-            user.setEmailVerified(false);
-            return;
-        }
-        user.setEmail(emailAuth.getAuthIdentifier());
-        user.setEmailVerified(Boolean.TRUE.equals(emailAuth.getVerified()));
+        applyEmailAuthSummary(user, emailAuth);
     }
 
     private void attachEmailAuthSummary(List<WfUser> users) {
@@ -289,14 +283,18 @@ public class UserService {
 
         for (WfUser user : users) {
             WfUserAuth auth = emailAuthMap.get(user.getId());
-            if (auth == null) {
-                user.setEmail(null);
-                user.setEmailVerified(false);
-                continue;
-            }
-            user.setEmail(auth.getAuthIdentifier());
-            user.setEmailVerified(Boolean.TRUE.equals(auth.getVerified()));
+            applyEmailAuthSummary(user, auth);
         }
+    }
+
+    private void applyEmailAuthSummary(WfUser user, WfUserAuth emailAuth) {
+        if (emailAuth == null) {
+            user.setEmail(null);
+            user.setEmailVerified(false);
+            return;
+        }
+        user.setEmail(emailAuth.getAuthIdentifier());
+        user.setEmailVerified(Boolean.TRUE.equals(emailAuth.getVerified()));
     }
 
     private WfUserAuth findEnabledEmailAuthByUserId(Long userId) {

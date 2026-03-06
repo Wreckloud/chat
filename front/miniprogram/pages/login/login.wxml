@@ -38,7 +38,6 @@
             value="{{nickname}}"
             required="{{true}}"
             bind:input="onNicknameInput"
-            bind:change="onNicknameInput"
             class="form-input"
           />
 
@@ -47,7 +46,6 @@
             placeholder="{{copy.register.emailPlaceholder}}"
             value="{{email}}"
             bind:input="onEmailInput"
-            bind:change="onEmailInput"
             class="form-input"
           />
 
@@ -61,7 +59,6 @@
             meta-text="{{passwordStrengthInlineText}}"
             required="{{true}}"
             bind:input="onPasswordInput"
-            bind:change="onPasswordInput"
             class="form-input"
           />
 
@@ -73,7 +70,6 @@
             hold-to-reveal="{{true}}"
             required="{{true}}"
             bind:input="onConfirmPasswordInput"
-            bind:change="onConfirmPasswordInput"
             class="form-input"
           />
 
@@ -108,7 +104,6 @@
           placeholder="{{copy.login.accountPlaceholder}}"
           value="{{account}}"
           bind:input="onAccountInput"
-          bind:change="onAccountInput"
           class="form-input"
         />
 
@@ -119,13 +114,8 @@
           value="{{loginKey}}"
           hold-to-reveal="{{true}}"
           bind:input="onLoginKeyInput"
-          bind:change="onLoginKeyInput"
           class="form-input"
         />
-
-        <view class="assist-row">
-          <text class="assist-link" bindtap="goResetPassword">{{copy.login.forgotPassword}}</text>
-        </view>
 
         <retro-button
           theme="primary"
@@ -137,8 +127,9 @@
           {{copy.login.submitButton}}
         </retro-button>
 
-        <view class="switch-mode">
-          <text class="switch-link" bindtap="switchToRegister">{{copy.login.switchToRegister}}</text>
+        <view class="login-links-row">
+          <text class="login-link" bindtap="goResetPassword">{{copy.login.forgotPassword}}</text>
+          <text class="login-link" bindtap="switchToRegister">{{copy.login.switchToRegister}}</text>
         </view>
       </view>
     </view>

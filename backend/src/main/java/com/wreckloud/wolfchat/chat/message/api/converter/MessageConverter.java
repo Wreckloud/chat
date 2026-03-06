@@ -2,6 +2,10 @@ package com.wreckloud.wolfchat.chat.message.api.converter;
 
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Description 消息转换器
@@ -25,5 +29,17 @@ public final class MessageConverter {
         vo.setMsgType(message.getMsgType());
         vo.setCreateTime(message.getCreateTime());
         return vo;
+    }
+
+    public static List<MessageVO> toMessageVOList(List<WfMessage> source) {
+        return source.stream()
+                .map(MessageConverter::toMessageVO)
+                .collect(Collectors.toList());
+    }
+
+    public static Page<MessageVO> toMessageVOPage(Page<WfMessage> source) {
+        Page<MessageVO> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
+        target.setRecords(toMessageVOList(source.getRecords()));
+        return target;
     }
 }

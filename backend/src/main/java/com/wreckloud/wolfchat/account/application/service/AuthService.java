@@ -253,7 +253,7 @@ public class AuthService {
      * @return 登录响应
      */
     private LoginVO buildLoginVO(WfUser user) {
-        String token = jwtUtil.generateToken(user.getId(), user.getWolfNo());
+        String token = jwtUtil.generateToken(user.getId());
 
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(token);
@@ -366,11 +366,10 @@ public class AuthService {
             loginRecordService.record(userId, loginMethod, loginResult, failCode, account, request);
         } catch (Exception e) {
             log.error(
-                    "登录记录写入失败: userId={}, method={}, result={}, account={}",
+                    "登录记录写入失败: userId={}, method={}, result={}",
                     userId,
                     loginMethod == null ? null : loginMethod.getValue(),
                     loginResult == null ? null : loginResult.getValue(),
-                    account,
                     e
             );
         }

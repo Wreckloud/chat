@@ -28,13 +28,6 @@ Component({
         bubbles: true,
         composed: true
       })
-    },
-
-    onChange(e) {
-      this.triggerEvent('change', e.detail, {
-        bubbles: true,
-        composed: true
-      })
     }
   }
 })

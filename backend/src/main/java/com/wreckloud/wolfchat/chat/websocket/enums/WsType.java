@@ -1,6 +1,5 @@
 package com.wreckloud.wolfchat.chat.websocket.enums;
 
-
 /**
  * @Description WebSocket 消息类型
  * @Author Wreckloud

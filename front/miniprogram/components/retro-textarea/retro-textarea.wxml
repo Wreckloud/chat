@@ -6,6 +6,5 @@
     maxlength="{{maxlength}}"
     disabled="{{disabled}}"
     auto-height="{{autoHeight}}"
-    bindinput="onInput"
-    bindchange="onChange" />
+    bindinput="onInput" />
 </view>

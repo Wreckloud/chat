@@ -7,33 +7,48 @@
   </view>
   <view class="retro-input-main">
     <input
+      wx:if="{{inputPassword}}"
       class="retro-input-core"
-      type="{{inputType}}"
+      type="text"
+      password="{{true}}"
       value="{{value}}"
       placeholder="{{placeholder}}"
       disabled="{{disabled}}"
       maxlength="{{maxlength}}"
       confirm-type="{{confirmType}}"
       bindinput="onInput"
-      bindchange="onChange"
+      bindconfirm="onConfirm" />
+
+    <input
+      wx:else
+      class="retro-input-core"
+      type="{{inputType}}"
+      password="{{false}}"
+      value="{{value}}"
+      placeholder="{{placeholder}}"
+      disabled="{{disabled}}"
+      maxlength="{{maxlength}}"
+      confirm-type="{{confirmType}}"
+      bindinput="onInput"
       bindconfirm="onConfirm" />
 
     <view wx:if="{{metaText || (holdToReveal && type === 'password')}}" class="retro-input-actions">
       <view wx:if="{{metaText}}" class="strength strength-{{metaLevel}}">
+        <text class="strength-text">{{metaText}}</text>
         <view class="strength-bars">
           <view class="strength-bar strength-bar-1"></view>
           <view class="strength-bar strength-bar-2"></view>
           <view class="strength-bar strength-bar-3"></view>
         </view>
-        <text class="strength-text">{{metaText}}</text>
       </view>
 
       <view
         wx:if="{{holdToReveal && type === 'password'}}"
         class="reveal-btn {{isRevealing ? 'is-revealing' : ''}}"
-        bindtouchstart="onRevealStart"
-        bindtouchend="onRevealEnd"
-        bindtouchcancel="onRevealEnd">
+        catchtouchstart="onRevealStart"
+        catchtouchend="onRevealEnd"
+        catchtouchcancel="onRevealEnd"
+        bindtap="onRevealTap">
         <view class="eye-icon">
           <view class="eye-core"></view>
         </view>

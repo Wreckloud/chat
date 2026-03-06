@@ -11,11 +11,15 @@ import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @Description 消息控制器
@@ -56,15 +60,7 @@ public class MessageController {
                 page,
                 size
         );
-
-        // 转换为 VO
-        Page<MessageVO> voPage = new Page<>(messagePage.getCurrent(), messagePage.getSize(), messagePage.getTotal());
-        List<MessageVO> voList = messagePage.getRecords().stream()
-                .map(MessageConverter::toMessageVO)
-                .collect(Collectors.toList());
-        voPage.setRecords(voList);
-
-        return Result.success(voPage);
+        return Result.success(MessageConverter.toMessageVOPage(messagePage));
     }
 
 }

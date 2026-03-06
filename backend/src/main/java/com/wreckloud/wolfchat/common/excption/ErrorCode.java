@@ -16,12 +16,10 @@ public enum ErrorCode {
     PARAM_ERROR(1001, "参数错误"),
     SYSTEM_ERROR(1002, "系统错误，请稍后重试"),
     DATABASE_ERROR(1003, "数据库操作失败，请稍后重试"),
-    DATABASE_CONNECTION_ERROR(1004, "数据库连接失败，请检查数据库服务是否启动"),
 
     // 认证相关错误码 2000-2999
     UNAUTHORIZED(2001, "请先登录"),
     TOKEN_INVALID(2002, "token 无效"),
-    TOKEN_EXPIRED(2003, "token 已过期"),
     LOGIN_FAILED(2004, "登录失败"),
     WOLF_NO_NOT_FOUND(2005, "狼藉号不存在"),
     LOGIN_KEY_ERROR(2006, "密码错误"),
@@ -45,7 +43,6 @@ public enum ErrorCode {
     FOLLOW_ALREADY(3005, "已关注该行者"),
     FOLLOW_NOT_FOUND(3006, "关注关系不存在"),
     POST_NOT_FOUND(3007, "帖子不存在或已删除"),
-    COMMENT_NOT_FOUND(3008, "评论不存在或已删除"),
     NOT_MUTUAL_FOLLOW(3009, "仅互相关注的行者可以聊天"),
     CONVERSATION_NOT_FOUND(3010, "会话不存在"),
     NOT_CONVERSATION_MEMBER(3011, "您不是该会话的参与者"),

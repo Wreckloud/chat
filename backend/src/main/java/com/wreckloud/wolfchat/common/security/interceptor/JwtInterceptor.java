@@ -1,7 +1,7 @@
 package com.wreckloud.wolfchat.common.security.interceptor;
 
-import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.excption.BaseException;
+import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
@@ -41,15 +41,13 @@ public class JwtInterceptor implements HandlerInterceptor {
 
         // 设置用户上下文
         Long userId = jwtUtil.getUserIdFromToken(token);
-        String wolfNo = jwtUtil.getWolfNoFromToken(token);
-        if (userId == null || !StringUtils.hasText(wolfNo)) {
+        if (userId == null) {
             throw new BaseException(ErrorCode.TOKEN_INVALID);
         }
         if (!sessionUserService.isSessionUserExists(userId)) {
             throw new BaseException(ErrorCode.TOKEN_INVALID);
         }
         UserContext.setUserId(userId);
-        UserContext.setWolfNo(wolfNo);
 
         return true;
     }
@@ -65,8 +63,12 @@ public class JwtInterceptor implements HandlerInterceptor {
      */
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        if (!StringUtils.hasText(bearerToken)) {
+            return null;
+        }
+        String normalizedToken = bearerToken.trim();
+        if (normalizedToken.startsWith("Bearer ")) {
+            return normalizedToken.substring(7).trim();
         }
         return null;
     }

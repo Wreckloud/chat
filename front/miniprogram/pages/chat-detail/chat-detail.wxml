@@ -70,7 +70,6 @@
       placeholder="输入消息..."
       value="{{inputMessage}}"
       disabled="{{sending}}"
-      bind:change="onMessageInput"
       bind:input="onMessageInput"
       confirm-type="send"
       bindconfirm="sendMessage"

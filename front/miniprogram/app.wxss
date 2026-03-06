@@ -3,6 +3,17 @@ page {
   color: #1f2d3d;
 }
 
+.container,
+.chat-page,
+.chat-detail-page,
+.community-page,
+.follow-page,
+.post-create-page,
+.post-detail-page,
+.user-detail-page {
+  box-sizing: border-box;
+}
+
 .theme-retro-blue {
   --retro-page-bg: #dce4ef;
   --retro-page-text: #1f2d3d;

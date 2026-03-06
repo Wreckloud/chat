@@ -28,13 +28,11 @@ public class JwtUtil {
      * 生成 JWT token
      *
      * @param userId 行者ID
-     * @param wolfNo 狼藉号
      * @return JWT token
      */
-    public String generateToken(Long userId, String wolfNo) {
+    public String generateToken(Long userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
-        claims.put("wolfNo", wolfNo);
         return createToken(claims);
     }
 
@@ -85,17 +83,6 @@ public class JwtUtil {
             return ((Integer) userId).longValue();
         }
         return (Long) userId;
-    }
-
-    /**
-     * 从 token 中获取狼藉号
-     */
-    public String getWolfNoFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        if (claims == null) {
-            return null;
-        }
-        return (String) claims.get("wolfNo");
     }
 
     /**

@@ -126,16 +126,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (!StringUtils.hasText(rawToken)) {
             return null;
         }
-        if (rawToken.startsWith("Bearer ")) {
-            return rawToken.substring(7);
+        String token = rawToken.trim();
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).trim();
         }
-        return rawToken;
+        return token;
     }
 
     private void sendAuthOk(WebSocketSession session) {
-        WsResponse response = new WsResponse();
-        response.setType(WsType.AUTH_OK);
-        send(session, response);
+        send(session, buildResponse(WsType.AUTH_OK, null));
     }
 
     private void replayUndeliveredMessages(WebSocketSession session, Long userId) {
@@ -207,24 +206,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendAck(WebSocketSession session, String clientMsgId, MessageVO messageVO) {
-        WsResponse ack = new WsResponse();
-        ack.setType(WsType.ACK);
+        WsResponse ack = buildResponse(WsType.ACK, messageVO);
         ack.setClientMsgId(clientMsgId);
-        ack.setData(messageVO);
         send(session, ack);
     }
 
     private WsResponse buildMessageResponse(WfMessage message) {
-        WsResponse push = new WsResponse();
-        push.setType(WsType.MESSAGE);
-        push.setData(MessageConverter.toMessageVO(message));
-        return push;
+        return buildMessageResponse(MessageConverter.toMessageVO(message));
+    }
+
+    private WsResponse buildMessageResponse(MessageVO messageVO) {
+        return buildResponse(WsType.MESSAGE, messageVO);
     }
 
     private void pushMessageToReceiver(WfMessage message, MessageVO messageVO) {
-        WsResponse push = new WsResponse();
-        push.setType(WsType.MESSAGE);
-        push.setData(messageVO);
+        WsResponse push = buildMessageResponse(messageVO);
         int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
         if (successCount > 0) {
             messageService.markDelivered(List.of(message.getId()));
@@ -251,11 +247,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendError(WebSocketSession session, Integer code, String message, String clientMsgId) {
-        WsResponse response = new WsResponse();
-        response.setType(WsType.ERROR);
+        WsResponse response = buildResponse(WsType.ERROR, null);
         response.setCode(code);
         response.setMessage(message);
         response.setClientMsgId(clientMsgId);
         send(session, response);
+    }
+
+    private WsResponse buildResponse(WsType type, Object data) {
+        WsResponse response = new WsResponse();
+        response.setType(type);
+        response.setData(data);
+        return response;
     }
 }

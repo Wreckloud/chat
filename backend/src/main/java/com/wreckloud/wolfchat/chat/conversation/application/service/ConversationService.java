@@ -17,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -167,7 +170,7 @@ public class ConversationService {
                 .collect(Collectors.toList());
         Map<Long, WfUser> userMap = userService.getUserMap(targetUserIds);
 
-        List<ConversationVO> result = new ArrayList<>();
+        List<ConversationVO> result = new ArrayList<>(conversations.size());
         for (WfConversation conversation : conversations) {
             Long targetUserId = getTargetUserId(conversation, userId);
             WfUser targetUser = userMap.get(targetUserId);

@@ -45,7 +45,7 @@ public class MessageService {
     public WfMessage sendMessage(Long userId, Long conversationId, String content) {
         log.info("发送消息: userId={}, conversationId={}", userId, conversationId);
 
-        String normalizedContent = normalizeContent(content, userId);
+        String normalizedContent = normalizeContent(content);
 
         // 校验会话存在且用户是参与者
         conversationService.validateConversationMember(conversationId, userId);
@@ -79,7 +79,7 @@ public class MessageService {
         conversationService.updateLastMessage(
                 conversationId,
                 message.getId(),
-                normalizedContent.length() > 100 ? normalizedContent.substring(0, 100) : normalizedContent,
+                buildConversationPreview(normalizedContent),
                 message.getCreateTime()
         );
 
@@ -101,7 +101,8 @@ public class MessageService {
         Page<WfMessage> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<WfMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfMessage::getConversationId, conversationId)
-                .orderByDesc(WfMessage::getCreateTime);
+                .orderByDesc(WfMessage::getCreateTime)
+                .orderByDesc(WfMessage::getId);
 
         Page<WfMessage> result = messageMapper.selectPage(page, queryWrapper);
         log.info("查询到消息数量: {}, 总数: {}", result.getRecords().size(), result.getTotal());
@@ -116,6 +117,7 @@ public class MessageService {
         queryWrapper.eq(WfMessage::getReceiverId, userId)
                 .eq(WfMessage::getDelivered, MessageDeliveryStatus.UNDELIVERED)
                 .orderByAsc(WfMessage::getCreateTime)
+                .orderByAsc(WfMessage::getId)
                 .last("LIMIT " + UNDELIVERED_LIMIT);
         return messageMapper.selectList(queryWrapper);
     }
@@ -132,18 +134,22 @@ public class MessageService {
         update.setDelivered(MessageDeliveryStatus.DELIVERED);
         update.setDeliveredTime(LocalDateTime.now());
         int updateRows = messageMapper.update(update, new LambdaQueryWrapper<WfMessage>()
+                .eq(WfMessage::getDelivered, MessageDeliveryStatus.UNDELIVERED)
                 .in(WfMessage::getId, messageIds));
         if (updateRows == 0) {
             log.warn("标记消息送达未命中: messageIds={}", messageIds);
         }
     }
 
-    private String normalizeContent(String content, Long userId) {
+    private String normalizeContent(String content) {
         if (content == null || content.trim().isEmpty()) {
-            log.warn("消息内容为空: userId={}", userId);
             throw new BaseException(ErrorCode.MESSAGE_CONTENT_EMPTY);
         }
         return content.trim();
+    }
+
+    private String buildConversationPreview(String content) {
+        return content.length() > 100 ? content.substring(0, 100) : content;
     }
 
     private void validatePageParams(Integer pageNum, Integer pageSize) {
