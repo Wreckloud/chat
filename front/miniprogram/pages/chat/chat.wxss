@@ -5,7 +5,7 @@
   color: var(--retro-page-text);
 }
 
-.retro-toolbar {
+.session-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -16,91 +16,93 @@
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
-.retro-title {
+.session-title {
   font-size: 27rpx;
   font-weight: 600;
   letter-spacing: 1rpx;
 }
 
-.retro-count {
+.session-total {
   font-size: 22rpx;
   color: var(--retro-muted-text-2);
 }
 
-.conversation-board {
+.session-board {
   margin: 14rpx 12rpx 20rpx;
   border: 1rpx solid var(--retro-panel-border);
   background: var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
-.board-head {
+.session-group {
+  width: 100%;
+}
+
+.session-group-head {
   display: flex;
   align-items: center;
-  padding: 12rpx 14rpx;
-  font-size: 22rpx;
+  justify-content: space-between;
+  padding: 12rpx 14rpx 10rpx;
   border-top: 1rpx solid var(--retro-board-head-top-border);
   border-bottom: 1rpx solid var(--retro-board-head-bottom-border);
   background: var(--retro-board-head-bg);
+}
+
+.session-group-title {
+  font-size: 24rpx;
   color: var(--retro-board-head-text);
+  font-weight: 600;
 }
 
-.board-head-user {
-  width: 44%;
-  padding-left: 6rpx;
+.session-group-empty {
+  padding: 16rpx 14rpx;
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
 }
 
-.board-head-msg {
-  width: 36%;
+.session-divider {
+  height: 1rpx;
+  background: var(--retro-tab-divider);
 }
 
-.board-head-time {
-  width: 20%;
-  text-align: right;
-}
-
-.conversation-row {
+.session-row {
   display: flex;
   align-items: center;
-  min-height: 112rpx;
+  min-height: 124rpx;
   padding: 10rpx 14rpx;
   border-bottom: 1rpx solid var(--retro-row-border);
   background: var(--retro-record-peer-bg);
 }
 
-.conversation-row-even {
+.session-row-offline {
   background: var(--retro-row-even-bg);
 }
 
-.conversation-row-pinned {
+.session-row-pinned {
   background: var(--retro-row-pinned-bg);
 }
 
-.conversation-user {
-  width: 44%;
-  display: flex;
-  align-items: center;
-}
-
-.conversation-avatar {
+.session-avatar {
   border: 1rpx solid var(--retro-avatar-border);
   background: #ffffff;
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
 }
 
-.conversation-user-meta {
+.session-meta {
+  flex: 1;
   min-width: 0;
   margin-left: 12rpx;
 }
 
-.conversation-user-line {
+.session-name-line {
   display: flex;
   align-items: center;
   min-width: 0;
 }
 
-.conversation-name {
-  max-width: 180rpx;
+.session-name {
+  max-width: 260rpx;
   font-size: 26rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
@@ -109,39 +111,39 @@
   text-overflow: ellipsis;
 }
 
-.pin-flag {
+.session-pin {
   margin-left: 8rpx;
   font-size: 20rpx;
   color: var(--retro-accent-text);
 }
 
-.conversation-no {
+.session-presence {
   margin-top: 4rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: var(--retro-muted-text);
 }
 
-.conversation-message {
-  width: 36%;
-  min-width: 0;
-  padding-right: 10rpx;
+.session-presence-online {
+  color: var(--retro-link-text);
 }
 
-.conversation-message-text {
-  font-size: 23rpx;
+.session-preview {
+  margin-top: 4rpx;
+  display: block;
+  font-size: 21rpx;
   color: var(--retro-body-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.conversation-time {
-  width: 20%;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.conversation-time-text {
-  font-size: 22rpx;
+.session-time {
+  margin-left: 12rpx;
+  width: 150rpx;
+  text-align: right;
+  font-size: 21rpx;
   color: var(--retro-muted-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

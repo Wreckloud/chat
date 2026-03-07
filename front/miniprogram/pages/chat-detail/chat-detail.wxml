@@ -1,87 +1,109 @@
-<view class="chat-detail-page {{themeClass}}">
-  <view class="record-toolbar">
-    <view class="record-toolbar-title">{{targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</view>
-    <view class="record-toolbar-sub">会话记录流</view>
+<view class="im-page {{themeClass}}">
+  <view class="im-header">
+    <view class="im-header-main" catchtap="goUserProfile">
+      <retro-avatar
+        class="im-header-avatar"
+        size="medium"
+        shape="square"
+        image="{{targetUser.avatar}}">
+        {{targetUser.nickname ? targetUser.nickname.charAt(0) : '行'}}
+      </retro-avatar>
+      <view class="im-header-meta">
+        <text class="im-header-name">{{targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
+      </view>
+    </view>
+    <view class="im-header-actions">
+      <text class="im-header-action">会话</text>
+    </view>
   </view>
 
   <scroll-view
     id="message-list"
-    class="record-list"
+    class="im-message-list"
     scroll-y
     scroll-top="{{scrollTop}}"
+    lower-threshold="60"
+    bindscrolltolower="onMessageListLower"
     enable-back-to-top>
-    <retro-loading wx:if="{{loading && messages.length === 0}}" size="40rpx" text="加载中..." />
+    <view wx:if="{{loading && messages.length === 0}}" class="im-state-text">加载中...</view>
 
-    <retro-empty wx:elif="{{messages.length === 0}}" description="暂无消息" />
+    <view wx:elif="{{messages.length === 0}}" class="im-state-text">暂无消息</view>
 
-    <view wx:else class="record-board">
-      <view wx:for="{{messages}}" wx:key="messageId" class="record-item">
-        <view wx:if="{{item.showTime}}" class="record-divider">
-          <text class="record-divider-text">{{item.timeText}}</text>
+    <view wx:else class="im-message-stream">
+      <block wx:for="{{messageBlocks}}" wx:key="key" wx:for-item="blockItem">
+        <view wx:if="{{blockItem.type === 'divider'}}" class="im-divider">
+          <view class="im-divider-line"></view>
+          <text class="im-divider-text">{{blockItem.timeText}}</text>
+          <view class="im-divider-line"></view>
         </view>
 
-        <view class="record-row {{item.senderId === currentUserId ? 'record-self' : 'record-peer'}}">
-          <view class="record-role">
+        <view wx:elif="{{blockItem.type === 'group'}}" class="im-group {{blockItem.isSelf ? 'im-group-self' : ''}}">
+          <view class="im-avatar-col">
             <retro-avatar
-              wx:if="{{item.senderId !== currentUserId}}"
-              class="record-avatar"
-              size="small"
-              shape="round"
-              image="{{targetUser.avatar}}"
-              catchtap="goUserProfile">
-              {{targetUser.nickname ? targetUser.nickname.charAt(0) : '行'}}
+              class="im-avatar"
+              size="medium"
+              shape="square"
+              image="{{blockItem.senderAvatar}}"
+              data-user-id="{{blockItem.senderId}}"
+              bindtap="onTapUserElement">
+              {{blockItem.senderInitial}}
             </retro-avatar>
-            <retro-avatar
-              wx:else
-              class="record-avatar"
-              size="small"
-              shape="round"
-              image="{{currentUser.avatar}}">
-              {{currentUser.nickname ? currentUser.nickname.charAt(0) : '我'}}
-            </retro-avatar>
-            <text class="record-role-tag">{{item.senderId === currentUserId ? '我' : '对方'}}</text>
           </view>
 
-          <view class="record-body">
-            <view class="record-meta">
-              <text
-                wx:if="{{item.senderId !== currentUserId}}"
-                class="record-name"
-                catchtap="goUserProfile">
-                {{targetUser.nickname || targetUser.wolfNo || '对方'}}
-              </text>
-              <text
-                wx:else
-                class="record-name record-name-self">
-                {{currentUser.nickname || currentUser.wolfNo || '我'}}
-              </text>
+          <view class="im-message-col">
+            <view class="im-meta-col">
+              <view class="im-name-line">
+                <view
+                  class="im-name {{blockItem.isSelf ? 'im-name-self' : 'im-name-peer'}}"
+                  data-user-id="{{blockItem.senderId}}"
+                  bindtap="onTapUserElement">
+                  {{blockItem.senderName}}
+                </view>
+              </view>
+              <view class="im-time-line">
+                <view class="im-meta-time">{{blockItem.headerTimeText}}</view>
+              </view>
             </view>
-            <text class="record-text">{{item.content}}</text>
+
+            <view wx:for="{{blockItem.rows}}" wx:key="key" wx:for-item="lineItem" class="im-line">
+              <text class="im-text">{{lineItem.content}}</text>
+            </view>
           </view>
         </view>
-      </view>
+      </block>
     </view>
   </scroll-view>
 
-  <view class="composer-bar">
-    <view class="composer-label">发送</view>
-    <retro-input
-      class="composer-input"
+  <view class="im-composer">
+    <input
+      class="im-composer-input"
+      type="text"
       placeholder="输入消息..."
+      placeholder-class="im-composer-input-placeholder"
       value="{{inputMessage}}"
       disabled="{{sending}}"
-      bind:input="onMessageInput"
+      bindinput="onMessageInput"
       confirm-type="send"
       bindconfirm="sendMessage"
     />
-    <retro-button
-      class="composer-send"
-      size="small"
-      theme="primary"
-      disabled="{{sending}}"
-      loading="{{sending}}"
-      bindtap="sendMessage">
-      {{sending ? '发送中' : '发送'}}
-    </retro-button>
+
+    <view class="im-composer-actions">
+      <retro-button
+        class="im-more-btn"
+        size="medium"
+        theme="default"
+        bindtap="onClickMore">
+        更多
+      </retro-button>
+      <retro-button
+        class="im-send-btn"
+        size="medium"
+        theme="primary"
+        disabled="{{sending}}"
+        loading="{{sending}}"
+        bindtap="sendMessage">
+        发送
+      </retro-button>
+    </view>
   </view>
 </view>

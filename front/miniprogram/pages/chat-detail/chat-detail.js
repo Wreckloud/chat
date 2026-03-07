@@ -1,39 +1,33 @@
-/**
- * 聊天详情页面
- */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
-const { toastError } = require('../../utils/ui')
+const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
     conversationId: null,
     messages: [],
+    messageBlocks: [],
     inputMessage: '',
     loading: false,
     sending: false,
     hasMore: true,
     currentPage: 1,
     pageSize: 20,
-    currentUserId: null,
     scrollTop: 0,
-    targetUser: {}, // 对方用户信息
-    currentUser: {}, // 当前用户信息
+    targetUser: {},
     themeClass: 'theme-retro-blue'
   },
 
   SEND_TIMEOUT_MS: 8000,
 
   onLoad(options) {
-    if (!auth.requireLogin()) {
-      return
-    }
+    if (!auth.requireLogin()) return
 
-    const conversationId = options.conversationId
+    const conversationId = Number(options.conversationId)
     if (!conversationId) {
       toastError('会话ID不能为空')
       setTimeout(() => {
@@ -42,21 +36,14 @@ Page({
       return
     }
 
-    const numericConversationId = Number(conversationId)
-
-    // 从本地存储获取当前用户信息
-    // 本地用户信息用于区分消息归属
     const userInfo = auth.getUserInfo()
-    const currentUserId = userInfo ? userInfo.userId : null
+    this.currentUserId = userInfo ? userInfo.userId : null
+    this.currentUser = normalizeUser(userInfo) || {}
 
     this.setData({
-      conversationId: numericConversationId,
-      currentUserId: currentUserId,
-      currentUser: normalizeUser(userInfo) || {}
+      conversationId
     })
 
-    // 加载会话信息（获取对方用户信息）
-    // 获取对方信息并设置标题
     this.loadConversation()
     this.loadMessages()
     this.initSocket()
@@ -69,16 +56,11 @@ Page({
 
   onUnload() {
     this.clearPendingTimer()
-    if (this.wsHandler) {
-      ws.offMessage(this.wsHandler)
-      this.wsHandler = null
-    }
+    this.teardownSocket()
   },
 
-  /**
-   * 初始化 WebSocket
-   */
   initSocket() {
+    if (this.wsHandler) return
     ws.connect()
     this.wsHandler = (payload) => {
       this.handleWsMessage(payload)
@@ -86,34 +68,42 @@ Page({
     ws.onMessage(this.wsHandler)
   },
 
-  /**
-   * 加载会话信息
-   */
+  teardownSocket() {
+    if (!this.wsHandler) return
+    ws.offMessage(this.wsHandler)
+    this.wsHandler = null
+  },
+
   loadConversation() {
-    // 先从会话列表中获取对方信息
-    // 复用会话列表数据获取对方资料
     request.get('/conversations')
       .then(res => {
         const conversations = res.data || []
         const conversation = conversations.find(
           c => Number(c.conversationId) === Number(this.data.conversationId)
         )
-        
-        if (conversation) {
-          const targetUser = {
-            userId: conversation.targetUserId,
-            nickname: conversation.targetNickname,
-            wolfNo: conversation.targetWolfNo,
-            avatar: conversation.targetAvatar
-          }
-          // 对方头像兜底，避免空白头像
-          const normalized = normalizeUser(targetUser) || {}
-          this.setData({ targetUser: normalized })
-          
-          // 设置页面标题为对方昵称
-          wx.setNavigationBarTitle({
-            title: normalized.nickname || normalized.wolfNo || '聊天'
-          })
+        if (!conversation) return
+
+        const normalized = normalizeUser({
+          userId: conversation.targetUserId,
+          nickname: conversation.targetNickname,
+          wolfNo: conversation.targetWolfNo,
+          avatar: conversation.targetAvatar
+        }) || {}
+
+        this.setData({
+          targetUser: normalized,
+          messageBlocks: this.buildMessageBlocks(this.data.messages)
+        })
+
+        wx.setNavigationBarTitle({
+          title: normalized.nickname || normalized.wolfNo || '聊天'
+        })
+
+        const needResolveTargetProfile = normalized.userId
+          && !normalized.nickname
+          && !normalized.wolfNo
+        if (needResolveTargetProfile) {
+          this.loadTargetUserProfile(normalized.userId)
         }
       })
       .catch(err => {
@@ -121,9 +111,22 @@ Page({
       })
   },
 
-  /**
-   * 加载消息列表
-   */
+  loadTargetUserProfile(userId) {
+    request.get(`/users/${userId}`)
+      .then(res => {
+        if (!res || !res.data) return
+        const user = normalizeUser(res.data) || {}
+        this.setData({
+          targetUser: user,
+          messageBlocks: this.buildMessageBlocks(this.data.messages)
+        })
+        wx.setNavigationBarTitle({
+          title: user.nickname || user.wolfNo || '聊天'
+        })
+      })
+      .catch(() => {})
+  },
+
   loadMessages() {
     if (this.data.loading || !this.data.hasMore) return
 
@@ -131,27 +134,24 @@ Page({
 
     const page = this.data.currentPage
     request.get(`/conversations/${this.data.conversationId}/messages`, {
-      page: page,
+      page,
       size: this.data.pageSize
     })
       .then(res => {
         const records = res.data.records || []
-        const ordered = records.slice().reverse() // 转成时间正序
+        const ordered = records.slice().reverse()
         const messages = page === 1
           ? ordered
           : [...ordered, ...this.data.messages]
 
-        // 处理消息时间显示
-        this.processMessageTimes(messages)
-
         this.setData({
           messages,
+          messageBlocks: this.buildMessageBlocks(messages),
           loading: false,
           hasMore: records.length >= this.data.pageSize,
           currentPage: page + 1
         })
 
-        // 首次加载后滚动到底部
         if (page === 1) {
           this.scrollToBottom()
         }
@@ -162,21 +162,14 @@ Page({
       })
   },
 
-  /**
-   * 输入框内容改变
-   */
   onMessageInput(e) {
     this.setData({
       inputMessage: e.detail.value
     })
   },
 
-  /**
-   * 发送消息
-   */
   sendMessage() {
     const content = this.data.inputMessage.trim()
-
     if (!content) {
       toastError('消息内容不能为空')
       return
@@ -200,9 +193,6 @@ Page({
     })
   },
 
-  /**
-   * 处理 WebSocket 消息
-   */
   handleWsMessage(payload) {
     if (!payload || !payload.type) return
 
@@ -210,7 +200,6 @@ Page({
       if (payload.clientMsgId && payload.clientMsgId === this.pendingClientMsgId) {
         this.clearPendingState(payload.clientMsgId)
       } else if (!payload.clientMsgId && this.data.sending) {
-        // 通用错误也要收敛发送态，避免页面卡住
         this.clearPendingState()
       }
       toastError(payload.message || '发送失败', '发送失败')
@@ -235,9 +224,6 @@ Page({
     }
   },
 
-  /**
-   * 追加消息并刷新时间显示
-   */
   appendMessage(message) {
     if (!message || message.conversationId !== Number(this.data.conversationId)) {
       return
@@ -247,8 +233,10 @@ Page({
     }
 
     const messages = [...this.data.messages, message]
-    this.processMessageTimes(messages)
-    this.setData({ messages })
+    this.setData({
+      messages,
+      messageBlocks: this.buildMessageBlocks(messages)
+    })
     this.scrollToBottom()
   },
 
@@ -258,39 +246,113 @@ Page({
     openUserProfile(user)
   },
 
+  onTapUserElement(e) {
+    const userId = e && e.currentTarget && e.currentTarget.dataset
+      ? Number(e.currentTarget.dataset.userId)
+      : 0
+    if (!userId) return
+    openUserProfile({ userId })
+  },
+
+  buildMessageBlocks(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return []
+    }
+
+    const blocks = []
+    let prevDateLabel = ''
+    let currentGroup = null
+
+    for (let index = 0; index < messages.length; index++) {
+      const message = messages[index]
+      const currentDateLabel = time.formatDateLabel(message.createTime)
+      const showDivider = !prevDateLabel || currentDateLabel !== prevDateLabel
+      if (showDivider) {
+        blocks.push({
+          type: 'divider',
+          key: `d_${message.messageId || index}`,
+          timeText: currentDateLabel
+        })
+        currentGroup = null
+      }
+
+      const isSelf = Number(message.senderId) === Number(this.currentUserId)
+      const sender = isSelf ? (this.currentUser || {}) : (this.data.targetUser || {})
+      const senderName = sender.nickname || sender.wolfNo || (isSelf ? '我' : `行者${message.senderId}`)
+      const senderInitial = senderName ? senderName.charAt(0) : (isSelf ? '我' : '行')
+      const senderAvatar = sender.avatar || ''
+
+      if (!currentGroup || Number(currentGroup.senderId) !== Number(message.senderId)) {
+        currentGroup = {
+          type: 'group',
+          key: `g_${message.messageId || index}`,
+          senderId: message.senderId,
+          isSelf,
+          senderName,
+          senderInitial,
+          senderAvatar,
+          headerTimeText: time.formatMessageMetaTime(message.createTime),
+          rows: []
+        }
+        blocks.push(currentGroup)
+      }
+
+      currentGroup.rows.push({
+        key: `m_${message.messageId || index}`,
+        messageId: message.messageId,
+        content: message.content
+      })
+      prevDateLabel = currentDateLabel
+    }
+    return blocks
+  },
+
   applyTheme() {
     applyPageTheme(this)
   },
 
-  /**
-   * 处理消息时间显示
-   * 相邻消息间隔>5分钟才显示时间
-   */
-  processMessageTimes(messages) {
-    for (let i = 0; i < messages.length; i++) {
-      const current = messages[i]
-      const prev = i > 0 ? messages[i - 1] : null
-      
-      current.showTime = time.shouldShowTime(current.createTime, prev ? prev.createTime : null)
-      if (current.showTime) {
-        current.timeText = time.formatTime(current.createTime)
+  onClickMore() {
+    wx.showActionSheet({
+      itemList: ['从相册选择图片', '从相册选择视频'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.chooseMediaFromAlbum('image', 9, (count) => `已选择 ${count} 张图片，发送功能待实现`)
+          return
+        }
+        if (res.tapIndex === 1) {
+          this.chooseMediaFromAlbum('video', 1, () => '已选择视频，发送功能待实现')
+        }
       }
-    }
+    })
   },
 
-  /**
-   * 滚动到底部
-   */
+  chooseMediaFromAlbum(mediaType, count, messageBuilder) {
+    wx.chooseMedia({
+      count,
+      mediaType: [mediaType],
+      sourceType: ['album'],
+      success: (res) => {
+        const fileCount = Array.isArray(res.tempFiles) ? res.tempFiles.length : 0
+        if (fileCount > 0) {
+          toastSuccess(messageBuilder(fileCount))
+        }
+      },
+      fail: (err) => {
+        if (err && err.errMsg && err.errMsg.includes('cancel')) {
+          return
+        }
+        toastError('打开相册失败')
+      }
+    })
+  },
+
   scrollToBottom() {
     this.setData({
       scrollTop: 999999
     })
   },
 
-  /**
-   * 上拉加载更多
-   */
-  onReachBottom() {
+  onMessageListLower() {
     this.loadMessages()
   },
 

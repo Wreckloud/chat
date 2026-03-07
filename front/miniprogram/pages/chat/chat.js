@@ -5,15 +5,18 @@ const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
-const { DEFAULT_AVATAR, openUserProfile } = require('../../utils/user')
+const { DEFAULT_AVATAR } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { getSwipeActionStyles } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
 
 Page({
   data: {
-    // 会话列表数据
     conversationList: [],
+    onlineConversations: [],
+    offlineConversations: [],
+    onlineCount: 0,
+    offlineCount: 0,
     loading: false,
     themeClass: 'theme-retro-blue'
   },
@@ -52,7 +55,7 @@ Page({
       .then(res => {
         const list = (res.data || []).map(item => this.formatConversationItem(item))
         this.setData({
-          conversationList: this.sortConversationList(list),
+          ...this.buildConversationViewData(list),
           loading: false
         })
       })
@@ -102,12 +105,11 @@ Page({
     item.lastMessage = message.content || item.lastMessage
     item.lastMessageTime = message.createTime
     item.formattedTime = time.formatTime(message.createTime)
+    item.presenceText = this.buildPresenceText(item.isOnline, message.createTime)
     item.swipeActions = this.buildSwipeActions(Boolean(item.pinned))
     list[idx] = item
 
-    this.setData({
-      conversationList: this.sortConversationList(list)
-    })
+    this.setData(this.buildConversationViewData(list))
   },
 
   /**
@@ -161,21 +163,56 @@ Page({
       }
     })
 
-    this.setData({
-      conversationList: this.sortConversationList(list)
-    })
+    this.setData(this.buildConversationViewData(list))
     toastSuccess(nextPinned ? '置顶成功' : '已取消置顶')
   },
 
   formatConversationItem(item) {
     const conversationId = Number(item.conversationId)
     const pinned = (this.pinnedConversationIds || []).includes(conversationId)
+    const isOnline = this.resolveOnlineStatus(item)
+    const lastMessageTime = item.lastMessageTime || ''
     return {
       ...item,
-      pinned: pinned,
+      pinned,
+      isOnline,
       targetAvatar: item.targetAvatar || DEFAULT_AVATAR,
-      formattedTime: item.lastMessageTime ? time.formatTime(item.lastMessageTime) : '',
+      formattedTime: lastMessageTime ? time.formatTime(lastMessageTime) : '',
+      presenceText: this.buildPresenceText(isOnline, lastMessageTime),
       swipeActions: this.buildSwipeActions(pinned)
+    }
+  },
+
+  resolveOnlineStatus(item) {
+    if (item.isOnline === true || item.online === true) {
+      return true
+    }
+    if (typeof item.onlineStatus === 'string' && item.onlineStatus.toUpperCase() === 'ONLINE') {
+      return true
+    }
+    return false
+  },
+
+  buildPresenceText(isOnline, lastMessageTime) {
+    if (isOnline) {
+      return '在线'
+    }
+    if (!lastMessageTime) {
+      return '离线'
+    }
+    return `上次活跃 ${time.formatTime(lastMessageTime)}`
+  },
+
+  buildConversationViewData(sourceList) {
+    const conversationList = this.sortConversationList(sourceList)
+    const onlineConversations = conversationList.filter(item => item.isOnline)
+    const offlineConversations = conversationList.filter(item => !item.isOnline)
+    return {
+      conversationList,
+      onlineConversations,
+      offlineConversations,
+      onlineCount: onlineConversations.length,
+      offlineCount: offlineConversations.length
     }
   },
 
@@ -209,9 +246,7 @@ Page({
           ...item,
           swipeActions: this.buildSwipeActions(Boolean(item.pinned))
         }))
-        return {
-          conversationList: list
-        }
+        return this.buildConversationViewData(list)
       }
     })
   },
@@ -254,18 +289,6 @@ Page({
     wx.navigateTo({
       url: `/pages/chat-detail/chat-detail?conversationId=${conversationId}`
     })
-  },
-
-  goUserProfile(e) {
-    const item = e.currentTarget.dataset.item
-    if (!item || !item.targetUserId) return
-    const user = {
-      userId: item.targetUserId,
-      nickname: item.targetNickname,
-      wolfNo: item.targetWolfNo,
-      avatar: item.targetAvatar
-    }
-    openUserProfile(user)
   },
 
   /**

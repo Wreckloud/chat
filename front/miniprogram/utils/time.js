@@ -24,6 +24,11 @@ function toDate(dateStr) {
   return new Date(year, month - 1, day, hour, minute, second)
 }
 
+function formatWeekday(date) {
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  return weekdays[date.getDay()]
+}
+
 /**
  * 会话列表时间
  * @param {string} dateStr
@@ -61,19 +66,35 @@ function formatTime(dateStr) {
 }
 
 /**
- * 是否显示消息时间（间隔 > 5 分钟）
+ * 消息分隔日期（仅日期，不包含时分）
  */
-function shouldShowTime(currentTime, prevTime) {
-  if (!prevTime) return true
+function formatDateLabel(dateStr) {
+  const date = toDate(dateStr)
+  if (!date) return ''
 
-  const current = toDate(currentTime)
-  const prev = toDate(prevTime)
-  if (!current || !prev) return false
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return `${year}年${month}月${day}日${formatWeekday(date)}`
+}
 
-  return (current - prev) > 300000
+/**
+ * 消息头部时间（日期 + 时分）
+ */
+function formatMessageMetaTime(dateStr) {
+  const date = toDate(dateStr)
+  if (!date) return ''
+
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${year}年${month}月${day}日${formatWeekday(date)} ${hours}:${minutes}`
 }
 
 module.exports = {
   formatTime,
-  shouldShowTime
+  formatDateLabel,
+  formatMessageMetaTime
 }
