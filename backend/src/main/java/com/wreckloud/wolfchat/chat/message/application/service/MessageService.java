@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wreckloud.wolfchat.chat.conversation.application.service.ConversationService;
 import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
+import com.wreckloud.wolfchat.chat.media.application.service.ChatMediaService;
+import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,15 +40,21 @@ public class MessageService {
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
     private final FollowService followService;
+    private final ChatMediaService chatMediaService;
+    private final MessageMediaService messageMediaService;
 
     /**
      * 发送消息
      */
     @Transactional(rollbackFor = Exception.class)
-    public WfMessage sendMessage(Long userId, Long conversationId, String content) {
+    public WfMessage sendMessage(SendMessageCommand command) {
+        Long userId = command.getUserId();
+        Long conversationId = command.getConversationId();
         log.info("发送消息: userId={}, conversationId={}", userId, conversationId);
 
-        String normalizedContent = normalizeContent(content);
+        MessageType msgType = normalizeMessageType(command.getMsgType());
+        String normalizedContent = normalizeContent(command.getContent(), msgType);
+        command.setMsgType(msgType);
 
         // 校验会话存在且用户是参与者
         conversationService.validateConversationMember(conversationId, userId);
@@ -60,13 +69,35 @@ public class MessageService {
             throw new BaseException(ErrorCode.NOT_MUTUAL_FOLLOW);
         }
 
+        switch (msgType) {
+            case TEXT:
+                validateNoMediaFields(command);
+                break;
+            case IMAGE:
+                chatMediaService.validateImageMessage(userId, command);
+                break;
+            case VIDEO:
+                chatMediaService.validateVideoMessage(userId, command);
+                break;
+            case FILE:
+                chatMediaService.validateFileMessage(userId, command);
+                break;
+            default:
+                throw new BaseException(ErrorCode.PARAM_ERROR, "消息类型不支持");
+        }
+
         // 保存消息
         WfMessage message = new WfMessage();
         message.setConversationId(conversationId);
         message.setSenderId(userId);
         message.setReceiverId(receiverId);
         message.setContent(normalizedContent);
-        message.setMsgType(MessageType.TEXT);
+        message.setMsgType(msgType);
+        message.setMediaKey(command.getMediaKey());
+        message.setMediaWidth(command.getMediaWidth());
+        message.setMediaHeight(command.getMediaHeight());
+        message.setMediaSize(command.getMediaSize());
+        message.setMediaMimeType(command.getMediaMimeType());
         message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
         message.setCreateTime(LocalDateTime.now());
         int insertRows = messageMapper.insert(message);
@@ -79,9 +110,10 @@ public class MessageService {
         conversationService.updateLastMessage(
                 conversationId,
                 message.getId(),
-                buildConversationPreview(normalizedContent),
+                messageMediaService.buildConversationPreview(msgType, normalizedContent),
                 message.getCreateTime()
         );
+        conversationService.increaseUnreadCount(conversationId, receiverId);
 
         return message;
     }
@@ -141,20 +173,55 @@ public class MessageService {
         }
     }
 
-    private String normalizeContent(String content) {
-        if (content == null || content.trim().isEmpty()) {
-            throw new BaseException(ErrorCode.MESSAGE_CONTENT_EMPTY);
-        }
-        return content.trim();
+    private MessageType normalizeMessageType(MessageType msgType) {
+        return msgType == null ? MessageType.TEXT : msgType;
     }
 
-    private String buildConversationPreview(String content) {
-        return content.length() > 100 ? content.substring(0, 100) : content;
+    private String normalizeContent(String content, MessageType msgType) {
+        if (MessageType.TEXT.equals(msgType)) {
+            if (!StringUtils.hasText(content)) {
+                throw new BaseException(ErrorCode.MESSAGE_CONTENT_EMPTY);
+            }
+            return content.trim();
+        }
+
+        if (MessageType.FILE.equals(msgType)) {
+            if (!StringUtils.hasText(content)) {
+                throw new BaseException(ErrorCode.PARAM_ERROR, "文件名称不能为空");
+            }
+            String normalizedFileName = content.trim();
+            if (normalizedFileName.length() > 120) {
+                throw new BaseException(ErrorCode.PARAM_ERROR, "文件名称不能超过 120 个字符");
+            }
+            return normalizedFileName;
+        }
+
+        if (!StringUtils.hasText(content)) {
+            return null;
+        }
+        String normalized = content.trim();
+        if (!StringUtils.hasText(normalized)) {
+            return null;
+        }
+        if (normalized.length() > 500) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "图片说明不能超过 500 个字符");
+        }
+        return normalized;
     }
 
     private void validatePageParams(Integer pageNum, Integer pageSize) {
         if (pageNum == null || pageNum < 1 || pageSize == null || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
             throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+    }
+
+    private void validateNoMediaFields(SendMessageCommand command) {
+        if (StringUtils.hasText(command.getMediaKey())
+                || command.getMediaWidth() != null
+                || command.getMediaHeight() != null
+                || command.getMediaSize() != null
+                || StringUtils.hasText(command.getMediaMimeType())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "文本消息不支持媒体字段");
         }
     }
 }

@@ -1,10 +1,12 @@
 package com.wreckloud.wolfchat.chat.message.api.converter;
 
+import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -16,7 +18,7 @@ public final class MessageConverter {
     private MessageConverter() {
     }
 
-    public static MessageVO toMessageVO(WfMessage message) {
+    public static MessageVO toMessageVO(WfMessage message, WfUser sender) {
         if (message == null) {
             return null;
         }
@@ -24,22 +26,32 @@ public final class MessageConverter {
         vo.setMessageId(message.getId());
         vo.setConversationId(message.getConversationId());
         vo.setSenderId(message.getSenderId());
+        if (sender != null) {
+            vo.setSenderWolfNo(sender.getWolfNo());
+            vo.setSenderNickname(sender.getNickname());
+            vo.setSenderAvatar(sender.getAvatar());
+        }
         vo.setReceiverId(message.getReceiverId());
         vo.setContent(message.getContent());
         vo.setMsgType(message.getMsgType());
+        vo.setMediaKey(message.getMediaKey());
+        vo.setMediaWidth(message.getMediaWidth());
+        vo.setMediaHeight(message.getMediaHeight());
+        vo.setMediaSize(message.getMediaSize());
+        vo.setMediaMimeType(message.getMediaMimeType());
         vo.setCreateTime(message.getCreateTime());
         return vo;
     }
 
-    public static List<MessageVO> toMessageVOList(List<WfMessage> source) {
+    public static List<MessageVO> toMessageVOList(List<WfMessage> source, Map<Long, WfUser> senderMap) {
         return source.stream()
-                .map(MessageConverter::toMessageVO)
+                .map(item -> toMessageVO(item, senderMap.get(item.getSenderId())))
                 .collect(Collectors.toList());
     }
 
-    public static Page<MessageVO> toMessageVOPage(Page<WfMessage> source) {
+    public static Page<MessageVO> toMessageVOPage(Page<WfMessage> source, Map<Long, WfUser> senderMap) {
         Page<MessageVO> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
-        target.setRecords(toMessageVOList(source.getRecords()));
+        target.setRecords(toMessageVOList(source.getRecords(), senderMap));
         return target;
     }
 }

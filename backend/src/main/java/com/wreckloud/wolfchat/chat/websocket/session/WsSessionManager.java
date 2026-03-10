@@ -1,13 +1,17 @@
 package com.wreckloud.wolfchat.chat.websocket.session;
 
+import com.wreckloud.wolfchat.chat.presence.application.event.UserPresenceChangedEvent;
+import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
 import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class WsSessionManager {
     private final SessionUserService sessionUserService;
+    private final UserPresenceService userPresenceService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     private final Map<Long, Set<WebSocketSession>> userSessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserMap = new ConcurrentHashMap<>();
@@ -35,6 +41,10 @@ public class WsSessionManager {
         }
         userSessions.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(session);
         sessionUserMap.put(sessionId, userId);
+        boolean becameOnline = userPresenceService.markOnline(userId);
+        if (becameOnline) {
+            publishPresenceChanged(userId, true, null);
+        }
         log.info("WS 绑定会话: userId={}, sessionId={}", userId, sessionId);
     }
 
@@ -48,6 +58,10 @@ public class WsSessionManager {
             sessions.remove(session);
             if (sessions.isEmpty()) {
                 userSessions.remove(userId);
+                LocalDateTime lastSeenAt = userPresenceService.markOffline(userId);
+                if (lastSeenAt != null) {
+                    publishPresenceChanged(userId, false, lastSeenAt);
+                }
             }
         }
         log.info("WS 解绑会话: userId={}, sessionId={}", userId, session.getId());
@@ -66,6 +80,7 @@ public class WsSessionManager {
         if (sessions == null || sessions.isEmpty()) {
             return 0;
         }
+        userPresenceService.markOnline(userId);
         TextMessage message = new TextMessage(payload);
         int successCount = 0;
         for (WebSocketSession session : sessions) {
@@ -89,6 +104,10 @@ public class WsSessionManager {
         if (sessions == null || sessions.isEmpty()) {
             return;
         }
+        LocalDateTime lastSeenAt = userPresenceService.markOffline(userId);
+        if (lastSeenAt != null) {
+            publishPresenceChanged(userId, false, lastSeenAt);
+        }
         for (WebSocketSession session : sessions) {
             sessionUserMap.remove(session.getId());
             try {
@@ -100,5 +119,20 @@ public class WsSessionManager {
             }
         }
         log.info("WS 清理用户会话: userId={}, count={}", userId, sessions.size());
+    }
+
+    public void refreshOnline(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        Set<WebSocketSession> sessions = userSessions.get(userId);
+        if (sessions == null || sessions.isEmpty()) {
+            return;
+        }
+        userPresenceService.markOnline(userId);
+    }
+
+    private void publishPresenceChanged(Long userId, boolean online, LocalDateTime lastSeenAt) {
+        applicationEventPublisher.publishEvent(new UserPresenceChangedEvent(userId, online, lastSeenAt));
     }
 }

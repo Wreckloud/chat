@@ -14,6 +14,33 @@ page {
   box-sizing: border-box;
 }
 
+.theme-retro-blue,
+.theme-retro-olive {
+  /* 会话列表尺寸 */
+  --retro-session-row-min-height: 124rpx;
+  --retro-session-row-padding-x: 14rpx;
+  --retro-session-pin-width: 8rpx;
+  --retro-session-inline-gap: 10rpx;
+  --retro-session-user-width: 52%;
+  --retro-session-name-font-size: 26rpx;
+  --retro-session-unread-font-size: 21rpx;
+  --retro-session-presence-font-size: 22rpx;
+  --retro-session-preview-font-size: 21rpx;
+  --retro-session-time-font-size: 21rpx;
+  --retro-session-time-width: 130rpx;
+
+  /* 聊天详情尺寸 */
+  --retro-chat-row-gap: 10rpx;
+  --retro-chat-meta-height: 74rpx;
+  --retro-chat-name-font-size: 28rpx;
+  --retro-chat-time-font-size: 20rpx;
+  --retro-chat-text-font-size: 27rpx;
+  --retro-chat-image-width: 320rpx;
+  --retro-chat-video-width: 420rpx;
+  --retro-chat-composer-input-height: 64rpx;
+  --retro-chat-composer-btn-min-width: 92rpx;
+}
+
 .theme-retro-blue {
   --retro-page-bg: #dce4ef;
   --retro-page-text: #1f2d3d;

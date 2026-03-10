@@ -19,82 +19,53 @@
   </retro-empty>
 
   <view wx:else class="session-board">
-    <view class="session-group">
-      <view class="session-group-head">
-        <text class="session-group-title">在线好友 ({{onlineCount}})</text>
-      </view>
+    <block wx:for="{{conversationSections}}" wx:key="key" wx:for-item="section" wx:for-index="sectionIndex">
+      <view wx:if="{{sectionIndex > 0}}" class="session-divider"></view>
 
-      <view wx:if="{{onlineCount === 0}}" class="session-group-empty">暂无在线好友</view>
-
-      <retro-swipe-cell
-        wx:for="{{onlineConversations}}"
-        wx:key="conversationId"
-        right="{{item.swipeActions}}"
-        bind:click="onSwipeActionClick"
-        data-id="{{item.conversationId}}">
-        <view
-          class="session-row {{item.pinned ? 'session-row-pinned' : ''}}"
-          bindtap="goChatDetail"
-          data-id="{{item.conversationId}}">
-          <retro-avatar
-            class="session-avatar"
-            size="medium"
-            shape="square"
-            image="{{item.targetAvatar}}">
-            {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
-          </retro-avatar>
-
-          <view class="session-meta">
-            <view class="session-name-line">
-              <text class="session-name">{{item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
-              <text wx:if="{{item.pinned}}" class="session-pin">置顶</text>
-            </view>
-            <text class="session-presence session-presence-online">{{item.presenceText}}</text>
-            <text class="session-preview">{{item.lastMessage || '暂无消息'}}</text>
-          </view>
-
-          <text class="session-time">{{item.formattedTime || '--'}}</text>
+      <view class="session-group">
+        <view class="session-group-head">
+          <text class="session-group-title">{{section.title}}</text>
         </view>
-      </retro-swipe-cell>
-    </view>
 
-    <view class="session-divider"></view>
+        <view wx:if="{{section.showEmpty && section.list.length === 0}}" class="session-group-empty">{{section.emptyText}}</view>
 
-    <view class="session-group">
-      <view class="session-group-head">
-        <text class="session-group-title">离线 ({{offlineCount}})</text>
-      </view>
-
-      <retro-swipe-cell
-        wx:for="{{offlineConversations}}"
-        wx:key="conversationId"
-        right="{{item.swipeActions}}"
-        bind:click="onSwipeActionClick"
-        data-id="{{item.conversationId}}">
-        <view
-          class="session-row session-row-offline {{item.pinned ? 'session-row-pinned' : ''}}"
-          bindtap="goChatDetail"
+        <retro-swipe-cell
+          wx:for="{{section.list}}"
+          wx:key="conversationId"
+          right="{{item.swipeActions}}"
+          bind:click="onSwipeActionClick"
           data-id="{{item.conversationId}}">
-          <retro-avatar
-            class="session-avatar"
-            size="medium"
-            shape="square"
-            image="{{item.targetAvatar}}">
-            {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
-          </retro-avatar>
+          <view
+            class="session-row {{section.rowClass}} {{item.pinned ? 'session-row-pinned' : ''}}"
+            bindtap="goChatDetail"
+            data-id="{{item.conversationId}}">
+            <view class="session-pin-bar {{item.pinned ? 'session-pin-bar-active' : ''}}"></view>
+            <view class="session-user">
+              <retro-avatar
+                class="session-avatar {{item.isOnline ? '' : 'session-avatar-offline'}}"
+                size="medium"
+                shape="square"
+                image="{{item.targetAvatar}}">
+                {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
+              </retro-avatar>
 
-          <view class="session-meta">
-            <view class="session-name-line">
-              <text class="session-name">{{item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
-              <text wx:if="{{item.pinned}}" class="session-pin">置顶</text>
+              <view class="session-user-meta">
+                <view class="session-name-line">
+                  <text class="session-name">{{item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
+                  <text wx:if="{{item.unreadCount > 0}}" class="session-unread">[{{item.unreadCount}}]</text>
+                </view>
+                <text class="session-presence {{item.isOnline ? 'session-presence-online' : ''}}">{{item.presenceText}}</text>
+              </view>
             </view>
-            <text class="session-presence">{{item.presenceText}}</text>
-            <text class="session-preview">{{item.lastMessage || '暂无消息'}}</text>
-          </view>
 
-          <text class="session-time">{{item.formattedTime || '--'}}</text>
-        </view>
-      </retro-swipe-cell>
-    </view>
+            <view class="session-preview-col">
+              <text class="session-preview">{{item.lastMessage || '暂无消息'}}</text>
+            </view>
+
+            <text class="session-time">{{item.formattedTime || '--'}}</text>
+          </view>
+        </retro-swipe-cell>
+      </view>
+    </block>
   </view>
 </view>

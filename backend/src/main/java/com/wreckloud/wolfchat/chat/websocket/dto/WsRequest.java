@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.chat.websocket.dto;
 
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import lombok.Data;
 
@@ -11,7 +12,7 @@ import lombok.Data;
 @Data
 public class WsRequest {
     /**
-     * 消息类型：AUTH / SEND
+     * 消息类型：AUTH / SEND / PING
      */
     private WsType type;
 
@@ -34,4 +35,34 @@ public class WsRequest {
      * 消息内容
      */
     private String content;
+
+    /**
+     * 消息类型：TEXT / IMAGE / VIDEO / FILE
+     */
+    private MessageType msgType;
+
+    /**
+     * 媒体对象 Key
+     */
+    private String mediaKey;
+
+    /**
+     * 媒体宽度
+     */
+    private Integer mediaWidth;
+
+    /**
+     * 媒体高度
+     */
+    private Integer mediaHeight;
+
+    /**
+     * 媒体大小
+     */
+    private Long mediaSize;
+
+    /**
+     * 媒体 MIME 类型
+     */
+    private String mediaMimeType;
 }

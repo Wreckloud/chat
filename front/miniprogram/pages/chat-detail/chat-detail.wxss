@@ -1,13 +1,15 @@
 .im-page {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   height: 100vh;
+  min-height: 0;
   overflow: hidden;
   background: var(--retro-page-bg);
   color: var(--retro-page-text);
 }
 
 .im-header {
+  position: relative;
+  z-index: 10;
   height: 82rpx;
   display: flex;
   align-items: center;
@@ -56,8 +58,12 @@
 }
 
 .im-message-list {
-  flex: 1;
-  overflow-y: auto;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 82rpx;
+  bottom: 88px;
+  min-height: 0;
   box-sizing: border-box;
   padding: 10rpx 12rpx 0;
 }
@@ -102,67 +108,53 @@
   flex-direction: row-reverse;
 }
 
-.im-avatar-col {
-  width: 74rpx;
-  flex-shrink: 0;
-}
-
-.im-group-self .im-avatar-col {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .im-avatar {
   border: 1rpx solid var(--retro-avatar-border);
+  flex-shrink: 0;
 }
 
 .im-message-col {
   flex: 0 1 auto;
   min-width: 0;
   max-width: 560rpx;
-  margin-left: 10rpx;
+  margin-left: var(--retro-chat-row-gap);
   display: flex;
   flex-direction: column;
 }
 
 .im-group-self .im-message-col {
   margin-left: 0;
-  margin-right: 10rpx;
+  margin-right: var(--retro-chat-row-gap);
   align-items: flex-end;
 }
 
 .im-meta-col {
   width: 100%;
-  height: 74rpx;
-  box-sizing: border-box;
+  height: var(--retro-chat-meta-height);
   display: flex;
   flex-direction: column;
-  justify-content: stretch;
-  align-items: flex-start;
+}
+
+.im-name-line,
+.im-time-line {
+  width: 100%;
+  display: flex;
 }
 
 .im-name-line {
-  height: 56rpx;
-  width: 100%;
-  display: flex;
-  align-items: center;
-}
-
-.im-time-line {
-  height: 18rpx;
-  width: 100%;
-  display: flex;
+  flex: 3;
   align-items: flex-start;
 }
 
+.im-time-line {
+  flex: 1;
+  align-items: flex-end;
+}
+
 .im-name {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
   max-width: 360rpx;
-  font-size: 30rpx;
-  line-height: 1;
+  font-size: var(--retro-chat-name-font-size);
+  line-height: 1.15;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -175,19 +167,21 @@
 
 .im-name-self {
   color: var(--retro-record-name-self);
-  justify-content: flex-end;
   text-align: right;
+  width: 100%;
 }
 
 .im-meta-time {
-  width: 100%;
-  font-size: 20rpx;
-  line-height: 1.2;
+  font-size: var(--retro-chat-time-font-size);
+  line-height: 1;
   color: var(--retro-muted-text);
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .im-group-self .im-meta-col {
-  align-items: flex-end;
   text-align: right;
 }
 
@@ -198,10 +192,11 @@
 
 .im-line {
   margin-top: 5rpx;
+  width: 100%;
 }
 
 .im-line:first-of-type {
-  margin-top: 3rpx;
+  margin-top: 4rpx;
 }
 
 .im-group-self .im-line {
@@ -212,25 +207,78 @@
 .im-text {
   display: block;
   max-width: 500rpx;
-  font-size: 27rpx;
+  font-size: var(--retro-chat-text-font-size);
   line-height: 1.5;
-  color: var(--retro-record-text);
   word-break: break-all;
+}
+
+.im-text {
+  color: var(--retro-record-text);
+}
+
+.im-link {
+  color: var(--retro-link-text);
+  text-decoration: underline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.im-file {
+  color: var(--retro-link-text);
+  text-decoration: underline;
+}
+
+.im-image {
+  display: block;
+  width: var(--retro-chat-image-width);
+  border: 1rpx solid var(--retro-avatar-border);
+  background: #ffffff;
+  box-shadow: var(--retro-panel-shadow);
+}
+
+.im-video {
+  display: block;
+  width: var(--retro-chat-video-width);
+  background: #000000;
+  border: 1rpx solid var(--retro-avatar-border);
+  box-shadow: var(--retro-panel-shadow);
+}
+
+.im-media-missing {
+  display: block;
+  font-size: var(--retro-chat-text-font-size);
+  line-height: 1.5;
+  color: var(--retro-muted-text);
+}
+
+.im-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
 }
 
 .im-composer {
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  gap: var(--retro-chat-row-gap);
   padding: 10rpx 12rpx calc(10rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid var(--retro-composer-border);
   background: var(--retro-composer-bg);
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
 }
 
+.im-composer.is-panel-open {
+  padding-bottom: 10rpx;
+}
+
 .im-composer-input {
   flex: 1;
-  height: 64rpx;
+  height: var(--retro-chat-composer-input-height);
   box-sizing: border-box;
   padding: 0 18rpx;
   border: 1rpx solid var(--retro-panel-border);
@@ -247,13 +295,81 @@
 .im-composer-actions {
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  gap: var(--retro-chat-row-gap);
 }
 
 .im-more-btn {
-  min-width: 92rpx;
+  min-width: var(--retro-chat-composer-btn-min-width);
 }
 
 .im-send-btn {
-  min-width: 92rpx;
+  min-width: var(--retro-chat-composer-btn-min-width);
+}
+
+.im-more-panel {
+  padding: 12rpx 12rpx calc(12rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid var(--retro-composer-border);
+  background: var(--retro-composer-bg);
+}
+
+.im-more-title {
+  margin-bottom: 10rpx;
+  text-align: center;
+  font-size: 23rpx;
+  color: var(--retro-composer-label-text);
+}
+
+.im-more-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10rpx;
+}
+
+.im-more-item {
+  min-height: 112rpx;
+  padding: 12rpx 10rpx;
+  box-sizing: border-box;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.im-more-item.is-disabled {
+  opacity: 0.52;
+}
+
+.im-more-item-icon {
+  width: 38rpx;
+  height: 38rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-theme-item-active-bg);
+  color: var(--retro-link-text);
+  font-size: 24rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.im-more-item-label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.2;
+  color: var(--retro-strong-text);
+}
+
+.im-more-item-sub {
+  margin-top: 4rpx;
+  font-size: 19rpx;
+  line-height: 1.2;
+  color: var(--retro-muted-text);
+}
+
+.im-bottom-anchor {
+  height: 1rpx;
 }

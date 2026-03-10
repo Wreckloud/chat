@@ -1,9 +1,8 @@
 package com.wreckloud.wolfchat.chat.message.api.dto;
 
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import javax.validation.constraints.NotBlank;
 
 /**
  * @Description 发送消息 DTO
@@ -13,8 +12,25 @@ import javax.validation.constraints.NotBlank;
 @Data
 @Schema(description = "发送消息请求")
 public class SendMessageDTO {
-    @NotBlank(message = "消息内容不能为空")
     @Schema(description = "消息内容")
     private String content;
+
+    @Schema(description = "消息类型：TEXT/IMAGE/VIDEO/FILE")
+    private MessageType msgType;
+
+    @Schema(description = "媒体对象Key")
+    private String mediaKey;
+
+    @Schema(description = "媒体宽度")
+    private Integer mediaWidth;
+
+    @Schema(description = "媒体高度")
+    private Integer mediaHeight;
+
+    @Schema(description = "媒体大小")
+    private Long mediaSize;
+
+    @Schema(description = "媒体 MIME 类型")
+    private String mediaMimeType;
 }
 

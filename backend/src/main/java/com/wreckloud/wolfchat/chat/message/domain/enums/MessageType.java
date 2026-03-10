@@ -14,7 +14,22 @@ public enum MessageType {
     /**
      * 文本消息
      */
-    TEXT("TEXT");
+    TEXT("TEXT"),
+
+    /**
+     * 图片消息
+     */
+    IMAGE("IMAGE"),
+
+    /**
+     * 视频消息
+     */
+    VIDEO("VIDEO"),
+
+    /**
+     * 文件消息
+     */
+    FILE("FILE");
 
     /**
      * 存储到数据库的值，同时用于 JSON 序列化

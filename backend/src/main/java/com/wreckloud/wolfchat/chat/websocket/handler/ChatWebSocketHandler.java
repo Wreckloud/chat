@@ -1,8 +1,12 @@
 package com.wreckloud.wolfchat.chat.websocket.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.wreckloud.wolfchat.account.application.service.UserService;
+import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.chat.message.api.converter.MessageConverter;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
+import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
+import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.chat.websocket.dto.WsRequest;
@@ -37,6 +41,8 @@ import java.util.List;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final JwtUtil jwtUtil;
     private final MessageService messageService;
+    private final MessageMediaService messageMediaService;
+    private final UserService userService;
     private final WsSessionManager sessionManager;
     private final SessionUserService sessionUserService;
 
@@ -58,6 +64,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 break;
             case SEND:
                 handleSend(session, request);
+                break;
+            case PING:
+                handlePing(session);
                 break;
             default:
                 sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
@@ -97,6 +106,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.info("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
         sendAuthOk(session);
         replayUndeliveredMessages(session, userId);
+    }
+
+    private void handlePing(WebSocketSession session) {
+        Long userId = sessionManager.getUserId(session);
+        if (userId == null) {
+            sendError(session, ErrorCode.UNAUTHORIZED, "请先认证");
+            return;
+        }
+        sessionManager.refreshOnline(userId);
     }
 
     private Long authenticateUserId(WebSocketSession session, String rawToken) {
@@ -147,7 +165,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.info("WS 补发未送达消息: userId={}, count={}", userId, undelivered.size());
         List<Long> deliveredIds = new ArrayList<>();
         for (WfMessage message : undelivered) {
-            WsResponse push = buildMessageResponse(message);
+            WsResponse push = buildMessageResponse(buildMessageVOWithSender(message));
             if (send(session, push)) {
                 deliveredIds.add(message.getId());
             }
@@ -175,13 +193,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
 
         try {
-            WfMessage message = messageService.sendMessage(
-                    userId,
-                    request.getConversationId(),
-                    request.getContent()
-            );
+            WfMessage message = messageService.sendMessage(buildSendCommand(userId, request));
 
-            MessageVO messageVO = MessageConverter.toMessageVO(message);
+            MessageVO messageVO = buildMessageVOWithSender(message);
             sendAck(session, request.getClientMsgId(), messageVO);
             pushMessageToReceiver(message, messageVO);
         } catch (BaseException e) {
@@ -198,10 +212,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return false;
         }
 
-        if (!StringUtils.hasText(request.getContent())) {
-            sendError(session, ErrorCode.MESSAGE_CONTENT_EMPTY, "消息内容不能为空", clientMsgId);
-            return false;
-        }
         return true;
     }
 
@@ -209,10 +219,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         WsResponse ack = buildResponse(WsType.ACK, messageVO);
         ack.setClientMsgId(clientMsgId);
         send(session, ack);
-    }
-
-    private WsResponse buildMessageResponse(WfMessage message) {
-        return buildMessageResponse(MessageConverter.toMessageVO(message));
     }
 
     private WsResponse buildMessageResponse(MessageVO messageVO) {
@@ -259,5 +265,24 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         response.setType(type);
         response.setData(data);
         return response;
+    }
+
+    private MessageVO buildMessageVOWithSender(WfMessage message) {
+        WfUser sender = userService.getByIdOrThrow(message.getSenderId());
+        return messageMediaService.fillMedia(MessageConverter.toMessageVO(message, sender));
+    }
+
+    private SendMessageCommand buildSendCommand(Long userId, WsRequest request) {
+        SendMessageCommand command = new SendMessageCommand();
+        command.setUserId(userId);
+        command.setConversationId(request.getConversationId());
+        command.setContent(request.getContent());
+        command.setMsgType(request.getMsgType());
+        command.setMediaKey(request.getMediaKey());
+        command.setMediaWidth(request.getMediaWidth());
+        command.setMediaHeight(request.getMediaHeight());
+        command.setMediaSize(request.getMediaSize());
+        command.setMediaMimeType(request.getMediaMimeType());
+        return command;
     }
 }

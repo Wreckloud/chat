@@ -7,6 +7,7 @@ import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.chat.conversation.api.vo.ConversationVO;
 import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
 import com.wreckloud.wolfchat.chat.conversation.infra.mapper.WfConversationMapper;
+import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.follow.application.service.FollowService;
@@ -32,9 +33,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ConversationService {
+    private static final int MARK_UNREAD_COUNT = 1;
+
     private final WfConversationMapper conversationMapper;
     private final UserService userService;
     private final FollowService followService;
+    private final UserPresenceService userPresenceService;
 
     /**
      * 获取或创建会话
@@ -68,6 +72,8 @@ public class ConversationService {
         WfConversation newConversation = new WfConversation();
         newConversation.setUserAId(userAId);
         newConversation.setUserBId(userBId);
+        newConversation.setUserAUnreadCount(0);
+        newConversation.setUserBUnreadCount(0);
         try {
             int insertRows = conversationMapper.insert(newConversation);
             if (insertRows != 1) {
@@ -114,6 +120,60 @@ public class ConversationService {
                 .set(WfConversation::getLastMessageId, messageId)
                 .set(WfConversation::getLastMessage, message)
                 .set(WfConversation::getLastMessageTime, time);
+        int updateRows = conversationMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void increaseUnreadCount(Long conversationId, Long receiverId) {
+        WfConversation conversation = getConversation(conversationId);
+        boolean userA = isUserA(conversation, receiverId);
+
+        LambdaUpdateWrapper<WfConversation> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfConversation::getId, conversationId);
+        if (userA) {
+            updateWrapper.setSql("user_a_unread_count = user_a_unread_count + 1");
+        } else {
+            updateWrapper.setSql("user_b_unread_count = user_b_unread_count + 1");
+        }
+        int updateRows = conversationMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void markConversationRead(Long conversationId, Long userId) {
+        WfConversation conversation = getConversation(conversationId);
+        boolean userA = isUserA(conversation, userId);
+
+        LambdaUpdateWrapper<WfConversation> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfConversation::getId, conversationId);
+        if (userA) {
+            updateWrapper.set(WfConversation::getUserAUnreadCount, 0);
+        } else {
+            updateWrapper.set(WfConversation::getUserBUnreadCount, 0);
+        }
+        int updateRows = conversationMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void markConversationUnread(Long conversationId, Long userId) {
+        WfConversation conversation = getConversation(conversationId);
+        boolean userA = isUserA(conversation, userId);
+
+        LambdaUpdateWrapper<WfConversation> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfConversation::getId, conversationId);
+        if (userA) {
+            updateWrapper.set(WfConversation::getUserAUnreadCount, MARK_UNREAD_COUNT);
+        } else {
+            updateWrapper.set(WfConversation::getUserBUnreadCount, MARK_UNREAD_COUNT);
+        }
         int updateRows = conversationMapper.update(null, updateWrapper);
         if (updateRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
@@ -186,9 +246,47 @@ public class ConversationService {
             vo.setTargetAvatar(targetUser.getAvatar());
             vo.setLastMessage(conversation.getLastMessage());
             vo.setLastMessageTime(conversation.getLastMessageTime());
+            vo.setUnreadCount(getUnreadCount(conversation, userId));
             result.add(vo);
         }
+        userPresenceService.fillConversationPresence(result);
         return result;
+    }
+
+    public List<Long> listPeerUserIds(Long userId) {
+        LambdaQueryWrapper<WfConversation> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.and(wrapper -> wrapper.eq(WfConversation::getUserAId, userId)
+                        .or()
+                        .eq(WfConversation::getUserBId, userId))
+                .select(WfConversation::getUserAId, WfConversation::getUserBId);
+        List<WfConversation> conversations = conversationMapper.selectList(queryWrapper);
+        if (conversations.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return conversations.stream()
+                .map(conversation -> getTargetUserId(conversation, userId))
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private Integer getUnreadCount(WfConversation conversation, Long userId) {
+        return isUserA(conversation, userId)
+                ? normalizeCount(conversation.getUserAUnreadCount())
+                : normalizeCount(conversation.getUserBUnreadCount());
+    }
+
+    private boolean isUserA(WfConversation conversation, Long userId) {
+        if (conversation.getUserAId().equals(userId)) {
+            return true;
+        }
+        if (conversation.getUserBId().equals(userId)) {
+            return false;
+        }
+        throw new BaseException(ErrorCode.NOT_CONVERSATION_MEMBER);
+    }
+
+    private int normalizeCount(Integer count) {
+        return count == null || count < 0 ? 0 : count;
     }
 
 }

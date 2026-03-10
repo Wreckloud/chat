@@ -15,6 +15,10 @@ public enum WsType {
      */
     SEND,
     /**
+     * 心跳
+     */
+    PING,
+    /**
      * 认证成功
      */
     AUTH_OK,
@@ -26,6 +30,10 @@ public enum WsType {
      * 推送消息
      */
     MESSAGE,
+    /**
+     * 在线状态推送
+     */
+    PRESENCE,
     /**
      * 错误消息
      */

@@ -25,7 +25,7 @@ const THEMES = {
     swipeAction: {
       pin: '#315f9f',
       unread: '#5e6d82',
-      delete: '#e34d59'
+      more: '#6f7f95'
     }
   },
   retro_olive: {
@@ -47,7 +47,7 @@ const THEMES = {
     swipeAction: {
       pin: '#0f5f30',
       unread: '#5f7567',
-      delete: '#cf5660'
+      more: '#637a6c'
     }
   }
 }
@@ -88,7 +88,7 @@ function getSwipeActionStyles(themeName) {
   return {
     pin: `color:#ffffff;background-color:${theme.swipeAction.pin};`,
     unread: `color:#ffffff;background-color:${theme.swipeAction.unread};`,
-    delete: `color:#ffffff;background-color:${theme.swipeAction.delete};`
+    more: `color:#ffffff;background-color:${theme.swipeAction.more};`
   }
 }
 

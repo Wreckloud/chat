@@ -1,18 +1,11 @@
 spring:
   application:
     name: wolf-chat-server
+  config:
+    import: classpath:application-local.yml
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
-    username: root
-    password: 1677
-
-  redis:
-    host: 127.0.0.1
-    port: 6379
-    password: 1677
-    database: 0
 
   jackson:
     serialization:
@@ -33,17 +26,6 @@ mybatis-plus:
 # Knife4j 配置
 knife4j:
   enable: true
-  openapi:
-    title: WolfChat API 文档
-    description: WolfChat 聊天系统 API 接口文档
-    version: 1.0.0
-    contact:
-      name: Wreckloud
-    license: Apache 2.0
-    license-url: https://www.apache.org/licenses/LICENSE-2.0.html
-    servers:
-      - url: http://localhost:8080/api
-        description: 本地环境
 
 # 自定义日志相关配置
 project:
@@ -51,8 +33,6 @@ project:
 
 # JWT配置
 jwt:
-  # JWT密钥
-  secret: wolfchat-secret-key-2025-12-07-default-key-change-in-production-environment
   # JWT过期时间（秒），默认7天（604800秒）
   expiration: 604800
 
@@ -68,8 +48,14 @@ wolfchat:
       - https://localhost:*
       - https://servicewechat.com
       - https://*.servicewechat.com
-  email:
-    # 邮箱认证链接地址（控制台会打印完整链接）
-    verify-url: http://localhost:8080/api/auth/email/verify
-    # 重置密码链接地址（控制台会打印完整链接）
-    reset-password-url: http://localhost:8080/api/auth/password/reset
+  oss:
+    # 直传策略有效期（秒）
+    upload-policy-expire-seconds: 300
+    # 图片签名访问地址有效期（秒）
+    download-url-expire-seconds: 86400
+    # 聊天图片大小上限（5MB）
+    max-image-size-bytes: 5242880
+    # 聊天视频大小上限（30MB）
+    max-video-size-bytes: 31457280
+    # 聊天文件大小上限（20MB）
+    max-file-size-bytes: 20971520

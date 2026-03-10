@@ -47,6 +47,16 @@ public class WfConversation {
     private LocalDateTime lastMessageTime;
 
     /**
+     * A侧未读数（userAId 对应）
+     */
+    private Integer userAUnreadCount;
+
+    /**
+     * B侧未读数（userBId 对应）
+     */
+    private Integer userBUnreadCount;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

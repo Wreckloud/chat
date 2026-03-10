@@ -33,5 +33,14 @@ public class ConversationVO {
 
     @Schema(description = "最近消息时间")
     private LocalDateTime lastMessageTime;
+
+    @Schema(description = "未读消息数")
+    private Integer unreadCount;
+
+    @Schema(description = "是否在线")
+    private Boolean isOnline;
+
+    @Schema(description = "最近在线时间")
+    private LocalDateTime lastSeenAt;
 }
 

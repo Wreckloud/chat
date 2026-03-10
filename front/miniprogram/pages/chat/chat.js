@@ -13,10 +13,7 @@ const { applyPageTheme } = require('../../utils/page-theme')
 Page({
   data: {
     conversationList: [],
-    onlineConversations: [],
-    offlineConversations: [],
-    onlineCount: 0,
-    offlineCount: 0,
+    conversationSections: [],
     loading: false,
     themeClass: 'theme-retro-blue'
   },
@@ -25,6 +22,8 @@ Page({
     if (!auth.requireLogin()) {
       return
     }
+    const userInfo = auth.getUserInfo()
+    this.currentUserId = userInfo ? Number(userInfo.userId) : 0
   },
 
   onShow() {
@@ -90,7 +89,14 @@ Page({
    * 处理 WebSocket 消息
    */
   handleWsMessage(payload) {
-    if (!payload || payload.type !== 'MESSAGE' || !payload.data) return
+    if (!payload || !payload.type || !payload.data) return
+
+    if (payload.type === 'PRESENCE') {
+      this.handlePresenceMessage(payload.data)
+      return
+    }
+
+    if (payload.type !== 'MESSAGE') return
 
     const message = payload.data
     const list = this.data.conversationList.slice()
@@ -102,13 +108,59 @@ Page({
     }
 
     const item = list[idx]
-    item.lastMessage = message.content || item.lastMessage
+    item.lastMessage = this.buildConversationPreview(message)
     item.lastMessageTime = message.createTime
-    item.formattedTime = time.formatTime(message.createTime)
-    item.presenceText = this.buildPresenceText(item.isOnline, message.createTime)
-    item.swipeActions = this.buildSwipeActions(Boolean(item.pinned))
+    item.isOnline = true
+    item.lastSeenAt = ''
+    if (Number(message.senderId) !== Number(this.currentUserId)) {
+      item.unreadCount = (Number(item.unreadCount) || 0) + 1
+    }
+    item.formattedTime = time.formatConversationTime(message.createTime)
+    item.presenceText = this.buildPresenceText(item.isOnline, item.lastSeenAt)
+    item.swipeActions = this.buildSwipeActions(Boolean(item.pinned), Number(item.unreadCount) || 0)
     list[idx] = item
 
+    this.setData(this.buildConversationViewData(list))
+  },
+
+  buildConversationPreview(message) {
+    if (!message) {
+      return ''
+    }
+    if (message.msgType === 'IMAGE') {
+      return '[图片]'
+    }
+    if (message.msgType === 'VIDEO') {
+      return '[视频]'
+    }
+    if (message.msgType === 'FILE') {
+      return '[文件]'
+    }
+    return message.content || ''
+  },
+
+  handlePresenceMessage(presence) {
+    const targetUserId = Number(presence.userId)
+    if (!targetUserId) return
+
+    const list = this.data.conversationList.slice()
+    let changed = false
+    for (let index = 0; index < list.length; index++) {
+      const item = list[index]
+      if (Number(item.targetUserId) !== targetUserId) {
+        continue
+      }
+      const isOnline = presence.online === true
+      const nextLastSeenAt = isOnline ? '' : (presence.lastSeenAt || item.lastSeenAt || '')
+      list[index] = {
+        ...item,
+        isOnline,
+        lastSeenAt: nextLastSeenAt,
+        presenceText: this.buildPresenceText(isOnline, nextLastSeenAt)
+      }
+      changed = true
+    }
+    if (!changed) return
     this.setData(this.buildConversationViewData(list))
   },
 
@@ -125,14 +177,74 @@ Page({
       return
     }
 
-    if (action.actionType === 'UNREAD') {
-      toastError('功能待实现')
+    if (action.actionType === 'TOGGLE_READ') {
+      this.toggleConversationReadState(conversationId)
       return
     }
 
-    if (action.actionType === 'DELETE') {
-      toastError('功能待实现')
+    if (action.actionType === 'MORE') {
+      this.openConversationMoreMenu(conversationId)
     }
+  },
+
+  openConversationMoreMenu(conversationId) {
+    const conversation = this.findConversationById(conversationId)
+    if (!conversation) return
+
+    wx.showActionSheet({
+      itemList: ['查看个人资料', '删除好友（待实现）', '拉聊天室（待实现）'],
+      success: ({ tapIndex }) => {
+        if (tapIndex === 0) {
+          const targetUserId = Number(conversation.targetUserId)
+          if (!targetUserId) {
+            toastError('用户信息缺失')
+            return
+          }
+          wx.navigateTo({
+            url: `/pages/user-detail/user-detail?userId=${targetUserId}`
+          })
+          return
+        }
+        toastError('功能待实现')
+      }
+    })
+  },
+
+  findConversationById(conversationId) {
+    return (this.data.conversationList || []).find(
+      item => Number(item.conversationId) === Number(conversationId)
+    ) || null
+  },
+
+  toggleConversationReadState(conversationId) {
+    const list = this.data.conversationList || []
+    const current = list.find(item => Number(item.conversationId) === Number(conversationId))
+    if (!current) return
+    const currentUnread = Number(current.unreadCount) || 0
+    const markRead = currentUnread > 0
+    const url = markRead
+      ? `/conversations/${conversationId}/read`
+      : `/conversations/${conversationId}/unread`
+
+    request.put(url)
+      .then(() => {
+        const nextUnread = markRead ? 0 : 1
+        const nextList = list.map(item => {
+          if (Number(item.conversationId) !== Number(conversationId)) {
+            return item
+          }
+          return {
+            ...item,
+            unreadCount: nextUnread,
+            swipeActions: this.buildSwipeActions(Boolean(item.pinned), nextUnread)
+          }
+        })
+        this.setData(this.buildConversationViewData(nextList))
+        toastSuccess(markRead ? '已标为已读' : '已标为未读')
+      })
+      .catch(err => {
+        toastError(err, '操作失败')
+      })
   },
 
   /**
@@ -159,7 +271,7 @@ Page({
       return {
         ...item,
         pinned: nextPinned,
-        swipeActions: this.buildSwipeActions(nextPinned)
+        swipeActions: this.buildSwipeActions(nextPinned, Number(item.unreadCount) || 0)
       }
     })
 
@@ -172,14 +284,18 @@ Page({
     const pinned = (this.pinnedConversationIds || []).includes(conversationId)
     const isOnline = this.resolveOnlineStatus(item)
     const lastMessageTime = item.lastMessageTime || ''
+    const lastSeenAt = item.lastSeenAt || ''
+    const unreadCount = Number(item.unreadCount) || 0
     return {
       ...item,
       pinned,
       isOnline,
+      lastSeenAt,
+      unreadCount,
       targetAvatar: item.targetAvatar || DEFAULT_AVATAR,
-      formattedTime: lastMessageTime ? time.formatTime(lastMessageTime) : '',
-      presenceText: this.buildPresenceText(isOnline, lastMessageTime),
-      swipeActions: this.buildSwipeActions(pinned)
+      formattedTime: lastMessageTime ? time.formatConversationTime(lastMessageTime) : '',
+      presenceText: this.buildPresenceText(isOnline, lastSeenAt),
+      swipeActions: this.buildSwipeActions(pinned, unreadCount)
     }
   },
 
@@ -193,30 +309,48 @@ Page({
     return false
   },
 
-  buildPresenceText(isOnline, lastMessageTime) {
+  buildPresenceText(isOnline, lastSeenAt) {
     if (isOnline) {
       return '在线'
     }
-    if (!lastMessageTime) {
-      return '离线'
+    if (lastSeenAt) {
+      return time.formatLastSeenText(lastSeenAt)
     }
-    return `上次活跃 ${time.formatTime(lastMessageTime)}`
+    return '上次在线 未知'
   },
 
   buildConversationViewData(sourceList) {
     const conversationList = this.sortConversationList(sourceList)
-    const onlineConversations = conversationList.filter(item => item.isOnline)
-    const offlineConversations = conversationList.filter(item => !item.isOnline)
     return {
       conversationList,
-      onlineConversations,
-      offlineConversations,
-      onlineCount: onlineConversations.length,
-      offlineCount: offlineConversations.length
+      conversationSections: this.buildConversationSections(conversationList)
     }
   },
 
-  buildSwipeActions(pinned) {
+  buildConversationSections(conversationList) {
+    const onlineConversations = conversationList.filter(item => item.isOnline)
+    const offlineConversations = conversationList.filter(item => !item.isOnline)
+    return [
+      {
+        key: 'online',
+        title: `在线好友 (${onlineConversations.length})`,
+        rowClass: '',
+        showEmpty: true,
+        emptyText: '暂无在线好友',
+        list: onlineConversations
+      },
+      {
+        key: 'offline',
+        title: `离线 (${offlineConversations.length})`,
+        rowClass: 'session-row-offline',
+        showEmpty: false,
+        emptyText: '',
+        list: offlineConversations
+      }
+    ]
+  },
+
+  buildSwipeActions(pinned, unreadCount) {
     const styles = this.swipeActionStyles || getSwipeActionStyles()
     return [
       {
@@ -225,14 +359,14 @@ Page({
         style: styles.pin
       },
       {
-        text: '标为未读',
-        actionType: 'UNREAD',
+        text: unreadCount > 0 ? '标为已读' : '标为未读',
+        actionType: 'TOGGLE_READ',
         style: styles.unread
       },
       {
-        text: '删除',
-        actionType: 'DELETE',
-        style: styles.delete
+        text: '更多',
+        actionType: 'MORE',
+        style: styles.more
       }
     ]
   },
@@ -244,7 +378,7 @@ Page({
         this.swipeActionStyles = getSwipeActionStyles(themeContext.themeName)
         const list = (this.data.conversationList || []).map(item => ({
           ...item,
-          swipeActions: this.buildSwipeActions(Boolean(item.pinned))
+          swipeActions: this.buildSwipeActions(Boolean(item.pinned), Number(item.unreadCount) || 0)
         }))
         return this.buildConversationViewData(list)
       }

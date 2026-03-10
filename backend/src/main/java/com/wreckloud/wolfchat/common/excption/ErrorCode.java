@@ -46,7 +46,10 @@ public enum ErrorCode {
     NOT_MUTUAL_FOLLOW(3009, "仅互相关注的行者可以聊天"),
     CONVERSATION_NOT_FOUND(3010, "会话不存在"),
     NOT_CONVERSATION_MEMBER(3011, "您不是该会话的参与者"),
-    MESSAGE_CONTENT_EMPTY(3012, "消息内容不能为空");
+    MESSAGE_CONTENT_EMPTY(3012, "消息内容不能为空"),
+    MEDIA_TYPE_NOT_SUPPORTED(3013, "暂不支持该媒体类型"),
+    MEDIA_FILE_INVALID(3014, "媒体文件无效"),
+    OSS_CONFIG_INCOMPLETE(3015, "OSS 配置未完成");
 
     /**
      * 错误码

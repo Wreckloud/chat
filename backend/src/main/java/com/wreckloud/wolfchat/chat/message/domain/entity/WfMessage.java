@@ -44,9 +44,34 @@ public class WfMessage {
     private String content;
 
     /**
-     * 消息类型：TEXT-文本
+     * 消息类型：TEXT-文本，IMAGE-图片，VIDEO-视频，FILE-文件
      */
     private MessageType msgType;
+
+    /**
+     * 媒体对象 Key
+     */
+    private String mediaKey;
+
+    /**
+     * 媒体宽度
+     */
+    private Integer mediaWidth;
+
+    /**
+     * 媒体高度
+     */
+    private Integer mediaHeight;
+
+    /**
+     * 媒体大小
+     */
+    private Long mediaSize;
+
+    /**
+     * 媒体 MIME 类型
+     */
+    private String mediaMimeType;
 
     /**
      * 是否已送达

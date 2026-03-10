@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,6 +41,22 @@ public class ConversationController {
     public Result<List<ConversationVO>> listConversations() {
         Long userId = UserContext.getRequiredUserId();
         return Result.success(conversationService.listConversationVOs(userId));
+    }
+
+    @Operation(summary = "标记会话已读", description = "将当前行者在该会话中的未读数清零")
+    @PutMapping("/{conversationId}/read")
+    public Result<Void> markConversationRead(@PathVariable Long conversationId) {
+        Long userId = UserContext.getRequiredUserId();
+        conversationService.markConversationRead(conversationId, userId);
+        return Result.success(null);
+    }
+
+    @Operation(summary = "标记会话未读", description = "将当前行者在该会话中的未读数标记为1")
+    @PutMapping("/{conversationId}/unread")
+    public Result<Void> markConversationUnread(@PathVariable Long conversationId) {
+        Long userId = UserContext.getRequiredUserId();
+        conversationService.markConversationUnread(conversationId, userId);
+        return Result.success(null);
     }
 }
 
