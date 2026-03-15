@@ -3,8 +3,9 @@
  */
 const config = require('./config')
 const auth = require('./auth')
+const imConfig = require('./im-config')
 const AUTH_ERROR_CODES = [2001, 2002, 2003]
-const READY_WAIT_TIMEOUT_MS = 10000
+const READY_WAIT_TIMEOUT_MS = imConfig.WS_READY_TIMEOUT_MS
 const MAX_QUEUE_SIZE = 200
 
 let socketOpen = false

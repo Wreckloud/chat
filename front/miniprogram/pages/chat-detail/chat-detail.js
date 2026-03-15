@@ -11,6 +11,7 @@ const imPageHelper = require('../../utils/im-page-helper')
 const imUserHelper = require('../../utils/im-user-helper')
 const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
+const imConfig = require('../../utils/im-config')
 
 Page({
   data: {
@@ -34,8 +35,8 @@ Page({
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS
   },
 
-  SEND_TIMEOUT_MS: 18000,
-  WS_READY_TIMEOUT_MS: 10000,
+  SEND_TIMEOUT_MS: imConfig.SEND_TIMEOUT_MS,
+  WS_READY_TIMEOUT_MS: imConfig.WS_READY_TIMEOUT_MS,
   CLIENT_MSG_ID_PREFIX: 'c',
   MESSAGE_MERGE_GAP_MS: imHelper.DEFAULT_MESSAGE_MERGE_GAP_MS,
   MARK_READ_MIN_INTERVAL_MS: 1500,
