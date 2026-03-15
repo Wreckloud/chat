@@ -7,6 +7,20 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const { setThemeName, listThemes } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
 
+function confirmAction(options) {
+  return new Promise(resolve => {
+    wx.showModal({
+      ...options,
+      success(res) {
+        resolve(!!res.confirm)
+      },
+      fail() {
+        resolve(false)
+      }
+    })
+  })
+}
+
 Page({
   data: {
     userInfo: null,
@@ -40,10 +54,8 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await request.get('/users/me')
-      if (res.code === 0 && res.data) {
-        auth.setUserInfo(res.data)
-        this.setData({ userInfo: auth.getUserInfo() })
-      }
+      auth.setUserInfo(res.data)
+      this.setData({ userInfo: auth.getUserInfo() })
     } catch (error) {
       toastError(error, '加载失败')
     } finally {
@@ -64,37 +76,28 @@ Page({
     })
   },
 
-  handleDeactivateAccount() {
-    wx.showModal({
+  async handleDeactivateAccount() {
+    const firstConfirmed = await confirmAction({
       title: '注销账号',
       content: '注销后将立即退出登录，且当前账号不可恢复。确定继续吗？',
-      confirmText: '继续',
-      success: (firstConfirmRes) => {
-        if (!firstConfirmRes.confirm) {
-          return
-        }
-        wx.showModal({
-          title: '再次确认',
-          content: '该操作用于测试环境，是否立即注销当前账号？',
-          confirmColor: '#b4474f',
-          confirmText: '立即注销',
-          success: (secondConfirmRes) => {
-            if (!secondConfirmRes.confirm) {
-              return
-            }
-            this.doDeactivateAccount()
-          }
-        })
-      }
+      confirmText: '继续'
     })
+    if (!firstConfirmed) return
+
+    const secondConfirmed = await confirmAction({
+      title: '再次确认',
+      content: '该操作用于测试环境，是否立即注销当前账号？',
+      confirmColor: '#b4474f',
+      confirmText: '立即注销'
+    })
+    if (!secondConfirmed) return
+
+    this.doDeactivateAccount()
   },
 
   async doDeactivateAccount() {
     try {
-      const res = await request.del('/users/me')
-      if (res.code !== 0) {
-        return
-      }
+      await request.del('/users/me')
       auth.logout()
       toastSuccess('账号已注销')
       setTimeout(() => {

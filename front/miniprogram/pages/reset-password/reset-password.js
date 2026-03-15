@@ -5,8 +5,8 @@ const request = require('../../utils/request')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { RESET_PASSWORD_PAGE_COPY } = require('../../constants/copy')
+const { normalizeEmail, isValidEmail } = require('../../utils/account')
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SEND_LINK_INTERVAL_SECONDS = 60
 
 Page({
@@ -46,27 +46,26 @@ Page({
       return
     }
 
-    const normalizedEmail = (this.data.email || '').trim().toLowerCase()
+    const copy = this.data.copy
+    const normalizedEmail = normalizeEmail(this.data.email)
     if (!normalizedEmail) {
-      toastError(RESET_PASSWORD_PAGE_COPY.validation.emailRequired)
+      toastError(copy.validation.emailRequired)
       return
     }
-    if (!EMAIL_REGEX.test(normalizedEmail)) {
-      toastError(RESET_PASSWORD_PAGE_COPY.validation.invalidEmail)
+    if (!isValidEmail(normalizedEmail)) {
+      toastError(copy.validation.invalidEmail)
       return
     }
 
     this.setData({ sending: true })
     try {
-      const res = await request.post('/auth/password/reset-link/send', {
+      await request.post('/auth/password/reset-link/send', {
         email: normalizedEmail
       })
-      if (res.code === 0) {
-        toastSuccess(RESET_PASSWORD_PAGE_COPY.toast.sendSuccess)
-        this.startCooldown(SEND_LINK_INTERVAL_SECONDS)
-      }
+      toastSuccess(copy.toast.sendSuccess)
+      this.startCooldown(SEND_LINK_INTERVAL_SECONDS)
     } catch (error) {
-      toastError(error, RESET_PASSWORD_PAGE_COPY.toast.sendFail)
+      toastError(error, copy.toast.sendFail)
     } finally {
       this.setData({ sending: false })
     }
@@ -93,7 +92,7 @@ Page({
         this.clearCountdownTimer()
         this.setData({
           cooldown: 0,
-          sendButtonText: RESET_PASSWORD_PAGE_COPY.actions.sendLink
+          sendButtonText: this.data.copy.actions.sendLink
         })
         return
       }

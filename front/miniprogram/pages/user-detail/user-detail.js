@@ -26,7 +26,7 @@ Page({
 
     const currentUser = auth.getUserInfo()
     const currentUserId = currentUser ? currentUser.userId : null
-    const userId = Number(options.userId)
+    const userId = Number(options && options.userId)
     if (!userId) {
       toastError('用户信息缺失')
       setTimeout(() => {
@@ -60,11 +60,9 @@ Page({
 
     try {
       const res = await request.get(`/users/${userId}`)
-      if (res.code === 0 && res.data) {
-        this.setData({
-          userInfo: normalizeUser(res.data)
-        })
-      }
+      this.setData({
+        userInfo: normalizeUser(res.data)
+      })
     } catch (error) {
       toastError(error, '加载失败')
     } finally {
@@ -115,7 +113,7 @@ Page({
         await request.post(`/follow/${userId}`)
         toastSuccess('关注成功')
       }
-      this.loadFollowStatus()
+      await this.loadFollowStatus()
     } catch (error) {
       toastError(error, '操作失败')
     } finally {

@@ -7,6 +7,12 @@ const { normalizeUserList, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 
+const FOLLOW_API_BY_TAB = {
+  following: '/follow/following',
+  followers: '/follow/followers',
+  mutual: '/follow/mutual'
+}
+
 Page({
   data: {
     active: 'following',
@@ -38,20 +44,13 @@ Page({
     if (this.data.loading) return
     this.setData({ loading: true })
 
-    let url = '/follow/following'
-    if (this.data.active === 'followers') {
-      url = '/follow/followers'
-    } else if (this.data.active === 'mutual') {
-      url = '/follow/mutual'
-    }
+    const url = FOLLOW_API_BY_TAB[this.data.active] || FOLLOW_API_BY_TAB.following
 
     try {
       const res = await request.get(url)
-      if (res.code === 0 && res.data) {
-        this.setData({
-          list: normalizeUserList(res.data || [])
-        })
-      }
+      this.setData({
+        list: normalizeUserList(res.data || [])
+      })
     } catch (error) {
       toastError(error, '加载失败')
     } finally {
@@ -64,11 +63,9 @@ Page({
     if (!userId) return
 
     try {
-      const res = await request.post(`/follow/${userId}`)
-      if (res.code === 0) {
-        toastSuccess('关注成功')
-        this.loadList()
-      }
+      await request.post(`/follow/${userId}`)
+      toastSuccess('关注成功')
+      await this.loadList()
     } catch (error) {
       toastError(error, '关注失败')
     }
@@ -79,11 +76,9 @@ Page({
     if (!userId) return
 
     try {
-      const res = await request.del(`/follow/${userId}`)
-      if (res.code === 0) {
-        toastSuccess('已取消关注')
-        this.loadList()
-      }
+      await request.del(`/follow/${userId}`)
+      toastSuccess('已取消关注')
+      await this.loadList()
     } catch (error) {
       toastError(error, '操作失败')
     }

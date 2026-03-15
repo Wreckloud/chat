@@ -6,8 +6,7 @@ const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { EMAIL_BIND_PAGE_COPY } = require('../../constants/copy')
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const { normalizeEmail, isValidEmail } = require('../../utils/account')
 
 Page({
   data: {
@@ -40,16 +39,15 @@ Page({
   async loadUserInfo() {
     try {
       const res = await request.get('/users/me')
-      if (res.code === 0 && res.data) {
-        auth.setUserInfo(res.data)
-        this.setData(
-          {
-            userInfo: res.data,
-            emailInput: res.data.email || ''
-          },
-          () => this.syncViewState()
-        )
-      }
+      const userInfo = res.data || null
+      auth.setUserInfo(userInfo)
+      this.setData(
+        {
+          userInfo,
+          emailInput: userInfo && userInfo.email ? userInfo.email : ''
+        },
+        () => this.syncViewState()
+      )
     } catch (error) {
       toastError(error, EMAIL_BIND_PAGE_COPY.toast.loadFail)
     }
@@ -68,26 +66,25 @@ Page({
     if (this.data.submitting) return
     if (!this.data.canSendLink) return
 
-    const normalizedEmail = (this.data.emailInput || '').trim().toLowerCase()
+    const copy = this.data.copy
+    const normalizedEmail = normalizeEmail(this.data.emailInput)
     if (!normalizedEmail) {
-      toastError(EMAIL_BIND_PAGE_COPY.validation.emailRequired)
+      toastError(copy.validation.emailRequired)
       return
     }
-    if (!EMAIL_REGEX.test(normalizedEmail)) {
-      toastError(EMAIL_BIND_PAGE_COPY.validation.invalidEmail)
+    if (!isValidEmail(normalizedEmail)) {
+      toastError(copy.validation.invalidEmail)
       return
     }
 
     this.setData({ submitting: true })
     try {
-      const res = await request.post('/users/email-link/send', {
+      await request.post('/users/email-link/send', {
         email: normalizedEmail
       })
-      if (res.code === 0) {
-        toastSuccess(EMAIL_BIND_PAGE_COPY.toast.sendSuccess)
-      }
+      toastSuccess(copy.toast.sendSuccess)
     } catch (error) {
-      toastError(error, EMAIL_BIND_PAGE_COPY.toast.sendFail)
+      toastError(error, copy.toast.sendFail)
     } finally {
       this.setData({ submitting: false })
     }

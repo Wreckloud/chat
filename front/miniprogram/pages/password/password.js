@@ -6,6 +6,7 @@ const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { PASSWORD_PAGE_COPY } = require('../../constants/copy')
+const { normalizeText } = require('../../utils/account')
 const {
   evaluatePasswordStrength,
   getPasswordStrengthInlineText
@@ -59,10 +60,10 @@ Page({
   async handleSubmit() {
     if (this.data.loading) return
 
-    const oldLoginKey = this.data.oldLoginKey.trim()
-    const newLoginKey = this.data.newLoginKey.trim()
-    const confirmLoginKey = this.data.confirmLoginKey.trim()
-    const copy = PASSWORD_PAGE_COPY
+    const oldLoginKey = normalizeText(this.data.oldLoginKey)
+    const newLoginKey = normalizeText(this.data.newLoginKey)
+    const confirmLoginKey = normalizeText(this.data.confirmLoginKey)
+    const copy = this.data.copy
 
     if (!oldLoginKey) {
       toastError(copy.validation.oldRequired)
@@ -92,20 +93,18 @@ Page({
     this.setData({ loading: true })
 
     try {
-      const res = await request.put('/users/password', {
+      await request.put('/users/password', {
         oldLoginKey,
         newLoginKey,
         confirmLoginKey
       })
-      if (res.code === 0) {
-        toastSuccess(copy.toast.success)
-        auth.logout()
-        setTimeout(() => {
-          wx.reLaunch({
-            url: '/pages/login/login'
-          })
-        }, 1000)
-      }
+      toastSuccess(copy.toast.success)
+      auth.logout()
+      setTimeout(() => {
+        wx.reLaunch({
+          url: '/pages/login/login'
+        })
+      }, 1000)
     } catch (error) {
       toastError(error, copy.toast.fail)
     } finally {
