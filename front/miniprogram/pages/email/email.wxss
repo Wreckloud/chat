@@ -93,10 +93,3 @@
 .email-input {
   margin-bottom: 18rpx;
 }
-
-.dev-hint {
-  margin-top: 14rpx;
-  font-size: 20rpx;
-  line-height: 1.55;
-  color: var(--retro-muted-text);
-}

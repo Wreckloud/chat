@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BaseException.class)
     public Result<?> handleBaseException(BaseException e) {
-        log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        log.info("业务异常: code={}, message={}", e.getCode(), e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
 
@@ -39,10 +39,10 @@ public class GlobalExceptionHandler {
     public Result<?> handleParamException(Exception e, HttpServletRequest request) {
         String message = resolveParamErrorMessage(e);
         if (isLoginRequest(request)) {
-            log.warn("登录参数异常: {}", message);
+            log.info("登录参数异常: {}", message);
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.warn("参数异常: {}", message);
+        log.info("参数异常: {}", message);
         return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
     }
 
@@ -52,20 +52,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request) {
         if (isLoginRequest(request)) {
-            log.warn("登录请求体异常: {}", e.getMessage());
+            log.info("登录请求体异常: {}", e.getMessage());
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.warn("请求体异常: {}", e.getMessage());
+        log.info("请求体异常: {}", e.getMessage());
         return Result.error(ErrorCode.PARAM_ERROR);
     }
 
     /**
-     * 处理数据库结构不匹配异常
+     * 处理数据库语法异常
      */
     @ExceptionHandler(BadSqlGrammarException.class)
     public Result<?> handleBadSqlGrammarException(BadSqlGrammarException e) {
         log.error("数据库结构异常", e);
-        return Result.error(ErrorCode.DATABASE_ERROR.getCode(), "数据库结构不匹配，请重新执行最新的初始化脚本");
+        return Result.error(ErrorCode.DATABASE_ERROR);
     }
 
     /**

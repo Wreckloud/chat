@@ -33,7 +33,5 @@
       bindtap="handleSendVerifyLink">
       {{submitText}}
     </retro-button>
-
-    <view class="dev-hint">{{copy.hint}}</view>
   </view>
 </view>

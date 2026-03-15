@@ -85,7 +85,6 @@ const RESET_PASSWORD_PAGE_COPY = {
     sendLink: '发送重置链接',
     backToLogin: '返回登录'
   },
-  hint: '开发模式下，重置链接将打印在后端控制台日志中。',
   validation: {
     emailRequired: '请输入邮箱',
     invalidEmail: '请输入正确的邮箱'
@@ -117,7 +116,6 @@ const EMAIL_BIND_PAGE_COPY = {
     resendLink: '重新发送认证链接',
     verifiedLocked: '邮箱已认证'
   },
-  hint: '开发模式下，认证链接将打印在后端控制台日志中。',
   validation: {
     emailRequired: '请输入邮箱',
     invalidEmail: '请输入正确的邮箱'

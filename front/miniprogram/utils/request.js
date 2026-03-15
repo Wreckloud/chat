@@ -48,7 +48,7 @@ function request(options) {
           }
         } else {
           // HTTP 错误
-          reject(new Error(`请求失败: ${res.statusCode}`))
+          reject(new Error('网络请求失败，请稍后重试'))
         }
       },
       fail(err) {
