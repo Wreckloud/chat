@@ -4,6 +4,7 @@ import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.chat.media.api.dto.ApplyChatUploadPolicyDTO;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
+import com.wreckloud.wolfchat.chat.message.application.support.MessageRuleSupport;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
@@ -90,6 +91,35 @@ public class ChatMediaService {
         String wolfNo = getWolfNoByUserId(userId);
         String objectKey = buildObjectKey("file", wolfNo, extension);
         return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+    }
+
+    /**
+     * 统一校验聊天消息媒体字段
+     */
+    public void validateMessagePayload(Long userId, SendMessageCommand command) {
+        MessageType msgType = command.getMsgType();
+        switch (msgType) {
+            case TEXT:
+                MessageRuleSupport.validateNoMediaFields(
+                        command.getMediaKey(),
+                        command.getMediaWidth(),
+                        command.getMediaHeight(),
+                        command.getMediaSize(),
+                        command.getMediaMimeType()
+                );
+                break;
+            case IMAGE:
+                validateImageMessage(userId, command);
+                break;
+            case VIDEO:
+                validateVideoMessage(userId, command);
+                break;
+            case FILE:
+                validateFileMessage(userId, command);
+                break;
+            default:
+                throw new BaseException(ErrorCode.PARAM_ERROR, "消息类型不支持");
+        }
     }
 
     /**

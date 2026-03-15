@@ -61,28 +61,7 @@ public class LobbyService {
 
         userService.getEnabledByIdOrThrow(userId);
 
-        switch (msgType) {
-            case TEXT:
-                MessageRuleSupport.validateNoMediaFields(
-                        command.getMediaKey(),
-                        command.getMediaWidth(),
-                        command.getMediaHeight(),
-                        command.getMediaSize(),
-                        command.getMediaMimeType()
-                );
-                break;
-            case IMAGE:
-                chatMediaService.validateImageMessage(userId, toChatMediaCommand(command));
-                break;
-            case VIDEO:
-                chatMediaService.validateVideoMessage(userId, toChatMediaCommand(command));
-                break;
-            case FILE:
-                chatMediaService.validateFileMessage(userId, toChatMediaCommand(command));
-                break;
-            default:
-                throw new BaseException(ErrorCode.PARAM_ERROR, "消息类型不支持");
-        }
+        chatMediaService.validateMessagePayload(userId, toChatMediaCommand(command));
 
         WfLobbyMessage message = new WfLobbyMessage();
         message.setSenderId(userId);

@@ -69,28 +69,7 @@ public class MessageService {
             throw new BaseException(ErrorCode.NOT_MUTUAL_FOLLOW);
         }
 
-        switch (msgType) {
-            case TEXT:
-                MessageRuleSupport.validateNoMediaFields(
-                        command.getMediaKey(),
-                        command.getMediaWidth(),
-                        command.getMediaHeight(),
-                        command.getMediaSize(),
-                        command.getMediaMimeType()
-                );
-                break;
-            case IMAGE:
-                chatMediaService.validateImageMessage(userId, command);
-                break;
-            case VIDEO:
-                chatMediaService.validateVideoMessage(userId, command);
-                break;
-            case FILE:
-                chatMediaService.validateFileMessage(userId, command);
-                break;
-            default:
-                throw new BaseException(ErrorCode.PARAM_ERROR, "消息类型不支持");
-        }
+        chatMediaService.validateMessagePayload(userId, command);
 
         // 保存消息
         WfMessage message = new WfMessage();
