@@ -1,4 +1,4 @@
-package com.wreckloud.wolfchat.chat.message.api.vo;
+package com.wreckloud.wolfchat.chat.lobby.api.vo;
 
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -7,18 +7,15 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * @Description 消息 VO
+ * @Description 大厅消息 VO
  * @Author Wreckloud
- * @Date 2026-01-29
+ * @Date 2026-03-12
  */
 @Data
-@Schema(description = "消息信息")
-public class MessageVO {
+@Schema(description = "大厅消息信息")
+public class LobbyMessageVO {
     @Schema(description = "消息ID")
     private Long messageId;
-
-    @Schema(description = "会话ID")
-    private Long conversationId;
 
     @Schema(description = "发送者ID")
     private Long senderId;
@@ -31,9 +28,6 @@ public class MessageVO {
 
     @Schema(description = "发送者头像")
     private String senderAvatar;
-
-    @Schema(description = "接收者ID")
-    private Long receiverId;
 
     @Schema(description = "消息内容")
     private String content;

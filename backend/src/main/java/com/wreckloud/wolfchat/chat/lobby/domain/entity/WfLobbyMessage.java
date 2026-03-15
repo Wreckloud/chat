@@ -1,35 +1,31 @@
-package com.wreckloud.wolfchat.chat.websocket.dto;
+package com.wreckloud.wolfchat.chat.lobby.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
-import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
- * @Description WebSocket 请求消息
+ * @Description 大厅消息实体
  * @Author Wreckloud
- * @Date 2026-02-05
+ * @Date 2026-03-12
  */
 @Data
-public class WsRequest {
+@TableName("wf_lobby_message")
+public class WfLobbyMessage {
     /**
-     * 消息类型：AUTH / SEND / LOBBY_SEND / PING
+     * 主键ID
      */
-    private WsType type;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
     /**
-     * 授权 token（AUTH 消息使用）
+     * 发送者ID
      */
-    private String token;
-
-    /**
-     * 客户端消息ID（用于 ACK 对应）
-     */
-    private String clientMsgId;
-
-    /**
-     * 会话ID（SEND 消息使用）
-     */
-    private Long conversationId;
+    private Long senderId;
 
     /**
      * 消息内容
@@ -37,7 +33,7 @@ public class WsRequest {
     private String content;
 
     /**
-     * 消息类型：TEXT / IMAGE / VIDEO / FILE
+     * 消息类型：TEXT/IMAGE/VIDEO/FILE
      */
     private MessageType msgType;
 
@@ -65,4 +61,10 @@ public class WsRequest {
      * 媒体 MIME 类型
      */
     private String mediaMimeType;
+
+    /**
+     * 发送时间
+     */
+    private LocalDateTime createTime;
 }
+

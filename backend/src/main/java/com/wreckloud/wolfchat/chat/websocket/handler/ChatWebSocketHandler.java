@@ -5,6 +5,9 @@ import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.chat.message.api.converter.MessageConverter;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
+import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyMessageVO;
+import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
+import com.wreckloud.wolfchat.chat.lobby.application.service.LobbyService;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
@@ -27,8 +30,12 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * @Description WebSocket 消息处理
@@ -41,10 +48,25 @@ import java.util.List;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final JwtUtil jwtUtil;
     private final MessageService messageService;
+    private final LobbyService lobbyService;
     private final MessageMediaService messageMediaService;
     private final UserService userService;
     private final WsSessionManager sessionManager;
     private final SessionUserService sessionUserService;
+    private final Map<WsType, BiConsumer<WebSocketSession, WsRequest>> requestHandlerMap = new EnumMap<>(WsType.class);
+
+    @PostConstruct
+    public void initRequestHandlers() {
+        requestHandlerMap.put(WsType.AUTH, this::handleAuth);
+        requestHandlerMap.put(WsType.SEND, this::handleSend);
+        requestHandlerMap.put(WsType.LOBBY_SEND, this::handleLobbySend);
+        requestHandlerMap.put(WsType.PING, this::handlePingRequest);
+    }
+
+    @FunctionalInterface
+    private interface AuthenticatedRequestHandler {
+        void handle(Long userId, String clientMsgId, WsRequest request) throws Exception;
+    }
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
@@ -58,20 +80,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        switch (request.getType()) {
-            case AUTH:
-                handleAuth(session, request);
-                break;
-            case SEND:
-                handleSend(session, request);
-                break;
-            case PING:
-                handlePing(session);
-                break;
-            default:
-                sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
-                break;
+        BiConsumer<WebSocketSession, WsRequest> requestHandler = requestHandlerMap.get(request.getType());
+        if (requestHandler == null) {
+            sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
+            return;
         }
+        requestHandler.accept(session, request);
     }
 
     @Override
@@ -108,13 +122,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         replayUndeliveredMessages(session, userId);
     }
 
-    private void handlePing(WebSocketSession session) {
-        Long userId = sessionManager.getUserId(session);
-        if (userId == null) {
-            sendError(session, ErrorCode.UNAUTHORIZED, "请先认证");
-            return;
-        }
-        sessionManager.refreshOnline(userId);
+    private void handlePingRequest(WebSocketSession session, WsRequest request) {
+        withAuthenticatedUser(session, request, "心跳", (userId, clientMsgId, currentRequest) -> {
+            sessionManager.refreshOnline(userId);
+        });
     }
 
     private Long authenticateUserId(WebSocketSession session, String rawToken) {
@@ -176,6 +187,29 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleSend(WebSocketSession session, WsRequest request) {
+        withAuthenticatedUser(session, request, "发送消息", (userId, clientMsgId, currentRequest) -> {
+            if (!validateSendRequest(session, currentRequest, clientMsgId)) {
+                return;
+            }
+            WfMessage message = messageService.sendMessage(buildSendCommand(userId, currentRequest));
+            MessageVO messageVO = buildMessageVOWithSender(message);
+            sendAck(session, clientMsgId, messageVO);
+            pushMessageToReceiver(message, messageVO);
+        });
+    }
+
+    private void handleLobbySend(WebSocketSession session, WsRequest request) {
+        withAuthenticatedUser(session, request, "发送大厅消息", (userId, clientMsgId, currentRequest) -> {
+            LobbyMessageVO messageVO = lobbyService.sendMessage(buildLobbySendCommand(userId, currentRequest));
+            sendAck(session, clientMsgId, messageVO);
+            pushLobbyMessage(userId, messageVO);
+        });
+    }
+
+    private void withAuthenticatedUser(WebSocketSession session,
+                                       WsRequest request,
+                                       String scene,
+                                       AuthenticatedRequestHandler handler) {
         String clientMsgId = request.getClientMsgId();
         Long userId = sessionManager.getUserId(session);
         if (userId == null) {
@@ -188,20 +222,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        if (!validateSendRequest(session, request, clientMsgId)) {
-            return;
-        }
-
         try {
-            WfMessage message = messageService.sendMessage(buildSendCommand(userId, request));
-
-            MessageVO messageVO = buildMessageVOWithSender(message);
-            sendAck(session, request.getClientMsgId(), messageVO);
-            pushMessageToReceiver(message, messageVO);
+            handler.handle(userId, clientMsgId, request);
         } catch (BaseException e) {
             sendError(session, e.getCode(), e.getMessage(), clientMsgId);
         } catch (Exception e) {
-            log.error("WS 发送消息失败: {}", e.getMessage(), e);
+            log.error("WS {}失败: {}", scene, e.getMessage(), e);
             sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
         }
     }
@@ -215,8 +241,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return true;
     }
 
-    private void sendAck(WebSocketSession session, String clientMsgId, MessageVO messageVO) {
-        WsResponse ack = buildResponse(WsType.ACK, messageVO);
+    private void sendAck(WebSocketSession session, String clientMsgId, Object data) {
+        WsResponse ack = buildResponse(WsType.ACK, data);
         ack.setClientMsgId(clientMsgId);
         send(session, ack);
     }
@@ -232,6 +258,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             messageService.markDelivered(List.of(message.getId()));
             log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
         }
+    }
+
+    private void pushLobbyMessage(Long senderUserId, LobbyMessageVO messageVO) {
+        WsResponse push = buildResponse(WsType.LOBBY_MESSAGE, messageVO);
+        sessionManager.sendToAll(JSON.toJSONString(push), senderUserId);
     }
 
     private boolean send(WebSocketSession session, WsResponse response) {
@@ -276,6 +307,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         SendMessageCommand command = new SendMessageCommand();
         command.setUserId(userId);
         command.setConversationId(request.getConversationId());
+        command.setContent(request.getContent());
+        command.setMsgType(request.getMsgType());
+        command.setMediaKey(request.getMediaKey());
+        command.setMediaWidth(request.getMediaWidth());
+        command.setMediaHeight(request.getMediaHeight());
+        command.setMediaSize(request.getMediaSize());
+        command.setMediaMimeType(request.getMediaMimeType());
+        return command;
+    }
+
+    private SendLobbyMessageCommand buildLobbySendCommand(Long userId, WsRequest request) {
+        SendLobbyMessageCommand command = new SendLobbyMessageCommand();
+        command.setUserId(userId);
         command.setContent(request.getContent());
         command.setMsgType(request.getMsgType());
         command.setMediaKey(request.getMediaKey());

@@ -1,33 +1,22 @@
-package com.wreckloud.wolfchat.chat.websocket.dto;
+package com.wreckloud.wolfchat.chat.message.application.command;
 
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
-import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import lombok.Data;
 
 /**
- * @Description WebSocket 请求消息
+ * @Description 发送消息命令
  * @Author Wreckloud
- * @Date 2026-02-05
+ * @Date 2026-03-09
  */
 @Data
-public class WsRequest {
+public class SendMessageCommand {
     /**
-     * 消息类型：AUTH / SEND / LOBBY_SEND / PING
+     * 当前发送者 ID
      */
-    private WsType type;
+    private Long userId;
 
     /**
-     * 授权 token（AUTH 消息使用）
-     */
-    private String token;
-
-    /**
-     * 客户端消息ID（用于 ACK 对应）
-     */
-    private String clientMsgId;
-
-    /**
-     * 会话ID（SEND 消息使用）
+     * 所属会话 ID
      */
     private Long conversationId;
 
@@ -37,7 +26,7 @@ public class WsRequest {
     private String content;
 
     /**
-     * 消息类型：TEXT / IMAGE / VIDEO / FILE
+     * 消息类型
      */
     private MessageType msgType;
 

@@ -15,6 +15,10 @@ public enum WsType {
      */
     SEND,
     /**
+     * 发送大厅消息
+     */
+    LOBBY_SEND,
+    /**
      * 心跳
      */
     PING,
@@ -30,6 +34,10 @@ public enum WsType {
      * 推送消息
      */
     MESSAGE,
+    /**
+     * 大厅消息推送
+     */
+    LOBBY_MESSAGE,
     /**
      * 在线状态推送
      */

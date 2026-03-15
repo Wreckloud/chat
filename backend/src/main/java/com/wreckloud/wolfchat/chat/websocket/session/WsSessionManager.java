@@ -12,6 +12,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -95,6 +96,18 @@ public class WsSessionManager {
                 log.warn("WS 推送失败: userId={}, sessionId={}, error={}", userId, session.getId(), e.getMessage());
                 removeSession(session);
             }
+        }
+        return successCount;
+    }
+
+    public int sendToAll(String payload, Long excludeUserId) {
+        Set<Long> userIds = new HashSet<>(userSessions.keySet());
+        int successCount = 0;
+        for (Long userId : userIds) {
+            if (excludeUserId != null && excludeUserId.equals(userId)) {
+                continue;
+            }
+            successCount += sendToUser(userId, payload);
         }
         return successCount;
     }

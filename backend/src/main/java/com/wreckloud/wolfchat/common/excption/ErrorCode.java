@@ -42,14 +42,19 @@ public enum ErrorCode {
     FOLLOW_SELF(3004, "不能关注自己"),
     FOLLOW_ALREADY(3005, "已关注该行者"),
     FOLLOW_NOT_FOUND(3006, "关注关系不存在"),
-    POST_NOT_FOUND(3007, "帖子不存在或已删除"),
+    FORUM_BOARD_NOT_FOUND(3007, "版块不存在"),
     NOT_MUTUAL_FOLLOW(3009, "仅互相关注的行者可以聊天"),
     CONVERSATION_NOT_FOUND(3010, "会话不存在"),
     NOT_CONVERSATION_MEMBER(3011, "您不是该会话的参与者"),
     MESSAGE_CONTENT_EMPTY(3012, "消息内容不能为空"),
     MEDIA_TYPE_NOT_SUPPORTED(3013, "暂不支持该媒体类型"),
     MEDIA_FILE_INVALID(3014, "媒体文件无效"),
-    OSS_CONFIG_INCOMPLETE(3015, "OSS 配置未完成");
+    OSS_CONFIG_INCOMPLETE(3015, "OSS 配置未完成"),
+    FORUM_THREAD_NOT_FOUND(3016, "主题不存在或已删除"),
+    FORUM_THREAD_LOCKED(3017, "主题已锁定，暂不可回复"),
+    FORUM_REPLY_NOT_FOUND(3018, "引用楼层不存在"),
+    FORUM_BOARD_CLOSED(3019, "版块已关闭，暂不可发帖"),
+    FORUM_OPERATION_FORBIDDEN(3020, "无权限执行该操作");
 
     /**
      * 错误码
