@@ -1,0 +1,22 @@
+.im-runtime-tip-bar {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 8rpx 12rpx;
+  background: var(--retro-composer-bg);
+}
+
+.im-runtime-tip {
+  font-size: 20rpx;
+  line-height: 1.2;
+}
+
+.im-runtime-tip-conn {
+  color: var(--retro-muted-text);
+}
+
+.im-runtime-tip-send {
+  margin-left: auto;
+  color: var(--retro-link-text);
+  text-decoration: underline;
+}
