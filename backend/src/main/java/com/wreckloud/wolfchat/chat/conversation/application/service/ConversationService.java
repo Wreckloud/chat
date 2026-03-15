@@ -45,7 +45,7 @@ public class ConversationService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Long getOrCreateConversation(Long userId, Long targetUserId) {
-        log.info("获取或创建会话: userId={}, targetUserId={}", userId, targetUserId);
+        log.debug("获取或创建会话: userId={}, targetUserId={}", userId, targetUserId);
         
         // 校验互相关注
         if (!followService.isMutualFollow(userId, targetUserId)) {
@@ -64,7 +64,7 @@ public class ConversationService {
         WfConversation conversation = conversationMapper.selectOne(queryWrapper);
 
         if (conversation != null) {
-            log.info("会话已存在: conversationId={}", conversation.getId());
+            log.debug("会话已存在: conversationId={}", conversation.getId());
             return conversation.getId();
         }
 
@@ -79,7 +79,7 @@ public class ConversationService {
             if (insertRows != 1) {
                 throw new BaseException(ErrorCode.DATABASE_ERROR);
             }
-            log.info("创建新会话成功: conversationId={}, userAId={}, userBId={}", 
+            log.debug("创建新会话成功: conversationId={}, userAId={}, userBId={}",
                     newConversation.getId(), userAId, userBId);
         } catch (DuplicateKeyException ex) {
             log.warn("并发创建会话，查询已存在的会话");
@@ -97,7 +97,7 @@ public class ConversationService {
      * 获取会话列表
      */
     public List<WfConversation> listConversations(Long userId) {
-        log.info("查询会话列表: userId={}", userId);
+        log.debug("查询会话列表: userId={}", userId);
         LambdaQueryWrapper<WfConversation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.and(wrapper -> wrapper.eq(WfConversation::getUserAId, userId)
                         .or()
@@ -105,7 +105,7 @@ public class ConversationService {
                 .orderByDesc(WfConversation::getLastMessageTime)
                 .orderByDesc(WfConversation::getCreateTime);
         List<WfConversation> conversations = conversationMapper.selectList(queryWrapper);
-        log.info("查询到会话数量: {}", conversations.size());
+        log.debug("查询到会话数量: {}", conversations.size());
         return conversations;
     }
 
@@ -114,7 +114,7 @@ public class ConversationService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void updateLastMessage(Long conversationId, Long messageId, String message, LocalDateTime time) {
-        log.info("更新会话最近消息: conversationId={}, messageId={}", conversationId, messageId);
+        log.debug("更新会话最近消息: conversationId={}, messageId={}", conversationId, messageId);
         LambdaUpdateWrapper<WfConversation> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfConversation::getId, conversationId)
                 .set(WfConversation::getLastMessageId, messageId)

@@ -50,7 +50,7 @@ public class MessageService {
     public WfMessage sendMessage(SendMessageCommand command) {
         Long userId = command.getUserId();
         Long conversationId = command.getConversationId();
-        log.info("发送消息: userId={}, conversationId={}", userId, conversationId);
+        log.debug("发送消息: userId={}, conversationId={}", userId, conversationId);
 
         MessageType msgType = MessageRuleSupport.normalizeMessageType(command.getMsgType());
         String normalizedContent = MessageRuleSupport.normalizeContent(command.getContent(), msgType);
@@ -110,7 +110,7 @@ public class MessageService {
         if (insertRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
         }
-        log.info("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
+        log.debug("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
 
         // 更新会话的最近消息信息
         conversationService.updateLastMessage(
@@ -129,7 +129,7 @@ public class MessageService {
      */
     public Page<WfMessage> listMessages(Long userId, Long conversationId, Integer pageNum, Integer pageSize) {
         MessageRuleSupport.validatePageParams(pageNum, pageSize, MAX_PAGE_SIZE);
-        log.info("查询消息列表: userId={}, conversationId={}, page={}, size={}", 
+        log.debug("查询消息列表: userId={}, conversationId={}, page={}, size={}",
                 userId, conversationId, pageNum, pageSize);
         
         // 校验会话存在且用户是参与者
@@ -143,7 +143,7 @@ public class MessageService {
                 .orderByDesc(WfMessage::getId);
 
         Page<WfMessage> result = messageMapper.selectPage(page, queryWrapper);
-        log.info("查询到消息数量: {}, 总数: {}", result.getRecords().size(), result.getTotal());
+        log.debug("查询到消息数量: {}, 总数: {}", result.getRecords().size(), result.getTotal());
         return result;
     }
 
@@ -175,7 +175,7 @@ public class MessageService {
                 .eq(WfMessage::getDelivered, MessageDeliveryStatus.UNDELIVERED)
                 .in(WfMessage::getId, messageIds));
         if (updateRows == 0) {
-            log.warn("标记消息送达未命中: messageIds={}", messageIds);
+            log.debug("标记消息送达未命中: messageIds={}", messageIds);
         }
     }
 

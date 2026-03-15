@@ -215,7 +215,9 @@ CREATE TABLE IF NOT EXISTS `wf_conversation` (
     UNIQUE KEY `uk_user_a_user_b` (`user_a_id`, `user_b_id`),
     KEY `idx_user_a_id` (`user_a_id`),
     KEY `idx_user_b_id` (`user_b_id`),
-    KEY `idx_last_message_time` (`last_message_time`)
+    KEY `idx_last_message_time` (`last_message_time`),
+    KEY `idx_user_a_last_message_time` (`user_a_id`, `last_message_time`, `id`),
+    KEY `idx_user_b_last_message_time` (`user_b_id`, `last_message_time`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
 
 -- 消息表
@@ -236,8 +238,10 @@ CREATE TABLE IF NOT EXISTS `wf_message` (
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
     PRIMARY KEY (`id`),
     KEY `idx_conversation_id` (`conversation_id`),
+    KEY `idx_conversation_create_id` (`conversation_id`, `create_time`, `id`),
     KEY `idx_sender_id` (`sender_id`),
     KEY `idx_receiver_id` (`receiver_id`),
+    KEY `idx_receiver_delivered_create_id` (`receiver_id`, `delivered`, `create_time`, `id`),
     KEY `idx_delivered` (`delivered`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';
@@ -256,5 +260,6 @@ CREATE TABLE IF NOT EXISTS `wf_lobby_message` (
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
     PRIMARY KEY (`id`),
     KEY `idx_sender_id` (`sender_id`),
-    KEY `idx_create_time` (`create_time`)
+    KEY `idx_create_time` (`create_time`),
+    KEY `idx_create_time_id` (`create_time`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='大厅消息表';
