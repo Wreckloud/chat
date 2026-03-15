@@ -4,7 +4,7 @@
 const config = require('./config')
 const auth = require('./auth')
 const AUTH_ERROR_CODES = [2001, 2002, 2003]
-const READY_WAIT_TIMEOUT_MS = 6000
+const READY_WAIT_TIMEOUT_MS = 10000
 const MAX_QUEUE_SIZE = 200
 
 let socketOpen = false

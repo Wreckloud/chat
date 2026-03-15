@@ -22,7 +22,11 @@ function handleWsError(page, payload, toastError) {
 
   if (!page.data.sending) {
     toastError(errorMessage, '请求异常')
+    return true
   }
+
+  // 服务端未带 clientMsgId 时，结束当前发送态，避免前端误报超时。
+  imHelper.rejectPendingRequest(page, new Error(errorMessage), '')
   return true
 }
 
@@ -47,4 +51,3 @@ module.exports = {
   handleWsError,
   handleWsAck
 }
-
