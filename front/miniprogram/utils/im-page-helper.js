@@ -1,0 +1,142 @@
+const imHelper = require('./im-helper')
+
+function initSocket(page, ws, onMessage) {
+  if (page.wsHandler) {
+    return
+  }
+  ws.connect()
+  page.wsHandler = (payload) => {
+    onMessage(payload)
+  }
+  ws.onMessage(page.wsHandler)
+}
+
+function teardownSocket(page, ws) {
+  if (!page.wsHandler) {
+    return
+  }
+  ws.offMessage(page.wsHandler)
+  page.wsHandler = null
+}
+
+function onMessageInput(page, event) {
+  const value = event && event.detail ? event.detail.value : ''
+  page.setData({
+    inputMessage: value
+  })
+}
+
+function onKeyboardHeightChange(page, event) {
+  imHelper.handleKeyboardHeightChange(page, event, () => setMorePanelVisible(page, false))
+}
+
+function onComposerFocus(page, event) {
+  imHelper.handleComposerFocus(page, event, () => setMorePanelVisible(page, false))
+}
+
+function onComposerBlur(page) {
+  imHelper.handleComposerBlur(page)
+}
+
+function setMorePanelVisible(page, visible) {
+  const nextVisible = Boolean(visible)
+  if (nextVisible === page.data.morePanelVisible) {
+    return
+  }
+  page.setData({
+    morePanelVisible: nextVisible
+  }, () => {
+    imHelper.measureDockHeight(page)
+  })
+}
+
+function toggleMorePanel(page) {
+  if (page.data.sending) {
+    return
+  }
+  const nextVisible = !page.data.morePanelVisible
+  if (nextVisible) {
+    wx.hideKeyboard()
+    imHelper.resetKeyboardHeight(page)
+  }
+  setMorePanelVisible(page, nextVisible)
+}
+
+function getSendDeps(page, depsFactory) {
+  if (page.imSendDeps) {
+    return page.imSendDeps
+  }
+  page.imSendDeps = depsFactory()
+  return page.imSendDeps
+}
+
+function onSendButtonTap(page, sendFn) {
+  page.keepComposerOpenAfterSend = imHelper.shouldKeepComposerAfterSend(page)
+  if (typeof sendFn === 'function') {
+    sendFn()
+  }
+}
+
+async function sendComposerText(page, sendTextFn, toastError) {
+  const content = String(page.data.inputMessage || '').trim()
+  if (!content) {
+    page.keepComposerOpenAfterSend = false
+    toastError('消息内容不能为空')
+    return
+  }
+
+  if (page.data.sending) {
+    page.keepComposerOpenAfterSend = false
+    return
+  }
+
+  const keepComposerOpen = page.keepComposerOpenAfterSend || imHelper.shouldKeepComposerAfterSend(page)
+  page.keepComposerOpenAfterSend = false
+  page.setData({ sending: true })
+  try {
+    await sendTextFn(content)
+  } catch (error) {
+    if (page.pageUnloaded) {
+      return
+    }
+    toastError(error, '发送失败')
+  } finally {
+    page.setData({ sending: false })
+    if (keepComposerOpen) {
+      imHelper.refocusComposerInput(page)
+    }
+  }
+}
+
+function previewImage(page, event) {
+  const current = event && event.currentTarget && event.currentTarget.dataset
+    ? event.currentTarget.dataset.url
+    : ''
+  if (!current) {
+    return
+  }
+
+  const urls = (page.data.messages || [])
+    .filter(item => item.msgType === 'IMAGE' && item.mediaUrl)
+    .map(item => item.mediaUrl)
+
+  wx.previewImage({
+    current,
+    urls: urls.length > 0 ? urls : [current]
+  })
+}
+
+module.exports = {
+  initSocket,
+  teardownSocket,
+  onMessageInput,
+  onKeyboardHeightChange,
+  onComposerFocus,
+  onComposerBlur,
+  setMorePanelVisible,
+  toggleMorePanel,
+  getSendDeps,
+  onSendButtonTap,
+  sendComposerText,
+  previewImage
+}

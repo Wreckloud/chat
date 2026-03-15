@@ -1,5 +1,6 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { uploadChatImage, uploadChatVideo, uploadChatFile } = require('../../utils/oss')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
@@ -11,10 +12,10 @@ const imPageHelper = require('../../utils/im-page-helper')
 const imUserHelper = require('../../utils/im-user-helper')
 const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
+const lobbyMetaHelper = require('../../utils/lobby-meta-helper')
 
 Page({
   data: {
-    conversationId: null,
     messages: [],
     messageBlocks: [],
     inputMessage: '',
@@ -28,41 +29,27 @@ Page({
     keyboardHeightPx: 0,
     dockHeightPx: 88,
     messageListBottomPx: 88,
-    targetUser: {},
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
-    moreActions: imSendHelper.DEFAULT_MORE_ACTIONS
+    moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
+    lobbyOnlineCount: 0,
+    lobbyActiveText: '最近活跃 --',
+    recentUsersText: '最近在线 --'
   },
 
   SEND_TIMEOUT_MS: 12000,
   WS_READY_TIMEOUT_MS: 6000,
-  CLIENT_MSG_ID_PREFIX: 'c',
+  CLIENT_MSG_ID_PREFIX: 'l',
   MESSAGE_MERGE_GAP_MS: imHelper.DEFAULT_MESSAGE_MERGE_GAP_MS,
-  IM_SEND_TYPE: 'SEND',
+  IM_SEND_TYPE: 'LOBBY_SEND',
 
-  onLoad(options) {
+  onLoad() {
     if (!auth.requireLogin()) return
 
-    const conversationId = Number(options.conversationId)
-    if (!conversationId) {
-      toastError('会话ID不能为空')
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 1500)
-      return
-    }
+    imUserHelper.initCurrentUserContext(this, auth, normalizeUser)
 
-    imUserHelper.initCurrentUserContext(this, auth, normalizeUser, {
-      enableLoadingUserGuard: true
-    })
-
-    this.setData({
-      conversationId
-    })
-
-    this.markConversationRead()
     this.loadCurrentUserProfile()
-    this.loadConversation()
+    this.loadLobbyMeta()
     this.loadMessages()
     this.initSocket()
   },
@@ -74,8 +61,8 @@ Page({
   onShow() {
     if (!auth.requireLogin()) return
     this.applyTheme()
-    this.markConversationRead()
     imHelper.measureDockHeight(this)
+    this.loadLobbyMeta()
   },
 
   onUnload() {
@@ -83,6 +70,7 @@ Page({
     imHelper.resetKeyboardHeight(this)
     imHelper.clearScrollToBottomTimer(this)
     imHelper.clearRefocusComposerTimer(this)
+    this.clearLobbyMetaTimer()
     imHelper.rejectPendingRequest(this, new Error('页面已关闭'))
     imHelper.clearPendingTimer(this)
     this.teardownSocket()
@@ -96,37 +84,36 @@ Page({
     imPageHelper.teardownSocket(this, ws)
   },
 
-  loadConversation() {
-    request.get('/conversations')
-      .then(res => {
-        const conversations = res.data || []
-        const conversation = conversations.find(
-          c => Number(c.conversationId) === Number(this.data.conversationId)
-        )
-        if (!conversation) return
-
-        const normalized = normalizeUser({
-          userId: conversation.targetUserId,
-          nickname: conversation.targetNickname,
-          wolfNo: conversation.targetWolfNo,
-          avatar: conversation.targetAvatar
-        }) || {}
-        this.cacheUserProfile(normalized)
+  loadLobbyMeta() {
+    return lobbyMetaHelper.loadLobbyMeta(this, request, (meta) => {
+        const onlineCount = Number(meta.onlineCount) || 0
+        const latestActiveAt = meta.latestActiveAt || ''
+        const recentUsers = Array.isArray(meta.recentUsers) ? meta.recentUsers : []
+        recentUsers.forEach(item => this.cacheUserProfile(item))
 
         this.setData({
-          targetUser: normalized,
-          messageBlocks: this.buildMessageBlocks(this.data.messages)
+          lobbyOnlineCount: onlineCount,
+          lobbyActiveText: this.buildLobbyActiveText(latestActiveAt),
+          recentUsersText: this.buildRecentUsersText(recentUsers)
         })
-
-        wx.setNavigationBarTitle({
-          title: normalized.nickname || normalized.wolfNo || '聊天'
-        })
-
-        this.ensureUserProfileById(normalized.userId)
       })
-      .catch(err => {
-        toastError(err, '加载失败')
-      })
+  },
+
+  buildLobbyActiveText(latestActiveAt) {
+    return lobbyMetaHelper.buildLobbyActiveText(latestActiveAt, time)
+  },
+
+  buildRecentUsersText(recentUsers) {
+    return lobbyMetaHelper.buildRecentUsersText(recentUsers, normalizeUser, time)
+  },
+
+  scheduleLobbyMetaRefresh() {
+    // Presence 推送可能很密，短暂防抖后再拉一次 meta。
+    lobbyMetaHelper.scheduleLobbyMetaRefresh(this, () => this.loadLobbyMeta(), 600)
+  },
+
+  clearLobbyMetaTimer() {
+    lobbyMetaHelper.clearLobbyMetaTimer(this)
   },
 
   loadCurrentUserProfile() {
@@ -147,14 +134,14 @@ Page({
 
   loadMessages() {
     return imMessageHelper.loadPagedMessages(this, request, {
-      url: `/conversations/${this.data.conversationId}/messages`,
-      parseRecords: (res) => (res && res.data && res.data.records) || [],
+      url: '/lobby/messages',
+      parseRecords: (res) => {
+        const pageData = res && res.data ? res.data : {}
+        return Array.isArray(pageData.records) ? pageData.records : []
+      },
       buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
-      onLoaded: ({ messages, records }) => {
+      onLoaded: ({ messages }) => {
         this.ensureSenderProfiles(messages)
-        if (records.length > 0) {
-          this.markConversationRead()
-        }
       },
       onFirstPageLoaded: () => {
         this.scrollToBottom()
@@ -199,6 +186,11 @@ Page({
     const payloadType = imWsHelper.getPayloadType(payload)
     if (!payloadType) return
 
+    if (payloadType === 'PRESENCE') {
+      this.scheduleLobbyMetaRefresh()
+      return
+    }
+
     if (payloadType === 'ERROR') {
       imWsHelper.handleWsError(this, payload, toastError)
       return
@@ -206,36 +198,31 @@ Page({
 
     if (payloadType === 'ACK') {
       imWsHelper.handleWsAck(this, payload, {
-        consumeWhenResolved: false,
-        onMessage: message => this.appendMessage(message)
+        onMessage: message => this.appendMessage(message),
+        onAfterAck: () => this.scheduleLobbyMetaRefresh()
       })
       return
     }
 
-    if (payloadType === 'MESSAGE') {
+    if (payloadType === 'LOBBY_MESSAGE') {
       this.appendMessage(payload.data)
-      if (payload.data && Number(payload.data.senderId) !== Number(this.currentUserId)) {
-        this.markConversationRead()
-      }
+      this.scheduleLobbyMetaRefresh()
     }
   },
 
   appendMessage(message) {
     imMessageHelper.appendMessage(this, message, {
-      isValidMessage: (current) => Boolean(current) && Number(current.conversationId) === Number(this.data.conversationId),
+      isValidMessage: (current) => Boolean(current && current.messageId),
       isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
+      beforeAppend: (current) => this.cacheUserProfile({
+        userId: current.senderId,
+        wolfNo: current.senderWolfNo,
+        nickname: current.senderNickname,
+        avatar: current.senderAvatar
+      }),
       buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
-      afterAppend: (current) => {
-        this.ensureUserProfileById(current.senderId)
-        this.scrollToBottom()
-      }
+      afterAppend: () => this.scrollToBottom()
     })
-  },
-
-  goUserProfile() {
-    const user = this.data.targetUser
-    if (!user || !user.userId) return
-    openUserProfile(user)
   },
 
   onTapUserElement(e) {
@@ -252,9 +239,7 @@ Page({
   },
 
   resolveSenderProfile(senderId, isSelf) {
-    return imUserHelper.resolveSenderProfile(this, senderId, isSelf, {
-      targetUser: this.data.targetUser
-    })
+    return imUserHelper.resolveSenderProfile(this, senderId, isSelf)
   },
 
   cacheUserProfile(user) {
@@ -262,41 +247,7 @@ Page({
   },
 
   ensureSenderProfiles(messages) {
-    const senderIds = imUserHelper.collectUniqueSenderIds(messages)
-    for (let index = 0; index < senderIds.length; index++) {
-      this.ensureUserProfileById(senderIds[index])
-    }
-  },
-
-  ensureUserProfileById(userId) {
-    return imUserHelper.ensureUserProfileById(
-      this,
-      request,
-      normalizeUser,
-      userId,
-      {
-        onLoaded: (normalized) => {
-          const updates = {}
-          if (Number(this.currentUserId) === Number(normalized.userId)) {
-            this.currentUser = normalized
-          }
-
-          if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalized.userId)) {
-            updates.targetUser = normalized
-            wx.setNavigationBarTitle({
-              title: normalized.nickname || normalized.wolfNo || '聊天'
-            })
-          }
-
-          if (this.data.messages.length > 0) {
-            updates.messageBlocks = this.buildMessageBlocks(this.data.messages)
-          }
-          if (Object.keys(updates).length > 0) {
-            this.setData(updates)
-          }
-        }
-      }
-    )
+    imUserHelper.cacheSenderProfilesFromMessages(messages, user => this.cacheUserProfile(user))
   },
 
   applyTheme() {
@@ -351,28 +302,6 @@ Page({
 
   previewImage(e) {
     imPageHelper.previewImage(this, e)
-  },
-
-  markConversationRead() {
-    if (!this.data.conversationId) {
-      return Promise.resolve()
-    }
-    // 合并短时间重复已读请求，避免连续拉取/收消息时放大请求量。
-    if (this.markReadLoading) {
-      this.markReadPending = true
-      return Promise.resolve()
-    }
-
-    this.markReadLoading = true
-    return request.put(`/conversations/${this.data.conversationId}/read`)
-      .catch(() => {})
-      .finally(() => {
-        this.markReadLoading = false
-        if (this.markReadPending) {
-          this.markReadPending = false
-          this.markConversationRead()
-        }
-      })
   },
 
   async sendWsMessageWithAck(payload, options = {}) {

@@ -4,6 +4,16 @@
     <view class="session-total">共 {{conversationList.length}}</view>
   </view>
 
+  <view class="lobby-entry" bindtap="openLobby">
+    <view class="lobby-entry-main">
+      <text class="lobby-entry-title">公共聊天室</text>
+      <text class="lobby-entry-sub">{{lobbyActiveText}}</text>
+    </view>
+    <view class="lobby-entry-side">
+      <text class="lobby-entry-online">在线 {{lobbyOnlineCount}}</text>
+    </view>
+  </view>
+
   <retro-loading wx:if="{{loading}}" size="40rpx" text="加载中..." />
 
   <retro-empty
@@ -22,12 +32,12 @@
     <block wx:for="{{conversationSections}}" wx:key="key" wx:for-item="section" wx:for-index="sectionIndex">
       <view wx:if="{{sectionIndex > 0}}" class="session-divider"></view>
 
-      <view class="session-group">
-        <view class="session-group-head">
-          <text class="session-group-title">{{section.title}}</text>
+      <view class="session-section">
+        <view class="session-section-head">
+          <text class="session-section-title">{{section.title}}</text>
         </view>
 
-        <view wx:if="{{section.showEmpty && section.list.length === 0}}" class="session-group-empty">{{section.emptyText}}</view>
+        <view wx:if="{{section.showEmpty && section.list.length === 0}}" class="session-section-empty">{{section.emptyText}}</view>
 
         <retro-swipe-cell
           wx:for="{{section.list}}"
@@ -69,3 +79,4 @@
     </block>
   </view>
 </view>
+

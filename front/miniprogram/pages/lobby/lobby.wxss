@@ -12,61 +12,56 @@ page {
   color: var(--retro-page-text);
 }
 
-.im-header {
+.lobby-panel {
   position: relative;
   z-index: 10;
-  height: 82rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 14rpx;
+  padding: 10rpx 14rpx 12rpx;
   border-top: 1rpx solid var(--retro-toolbar-top-border);
   border-bottom: 1rpx solid var(--retro-toolbar-border);
   background: var(--retro-toolbar-bg);
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
-.im-header-main {
-  min-width: 0;
+.lobby-panel-head {
   display: flex;
   align-items: center;
-  flex: 1;
+  justify-content: space-between;
 }
 
-.im-header-avatar {
-  border: 1rpx solid var(--retro-avatar-border);
-}
-
-.im-header-meta {
-  min-width: 0;
-  margin-left: 12rpx;
-}
-
-.im-header-name {
-  display: block;
-  max-width: 410rpx;
+.lobby-title {
   font-size: 29rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
+}
+
+.lobby-online {
+  font-size: 23rpx;
+  color: var(--retro-link-text);
+  font-weight: 600;
+}
+
+.lobby-active {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--retro-muted-text-2);
+}
+
+.lobby-recent {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.im-header-actions {
-  margin-left: 12rpx;
-}
-
-.im-header-action {
-  font-size: 22rpx;
-  color: var(--retro-muted-text-2);
 }
 
 .im-message-list {
   position: absolute;
   left: 0;
   right: 0;
-  top: 82rpx;
+  top: 126rpx;
   bottom: 88px;
   min-height: 0;
   box-sizing: border-box;
@@ -215,9 +210,6 @@ page {
   font-size: var(--retro-chat-text-font-size);
   line-height: 1.5;
   word-break: break-all;
-}
-
-.im-text {
   color: var(--retro-record-text);
 }
 

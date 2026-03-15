@@ -45,17 +45,21 @@ function initEvents() {
     try {
       payload = JSON.parse(res.data)
     } catch (e) {
-      console.error('WS 消息解析失败:', e)
       return
     }
 
-    if (payload && payload.type === 'AUTH_OK') {
+    const payloadType = payload && payload.type
+      ? String(payload.type).toUpperCase()
+      : ''
+
+    if (payloadType === 'AUTH_OK') {
       authenticated = true
       flushQueue()
       resolveReadyWaiters()
     }
 
-    if (payload && payload.type === 'ERROR' && AUTH_ERROR_CODES.includes(payload.code)) {
+    const payloadCode = payload && payload.code != null ? Number(payload.code) : NaN
+    if (payloadType === 'ERROR' && AUTH_ERROR_CODES.includes(payloadCode)) {
       authenticated = false
       rejectReadyWaiters('登录状态失效，请重新登录')
       auth.handleAuthExpired()
@@ -71,7 +75,6 @@ function initEvents() {
 
   wx.onSocketError((err) => {
     markSocketBroken()
-    console.error('WS 连接错误:', err)
     scheduleReconnect()
   })
 }

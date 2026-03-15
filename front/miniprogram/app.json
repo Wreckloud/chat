@@ -2,6 +2,7 @@
   "pages": [
     "pages/chat/chat",
     "pages/chat-detail/chat-detail",
+    "pages/lobby/lobby",
     "pages/community/community",
     "pages/me/me",
     "pages/email/email",

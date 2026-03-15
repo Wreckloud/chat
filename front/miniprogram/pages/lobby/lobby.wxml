@@ -1,20 +1,11 @@
 <view class="im-page {{themeClass}}">
-  <view class="im-header">
-    <view class="im-header-main" catchtap="goUserProfile">
-      <retro-avatar
-        class="im-header-avatar"
-        size="medium"
-        shape="square"
-        image="{{targetUser.avatar}}">
-        {{targetUser.nickname ? targetUser.nickname.charAt(0) : '行'}}
-      </retro-avatar>
-      <view class="im-header-meta">
-        <text class="im-header-name">{{targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
-      </view>
+  <view class="lobby-panel">
+    <view class="lobby-panel-head">
+      <text class="lobby-title">公共聊天室</text>
+      <text class="lobby-online">在线 {{lobbyOnlineCount}}</text>
     </view>
-    <view class="im-header-actions">
-      <text class="im-header-action">会话</text>
-    </view>
+    <text class="lobby-active">{{lobbyActiveText}}</text>
+    <text class="lobby-recent">{{recentUsersText}}</text>
   </view>
 
   <scroll-view
@@ -28,7 +19,7 @@
     enable-back-to-top>
     <view wx:if="{{loading && messages.length === 0}}" class="im-state-text">加载中...</view>
 
-    <view wx:elif="{{messages.length === 0}}" class="im-state-text">暂无消息</view>
+    <view wx:elif="{{messages.length === 0}}" class="im-state-text">公共聊天室还没有消息</view>
 
     <view wx:else class="im-message-stream">
       <block wx:for="{{messageBlocks}}" wx:key="key" wx:for-item="blockItem">
@@ -121,7 +112,7 @@
       <input
         class="im-composer-input"
         type="text"
-        placeholder="输入消息..."
+        placeholder="在公共聊天室发言..."
         placeholder-class="im-composer-input-placeholder"
         value="{{inputMessage}}"
         focus="{{composerFocused}}"

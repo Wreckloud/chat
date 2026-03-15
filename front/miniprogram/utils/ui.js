@@ -8,6 +8,8 @@ function toastError(error, fallback = '操作失败') {
       message = error
     } else if (error.message) {
       message = error.message
+    } else if (error.errMsg) {
+      message = error.errMsg
     }
   }
   wx.showToast({

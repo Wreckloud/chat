@@ -16,6 +16,49 @@
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
+.lobby-entry {
+  margin: 12rpx 12rpx 0;
+  min-height: 86rpx;
+  padding: 12rpx 14rpx;
+  box-sizing: border-box;
+  border: 1rpx solid var(--retro-panel-border);
+  border-top-color: var(--retro-board-head-top-border);
+  border-bottom-color: var(--retro-board-head-bottom-border);
+  background: var(--retro-board-head-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lobby-entry-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.lobby-entry-title {
+  display: block;
+  font-size: 25rpx;
+  font-weight: 600;
+  color: var(--retro-board-head-text);
+}
+
+.lobby-entry-sub {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--retro-muted-text-2);
+}
+
+.lobby-entry-side {
+  margin-left: 16rpx;
+}
+
+.lobby-entry-online {
+  font-size: 23rpx;
+  color: var(--retro-link-text);
+  font-weight: 600;
+}
+
 .session-title {
   font-size: 27rpx;
   font-weight: 600;
@@ -34,7 +77,7 @@
   box-shadow: var(--retro-panel-shadow);
 }
 
-.session-group-head {
+.session-section-head {
   display: flex;
   align-items: center;
   padding: 12rpx 14rpx 10rpx;
@@ -43,13 +86,13 @@
   background: var(--retro-board-head-bg);
 }
 
-.session-group-title {
+.session-section-title {
   font-size: 24rpx;
   color: var(--retro-board-head-text);
   font-weight: 600;
 }
 
-.session-group-empty {
+.session-section-empty {
   padding: 16rpx 14rpx;
   font-size: 22rpx;
   color: var(--retro-muted-text);
@@ -174,3 +217,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
