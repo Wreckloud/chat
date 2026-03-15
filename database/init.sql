@@ -126,34 +126,78 @@ CREATE TABLE IF NOT EXISTS `wf_follow` (
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='关注关系表';
 
--- 帖子表
-CREATE TABLE IF NOT EXISTS `wf_post` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '帖子ID',
-    `user_id` BIGINT NOT NULL COMMENT '发布者ID',
-    `content` TEXT NOT NULL COMMENT '帖子内容',
-    `room_id` BIGINT DEFAULT NULL COMMENT '关联聊天室ID（可选）',
+-- 论坛版块表
+CREATE TABLE IF NOT EXISTS `wf_forum_board` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '版块ID',
+    `name` VARCHAR(64) NOT NULL COMMENT '版块名称',
+    `slug` VARCHAR(64) NOT NULL COMMENT '版块短标识',
+    `description` VARCHAR(255) DEFAULT NULL COMMENT '版块描述',
+    `sort_no` INT NOT NULL DEFAULT 0 COMMENT '排序号（越小越靠前）',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/CLOSED',
+    `thread_count` INT NOT NULL DEFAULT 0 COMMENT '主题数',
+    `reply_count` INT NOT NULL DEFAULT 0 COMMENT '回复数',
+    `last_thread_id` BIGINT DEFAULT NULL COMMENT '最近活跃主题ID',
+    `last_reply_time` DATETIME DEFAULT NULL COMMENT '最近活跃时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_slug` (`slug`),
+    KEY `idx_status_sort` (`status`, `sort_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='论坛版块表';
+
+-- 论坛主题表
+CREATE TABLE IF NOT EXISTS `wf_forum_thread` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主题ID',
+    `board_id` BIGINT NOT NULL COMMENT '版块ID',
+    `author_id` BIGINT NOT NULL COMMENT '作者ID',
+    `title` VARCHAR(120) NOT NULL COMMENT '标题',
+    `content` TEXT NOT NULL COMMENT '首帖内容',
+    `thread_type` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '主题类型：NORMAL/STICKY/ANNOUNCEMENT',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/LOCKED/DELETED',
+    `is_essence` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否精华：0-否，1-是',
+    `view_count` INT NOT NULL DEFAULT 0 COMMENT '浏览数',
+    `reply_count` INT NOT NULL DEFAULT 0 COMMENT '回复数',
+    `last_reply_id` BIGINT DEFAULT NULL COMMENT '最后回复ID',
+    `last_reply_user_id` BIGINT DEFAULT NULL COMMENT '最后回复者ID',
+    `last_reply_time` DATETIME DEFAULT NULL COMMENT '最后回复时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_board_type_status_reply_time` (`board_id`, `thread_type`, `status`, `last_reply_time`),
+    KEY `idx_author_create` (`author_id`, `create_time`),
+    KEY `idx_status_create` (`status`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='论坛主题表';
+
+-- 论坛回复表
+CREATE TABLE IF NOT EXISTS `wf_forum_reply` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '回复ID',
+    `thread_id` BIGINT NOT NULL COMMENT '主题ID',
+    `floor_no` INT NOT NULL COMMENT '楼层号（首帖为1楼，回复从2楼开始）',
+    `author_id` BIGINT NOT NULL COMMENT '作者ID',
+    `content` TEXT NOT NULL COMMENT '回复内容',
+    `quote_reply_id` BIGINT DEFAULT NULL COMMENT '引用楼层ID',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/DELETED',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    KEY `idx_user_id` (`user_id`),
-    KEY `idx_create_time` (`create_time`),
-    KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子表';
+    UNIQUE KEY `uk_thread_floor` (`thread_id`, `floor_no`),
+    KEY `idx_thread_status_floor` (`thread_id`, `status`, `floor_no`),
+    KEY `idx_author_create` (`author_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='论坛回复表';
 
--- 评论表
-CREATE TABLE IF NOT EXISTS `wf_comment` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '评论ID',
-    `post_id` BIGINT NOT NULL COMMENT '帖子ID',
-    `user_id` BIGINT NOT NULL COMMENT '评论者ID',
-    `content` TEXT NOT NULL COMMENT '评论内容',
-    `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/DELETED',
+-- 论坛版务日志表
+CREATE TABLE IF NOT EXISTS `wf_forum_moderation_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+    `operator_user_id` BIGINT NOT NULL COMMENT '操作人用户ID',
+    `target_type` VARCHAR(20) NOT NULL COMMENT '目标类型：THREAD/REPLY',
+    `target_id` BIGINT NOT NULL COMMENT '目标ID',
+    `action` VARCHAR(40) NOT NULL COMMENT '操作类型：LOCK_THREAD/UNLOCK_THREAD/STICKY_THREAD/UNSTICKY_THREAD/ESSENCE_THREAD/UNESSENCE_THREAD/DELETE_THREAD/DELETE_REPLY',
+    `reason` VARCHAR(255) DEFAULT NULL COMMENT '操作原因',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
-    KEY `idx_post_id` (`post_id`),
-    KEY `idx_user_id` (`user_id`),
-    KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
+    KEY `idx_target` (`target_type`, `target_id`),
+    KEY `idx_operator_time` (`operator_user_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='论坛版务日志表';
 
 -- 会话表
 CREATE TABLE IF NOT EXISTS `wf_conversation` (
@@ -197,3 +241,20 @@ CREATE TABLE IF NOT EXISTS `wf_message` (
     KEY `idx_delivered` (`delivered`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';
+
+-- 大厅消息表
+CREATE TABLE IF NOT EXISTS `wf_lobby_message` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `sender_id` BIGINT NOT NULL COMMENT '发送者ID',
+    `content` TEXT DEFAULT NULL COMMENT '消息内容（文本消息或图片说明）',
+    `msg_type` VARCHAR(20) NOT NULL DEFAULT 'TEXT' COMMENT '消息类型：TEXT-文本，IMAGE-图片，VIDEO-视频，FILE-文件',
+    `media_key` VARCHAR(255) DEFAULT NULL COMMENT '媒体对象Key',
+    `media_width` INT DEFAULT NULL COMMENT '媒体宽度',
+    `media_height` INT DEFAULT NULL COMMENT '媒体高度',
+    `media_size` BIGINT DEFAULT NULL COMMENT '媒体大小（字节）',
+    `media_mime_type` VARCHAR(100) DEFAULT NULL COMMENT '媒体MIME类型',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sender_id` (`sender_id`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='大厅消息表';

@@ -1,14 +1,14 @@
 package com.wreckloud.wolfchat.community.infra.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.wreckloud.wolfchat.community.domain.entity.WfPost;
+import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * @Description 帖子 Mapper
+ * @Description 论坛版块 Mapper
  * @Author Wreckloud
- * @Date 2026-01-23
+ * @Date 2026-03-10
  */
 @Mapper
-public interface WfPostMapper extends BaseMapper<WfPost> {
+public interface WfForumBoardMapper extends BaseMapper<WfForumBoard> {
 }

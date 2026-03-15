@@ -3,47 +3,48 @@ package com.wreckloud.wolfchat.community.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.wreckloud.wolfchat.community.domain.enums.CommentStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 /**
- * @Description 评论实体
+ * @Description 论坛版务日志实体
  * @Author Wreckloud
- * @Date 2026-01-23
+ * @Date 2026-03-10
  */
 @Data
-@TableName("wf_comment")
-public class WfComment {
+@TableName("wf_forum_moderation_log")
+public class WfForumModerationLog {
     /**
-     * 评论ID
+     * 主键ID
      */
     @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
-     * 帖子ID
+     * 操作人用户ID
      */
-    private Long postId;
+    private Long operatorUserId;
 
     /**
-     * 评论者ID
+     * 目标类型：THREAD/REPLY
      */
-    private Long userId;
+    private String targetType;
 
     /**
-     * 评论内容
+     * 目标ID
      */
-    private String content;
+    private Long targetId;
 
     /**
-     * 状态：NORMAL/DELETED
+     * 操作类型：LOCK_THREAD/UNLOCK_THREAD/DELETE_THREAD/DELETE_REPLY
      */
-    private CommentStatus status;
+    private String action;
 
     /**
-     * 创建时间
+     * 操作原因
      */
+    private String reason;
+
     private LocalDateTime createTime;
 }

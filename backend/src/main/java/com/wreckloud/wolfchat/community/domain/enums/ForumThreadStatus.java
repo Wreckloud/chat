@@ -5,31 +5,32 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
- * @Description 帖子状态枚举
+ * @Description 主题状态枚举
  * @Author Wreckloud
- * @Date 2026-01-23
+ * @Date 2026-03-10
  */
 @Getter
-public enum PostStatus {
+public enum ForumThreadStatus {
     /**
      * 正常
      */
     NORMAL("NORMAL"),
 
     /**
+     * 已锁定
+     */
+    LOCKED("LOCKED"),
+
+    /**
      * 已删除
      */
     DELETED("DELETED");
 
-    /**
-     * 存储到数据库的值，同时用于 JSON 序列化
-     */
     @EnumValue
     @JsonValue
     private final String value;
 
-    PostStatus(String value) {
+    ForumThreadStatus(String value) {
         this.value = value;
     }
 }
-

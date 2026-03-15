@@ -5,31 +5,32 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
- * @Description 评论状态枚举
+ * @Description 主题类型枚举
  * @Author Wreckloud
- * @Date 2026-01-23
+ * @Date 2026-03-10
  */
 @Getter
-public enum CommentStatus {
+public enum ForumThreadType {
     /**
-     * 正常
+     * 普通主题
      */
     NORMAL("NORMAL"),
 
     /**
-     * 已删除
+     * 置顶主题
      */
-    DELETED("DELETED");
+    STICKY("STICKY"),
 
     /**
-     * 存储到数据库的值，同时用于 JSON 序列化
+     * 公告主题
      */
+    ANNOUNCEMENT("ANNOUNCEMENT");
+
     @EnumValue
     @JsonValue
     private final String value;
 
-    CommentStatus(String value) {
+    ForumThreadType(String value) {
         this.value = value;
     }
 }
-
