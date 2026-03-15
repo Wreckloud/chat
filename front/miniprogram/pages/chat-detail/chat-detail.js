@@ -29,6 +29,8 @@ Page({
     keyboardHeightPx: 0,
     dockHeightPx: 88,
     messageListBottomPx: 88,
+    connectionTip: '',
+    sendStatusText: '',
     targetUser: {},
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
@@ -189,6 +191,10 @@ Page({
 
   onSendButtonTap() {
     imPageHelper.onSendButtonTap(this, () => this.sendMessage())
+  },
+
+  onSendStatusTap() {
+    imPageHelper.onSendStatusTap(this, () => this.sendMessage())
   },
 
   async sendMessage() {

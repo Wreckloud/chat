@@ -1,5 +1,47 @@
 const imHelper = require('./im-helper')
 
+const CONNECTION_TIP_MAP = {
+  CONNECTING: '连接中...',
+  AUTHING: '认证中...',
+  RECONNECTING: '网络波动，重连中...',
+  DISCONNECTED: '连接已断开',
+  READY: ''
+}
+
+function resolveConnectionTip(state) {
+  const key = String(state || '').toUpperCase()
+  return CONNECTION_TIP_MAP[key] || ''
+}
+
+function clearSendStatusTimer(page) {
+  if (!page || !page.sendStatusTimer) {
+    return
+  }
+  clearTimeout(page.sendStatusTimer)
+  page.sendStatusTimer = null
+}
+
+function setSendStatus(page, text, autoClearMs = 0) {
+  if (!page || !page.data || !Object.prototype.hasOwnProperty.call(page.data, 'sendStatusText')) {
+    return
+  }
+  clearSendStatusTimer(page)
+  if (page.data.sendStatusText !== text) {
+    page.setData({ sendStatusText: text })
+  }
+  if (autoClearMs > 0) {
+    page.sendStatusTimer = setTimeout(() => {
+      page.sendStatusTimer = null
+      if (page.pageUnloaded || !page.data) {
+        return
+      }
+      if (page.data.sendStatusText) {
+        page.setData({ sendStatusText: '' })
+      }
+    }, autoClearMs)
+  }
+}
+
 function initSocket(page, ws, onMessage) {
   if (page.wsHandler) {
     return
@@ -9,9 +51,25 @@ function initSocket(page, ws, onMessage) {
     onMessage(payload)
   }
   ws.onMessage(page.wsHandler)
+
+  if (Object.prototype.hasOwnProperty.call(page.data || {}, 'connectionTip')) {
+    page.wsStateHandler = (state) => {
+      const nextTip = resolveConnectionTip(state)
+      if (nextTip !== page.data.connectionTip) {
+        page.setData({ connectionTip: nextTip })
+      }
+    }
+    ws.onStateChange(page.wsStateHandler)
+    page.wsStateHandler(ws.getState())
+  }
 }
 
 function teardownSocket(page, ws) {
+  if (page.wsStateHandler) {
+    ws.offStateChange(page.wsStateHandler)
+    page.wsStateHandler = null
+  }
+  clearSendStatusTimer(page)
   if (!page.wsHandler) {
     return
   }
@@ -21,9 +79,13 @@ function teardownSocket(page, ws) {
 
 function onMessageInput(page, event) {
   const value = event && event.detail ? event.detail.value : ''
-  page.setData({
+  const nextData = {
     inputMessage: value
-  })
+  }
+  if (page.data.sendStatusText) {
+    nextData.sendStatusText = ''
+  }
+  page.setData(nextData)
 }
 
 function onKeyboardHeightChange(page, event) {
@@ -92,13 +154,18 @@ async function sendComposerText(page, sendTextFn, toastError) {
 
   const keepComposerOpen = page.keepComposerOpenAfterSend || imHelper.shouldKeepComposerAfterSend(page)
   page.keepComposerOpenAfterSend = false
+  setSendStatus(page, '发送中...')
   page.setData({ sending: true })
   try {
     await sendTextFn(content)
+    page.lastFailedInputContent = ''
+    setSendStatus(page, '')
   } catch (error) {
     if (page.pageUnloaded) {
       return
     }
+    page.lastFailedInputContent = content
+    setSendStatus(page, '发送失败，点击重试')
     toastError(error, '发送失败')
   } finally {
     page.setData({ sending: false })
@@ -126,6 +193,23 @@ function previewImage(page, event) {
   })
 }
 
+function onSendStatusTap(page, sendFn) {
+  if (!page || page.data.sending) {
+    return
+  }
+  if (!String(page.data.sendStatusText || '').includes('发送失败')) {
+    return
+  }
+  if (!String(page.data.inputMessage || '').trim() && page.lastFailedInputContent) {
+    page.setData({
+      inputMessage: page.lastFailedInputContent
+    })
+  }
+  if (typeof sendFn === 'function') {
+    sendFn()
+  }
+}
+
 module.exports = {
   initSocket,
   teardownSocket,
@@ -137,6 +221,8 @@ module.exports = {
   toggleMorePanel,
   getSendDeps,
   onSendButtonTap,
+  onSendStatusTap,
   sendComposerText,
-  previewImage
+  previewImage,
+  resolveConnectionTip
 }

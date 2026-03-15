@@ -30,6 +30,8 @@ Page({
     keyboardHeightPx: 0,
     dockHeightPx: 88,
     messageListBottomPx: 88,
+    connectionTip: '',
+    sendStatusText: '',
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
@@ -171,6 +173,10 @@ Page({
 
   onSendButtonTap() {
     imPageHelper.onSendButtonTap(this, () => this.sendMessage())
+  },
+
+  onSendStatusTap() {
+    imPageHelper.onSendStatusTap(this, () => this.sendMessage())
   },
 
   async sendMessage() {

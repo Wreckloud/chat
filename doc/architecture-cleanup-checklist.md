@@ -13,6 +13,7 @@
 9. 媒体面板通用交互已收敛：`im-helper.js` 承载 `chooseMedia`、`chooseMessageFile`、确认弹窗、可编辑弹窗、文件下载与文档打开。
 10. 输入区交互已收敛：`im-helper.js` 承载键盘高度处理、聚焦/失焦、输入框回焦、底部高度测量与重置逻辑。
 11. 消息规则校验入口已统一：私聊与 Lobby 均复用 `ChatMediaService.validateMessagePayload`，不再分别维护类型分支。
+12. 聊天连接态与发送态提示已统一：`ws.js` 提供状态订阅，`im-page-helper.js` 统一连接提示与发送失败点击重试。
 
 ## 仍需收口（按建议顺序）
 

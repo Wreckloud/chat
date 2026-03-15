@@ -7,6 +7,13 @@ const imConfig = require('./im-config')
 const AUTH_ERROR_CODES = [2001, 2002, 2003]
 const READY_WAIT_TIMEOUT_MS = imConfig.WS_READY_TIMEOUT_MS
 const MAX_QUEUE_SIZE = 200
+const WS_STATE = {
+  DISCONNECTED: 'DISCONNECTED',
+  CONNECTING: 'CONNECTING',
+  AUTHING: 'AUTHING',
+  READY: 'READY',
+  RECONNECTING: 'RECONNECTING'
+}
 
 let socketOpen = false
 let connecting = false
@@ -16,9 +23,25 @@ let reconnectTimer = null
 let heartbeatTimer = null
 const messageQueue = []
 const listeners = new Set()
+const connectionStateListeners = new Set()
 const readyWaiters = []
 const RECONNECT_DELAY = 3000
 const HEARTBEAT_INTERVAL = 30000
+let currentState = WS_STATE.DISCONNECTED
+
+function setState(nextState) {
+  if (currentState === nextState) {
+    return
+  }
+  currentState = nextState
+  connectionStateListeners.forEach(handler => {
+    try {
+      handler(currentState)
+    } catch (e) {
+      // 状态监听失败不影响主链路
+    }
+  })
+}
 
 function pushQueueTail(item) {
   if (messageQueue.length >= MAX_QUEUE_SIZE) {
@@ -51,6 +74,7 @@ function initEvents() {
     socketOpen = true
     connecting = false
     authenticated = false
+    setState(WS_STATE.AUTHING)
     sendAuth()
     startHeartbeat()
     flushQueue()
@@ -70,6 +94,7 @@ function initEvents() {
 
     if (payloadType === 'AUTH_OK') {
       authenticated = true
+      setState(WS_STATE.READY)
       flushQueue()
       resolveReadyWaiters()
     }
@@ -77,6 +102,7 @@ function initEvents() {
     const payloadCode = payload && payload.code != null ? Number(payload.code) : NaN
     if (payloadType === 'ERROR' && AUTH_ERROR_CODES.includes(payloadCode)) {
       authenticated = false
+      setState(WS_STATE.DISCONNECTED)
       rejectReadyWaiters('登录状态失效，请重新登录')
       auth.handleAuthExpired()
       return
@@ -100,6 +126,7 @@ function markSocketBroken() {
   connecting = false
   authenticated = false
   stopHeartbeat()
+  setState(WS_STATE.DISCONNECTED)
 }
 
 function connect() {
@@ -107,6 +134,7 @@ function connect() {
   if (!auth.getToken()) return
   initEvents()
   connecting = true
+  setState(WS_STATE.CONNECTING)
   wx.connectSocket({
     url: getWsUrl()
   })
@@ -253,6 +281,7 @@ function offMessage(handler) {
 
 function scheduleReconnect() {
   if (reconnectTimer || socketOpen || connecting || listeners.size === 0) return
+  setState(WS_STATE.RECONNECTING)
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
     connect()
@@ -273,10 +302,29 @@ function stopHeartbeat() {
   heartbeatTimer = null
 }
 
+function onStateChange(handler) {
+  if (typeof handler !== 'function') {
+    return
+  }
+  connectionStateListeners.add(handler)
+}
+
+function offStateChange(handler) {
+  connectionStateListeners.delete(handler)
+}
+
+function getState() {
+  return currentState
+}
+
 module.exports = {
   connect,
   send,
   waitUntilReady,
   onMessage,
-  offMessage
+  offMessage,
+  onStateChange,
+  offStateChange,
+  getState,
+  WS_STATE
 }
