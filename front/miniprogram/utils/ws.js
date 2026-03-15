@@ -5,6 +5,7 @@ const config = require('./config')
 const auth = require('./auth')
 const AUTH_ERROR_CODES = [2001, 2002, 2003]
 const READY_WAIT_TIMEOUT_MS = 6000
+const MAX_QUEUE_SIZE = 200
 
 let socketOpen = false
 let connecting = false
@@ -17,6 +18,20 @@ const listeners = new Set()
 const readyWaiters = []
 const RECONNECT_DELAY = 3000
 const HEARTBEAT_INTERVAL = 30000
+
+function pushQueueTail(item) {
+  if (messageQueue.length >= MAX_QUEUE_SIZE) {
+    messageQueue.shift()
+  }
+  messageQueue.push(item)
+}
+
+function pushQueueHead(item) {
+  if (messageQueue.length >= MAX_QUEUE_SIZE) {
+    messageQueue.pop()
+  }
+  messageQueue.unshift(item)
+}
 
 function getWsUrl() {
   // 统一把 http/https 转为 ws/wss
@@ -134,7 +149,7 @@ function flushQueue() {
       data: item.payload,
       fail: () => {
         // 发送失败回退到队列头，等待重连后补发
-        messageQueue.unshift(item)
+        pushQueueHead(item)
         markSocketBroken()
         scheduleReconnect()
       }
@@ -152,13 +167,13 @@ function send(data) {
     wx.sendSocketMessage({
       data: payload,
       fail: () => {
-        messageQueue.unshift(item)
+        pushQueueHead(item)
         markSocketBroken()
         scheduleReconnect()
       }
     })
   } else {
-    messageQueue.push(item)
+    pushQueueTail(item)
     connect()
   }
 }

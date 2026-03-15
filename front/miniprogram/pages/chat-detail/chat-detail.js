@@ -38,6 +38,7 @@ Page({
   WS_READY_TIMEOUT_MS: 6000,
   CLIENT_MSG_ID_PREFIX: 'c',
   MESSAGE_MERGE_GAP_MS: imHelper.DEFAULT_MESSAGE_MERGE_GAP_MS,
+  MARK_READ_MIN_INTERVAL_MS: 1500,
   IM_SEND_TYPE: 'SEND',
 
   onLoad(options) {
@@ -60,7 +61,7 @@ Page({
       conversationId
     })
 
-    this.markConversationRead()
+    this.markConversationRead(true)
     this.loadCurrentUserProfile()
     this.loadConversation()
     this.loadMessages()
@@ -74,7 +75,7 @@ Page({
   onShow() {
     if (!auth.requireLogin()) return
     this.applyTheme()
-    this.markConversationRead()
+    this.markConversationRead(true)
     imHelper.measureDockHeight(this)
   },
 
@@ -85,6 +86,10 @@ Page({
     imHelper.clearRefocusComposerTimer(this)
     imHelper.rejectPendingRequest(this, new Error('页面已关闭'))
     imHelper.clearPendingTimer(this)
+    if (this.markReadThrottleTimer) {
+      clearTimeout(this.markReadThrottleTimer)
+      this.markReadThrottleTimer = null
+    }
     this.teardownSocket()
   },
 
@@ -353,16 +358,35 @@ Page({
     imPageHelper.previewImage(this, e)
   },
 
-  markConversationRead() {
+  markConversationRead(force = false) {
     if (!this.data.conversationId) {
       return Promise.resolve()
     }
+    const now = Date.now()
+    const elapsed = now - (this.lastMarkReadAt || 0)
+
+    if (!force && elapsed < this.MARK_READ_MIN_INTERVAL_MS) {
+      this.markReadPending = true
+      if (!this.markReadThrottleTimer) {
+        const delay = this.MARK_READ_MIN_INTERVAL_MS - elapsed
+        this.markReadThrottleTimer = setTimeout(() => {
+          this.markReadThrottleTimer = null
+          if (this.markReadPending) {
+            this.markReadPending = false
+            this.markConversationRead(true)
+          }
+        }, delay)
+      }
+      return Promise.resolve()
+    }
+
     // 合并短时间重复已读请求，避免连续拉取/收消息时放大请求量。
     if (this.markReadLoading) {
       this.markReadPending = true
       return Promise.resolve()
     }
 
+    this.lastMarkReadAt = now
     this.markReadLoading = true
     return request.put(`/conversations/${this.data.conversationId}/read`)
       .catch(() => {})
@@ -370,7 +394,7 @@ Page({
         this.markReadLoading = false
         if (this.markReadPending) {
           this.markReadPending = false
-          this.markConversationRead()
+          this.markConversationRead(true)
         }
       })
   },

@@ -14,6 +14,8 @@ const imWsHelper = require('../../utils/im-ws-helper')
 const lobbyMetaHelper = require('../../utils/lobby-meta-helper')
 const conversationViewHelper = require('../../utils/conversation-view-helper')
 const conversationActionHelper = require('../../utils/conversation-action-helper')
+const PRESENCE_FLUSH_DELAY_MS = 80
+const CONVERSATION_RELOAD_DELAY_MS = 300
 
 Page({
   data: {
@@ -43,10 +45,12 @@ Page({
   },
 
   onHide() {
+    this.clearPerformanceTimers()
     this.teardownSocket()
   },
 
   onUnload() {
+    this.clearPerformanceTimers()
     this.clearLobbyMetaTimer()
     this.teardownSocket()
   },
@@ -96,7 +100,7 @@ Page({
 
     if (payloadType === 'PRESENCE') {
       if (payload.data) {
-        this.handlePresenceMessage(payload.data)
+        this.queuePresenceMessage(payload.data)
       }
       this.scheduleLobbyMetaRefresh()
       return
@@ -115,7 +119,7 @@ Page({
     const idx = list.findIndex(item => Number(item.conversationId) === Number(message.conversationId))
 
     if (idx < 0) {
-      this.loadConversations()
+      this.scheduleConversationReload()
       return
     }
 
@@ -139,10 +143,11 @@ Page({
     return lobbyMetaHelper.loadLobbyMeta(this, request, (meta) => {
       const onlineCount = Number(meta.onlineCount) || 0
       const latestActiveAt = meta.latestActiveAt || ''
-      this.setData({
-        lobbyOnlineCount: onlineCount,
-        lobbyActiveText: this.buildLobbyActiveText(latestActiveAt)
-      })
+      const activeText = this.buildLobbyActiveText(latestActiveAt)
+      if (onlineCount === this.data.lobbyOnlineCount && activeText === this.data.lobbyActiveText) {
+        return
+      }
+      this.setData({ lobbyOnlineCount: onlineCount, lobbyActiveText: activeText })
     })
   },
 
@@ -158,29 +163,79 @@ Page({
     return lobbyMetaHelper.buildLobbyActiveText(latestActiveAt, time)
   },
 
-  handlePresenceMessage(presence) {
+  queuePresenceMessage(presence) {
     const targetUserId = Number(presence.userId)
     if (!targetUserId) return
+
+    if (!this.pendingPresenceMap) {
+      this.pendingPresenceMap = {}
+    }
+    this.pendingPresenceMap[targetUserId] = {
+      online: presence.online === true,
+      lastSeenAt: presence.lastSeenAt || ''
+    }
+    if (this.presenceFlushTimer) return
+
+    this.presenceFlushTimer = setTimeout(() => {
+      this.presenceFlushTimer = null
+      this.flushPresenceMessages()
+    }, PRESENCE_FLUSH_DELAY_MS)
+  },
+
+  flushPresenceMessages() {
+    const pending = this.pendingPresenceMap
+    this.pendingPresenceMap = null
+    if (!pending) return
 
     const list = this.data.conversationList.slice()
     let changed = false
     for (let index = 0; index < list.length; index++) {
       const item = list[index]
-      if (Number(item.targetUserId) !== targetUserId) {
+      const targetUserId = Number(item.targetUserId)
+      const nextPresence = pending[targetUserId]
+      if (!nextPresence) continue
+
+      const nextLastSeenAt = nextPresence.online
+        ? ''
+        : (nextPresence.lastSeenAt || item.lastSeenAt || '')
+      if (item.isOnline === nextPresence.online && (item.lastSeenAt || '') === nextLastSeenAt) {
         continue
       }
-      const isOnline = presence.online === true
-      const nextLastSeenAt = isOnline ? '' : (presence.lastSeenAt || item.lastSeenAt || '')
+
       list[index] = {
         ...item,
-        isOnline,
+        isOnline: nextPresence.online,
         lastSeenAt: nextLastSeenAt,
-        presenceText: conversationViewHelper.buildPresenceText(isOnline, nextLastSeenAt, time)
+        presenceText: conversationViewHelper.buildPresenceText(nextPresence.online, nextLastSeenAt, time)
       }
       changed = true
     }
     if (!changed) return
     this.setData(this.buildConversationViewData(list))
+  },
+
+  scheduleConversationReload() {
+    if (this.conversationReloadTimer) {
+      return
+    }
+    this.conversationReloadTimer = setTimeout(() => {
+      this.conversationReloadTimer = null
+      if (!this.data.loading) {
+        this.loadConversations()
+      }
+    }, CONVERSATION_RELOAD_DELAY_MS)
+  },
+
+  clearPerformanceTimers() {
+    if (this.presenceFlushTimer) {
+      clearTimeout(this.presenceFlushTimer)
+      this.presenceFlushTimer = null
+    }
+    if (this.conversationReloadTimer) {
+      clearTimeout(this.conversationReloadTimer)
+      this.conversationReloadTimer = null
+    }
+    this.pendingPresenceMap = null
   },
 
   /**
