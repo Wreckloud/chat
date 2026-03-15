@@ -1,14 +1,41 @@
 <view class="post-create-page {{themeClass}}">
   <view class="editor-toolbar">
-    <view class="title">发布帖子</view>
-    <view class="hint">最多 500 字</view>
+    <view class="title">发布主题</view>
+    <view class="hint">标题 120 字内</view>
   </view>
 
   <view class="editor-card">
+    <view class="field-row">
+      <view class="field-label">版块</view>
+      <picker
+        class="board-picker"
+        range="{{boards}}"
+        range-key="name"
+        value="{{boardIndex}}"
+        bindchange="onBoardChange">
+        <view class="board-value">{{selectedBoardName || '请选择版块'}}</view>
+      </picker>
+    </view>
+
+    <view class="field-row">
+      <view class="field-label">标题</view>
+      <retro-input
+        class="title-input"
+        placeholder="输入主题标题"
+        value="{{title}}"
+        maxlength="120"
+        bind:input="onTitleInput"
+      />
+    </view>
+
+    <view class="field-row column">
+      <view class="field-label">正文</view>
+      <view class="content-hint">最多 5000 字</view>
+    </view>
     <retro-textarea
-      placeholder="说点什么..."
+      placeholder="写下你的主题内容..."
       value="{{content}}"
-      maxlength="500"
+      maxlength="5000"
       bind:input="onContentInput"
     />
 

@@ -6,50 +6,126 @@
   color: var(--retro-page-text);
 }
 
-.post-card,
-.comment-item,
-.comment-input {
+.thread-card,
+.reply-item,
+.reply-input {
   padding: 18rpx;
   border: 1rpx solid var(--retro-panel-border);
   background: var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
-.post-card {
+.thread-card {
   margin-bottom: 16rpx;
 }
 
-.post-header {
+.thread-title-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-bottom: 10rpx;
+}
+
+.thread-tag {
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}
+
+.thread-tag-ann {
+  color: #a24f2a;
+}
+
+.thread-tag-sticky {
+  color: #235e94;
+}
+
+.thread-tag-essence {
+  color: #5f5321;
+}
+
+.thread-tag-locked {
+  color: #7a4258;
+}
+
+.thread-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-header {
   display: flex;
   align-items: center;
   gap: 14rpx;
-  margin-bottom: 14rpx;
+  margin-bottom: 12rpx;
 }
 
-.author-avatar,
-.comment-avatar {
+.author-avatar {
   border: 1rpx solid var(--retro-avatar-border);
 }
 
-.post-info {
+.thread-info {
   flex: 1;
 }
 
-.post-name {
+.thread-name {
   font-size: 28rpx;
   font-weight: 600;
 }
 
-.post-time {
+.thread-time {
   margin-top: 2rpx;
   font-size: 22rpx;
   color: var(--retro-muted-text);
 }
 
-.post-content {
+.thread-stat {
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+}
+
+.thread-stat-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6rpx;
+}
+
+.thread-manage-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12rpx;
+}
+
+.manage-btn {
+  font-size: 21rpx;
+  color: var(--retro-accent-color);
+}
+
+.manage-btn.danger {
+  color: #b4474f;
+}
+
+.thread-content {
   font-size: 26rpx;
   line-height: 1.55;
   color: var(--retro-body-text);
+}
+
+.thread-last-line {
+  margin-top: 10rpx;
+  display: flex;
+  justify-content: space-between;
+  gap: 10rpx;
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
 }
 
 .section-title {
@@ -58,46 +134,101 @@
   margin: 8rpx 0 14rpx;
 }
 
-.comment-item {
+.reply-item {
   margin-bottom: 12rpx;
 }
 
-.comment-header {
+.reply-item:last-child {
+  margin-bottom: 0;
+}
+
+.reply-more-wrap {
+  padding: 6rpx 0 14rpx;
   display: flex;
-  align-items: center;
-  gap: 12rpx;
+  justify-content: center;
 }
 
-.comment-info {
-  flex: 1;
-}
-
-.comment-name {
-  font-size: 25rpx;
-  font-weight: 600;
-}
-
-.comment-time {
-  margin-top: 2rpx;
-  font-size: 21rpx;
+.reply-more-text {
+  font-size: 22rpx;
   color: var(--retro-muted-text);
 }
 
-.comment-content {
-  margin-top: 10rpx;
-  padding-left: 58rpx;
-  font-size: 25rpx;
-  line-height: 1.5;
-  color: var(--retro-body-text);
-}
-
-.comment-input {
-  margin-top: 16rpx;
+.reply-header {
   display: flex;
   align-items: center;
   gap: 10rpx;
 }
 
-.comment-field {
+.reply-floor {
+  width: 70rpx;
+  font-size: 23rpx;
+  color: var(--retro-muted-text);
+}
+
+.reply-author {
+  flex: 1;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.reply-time {
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}
+
+.reply-quote {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}
+
+.reply-quote-content {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.reply-content {
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  line-height: 1.5;
+  color: var(--retro-body-text);
+}
+
+.reply-actions {
+  margin-top: 8rpx;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.quote-btn {
+  font-size: 21rpx;
+  color: var(--retro-accent-color);
+}
+
+.reply-delete-btn {
+  font-size: 21rpx;
+  color: #b4474f;
+}
+
+.quote-hint {
+  margin: 10rpx 0;
+  padding: 10rpx 14rpx;
+  border: 1rpx dashed var(--retro-panel-border);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}
+
+.reply-input {
+  margin-top: 8rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.reply-field {
   flex: 1;
 }

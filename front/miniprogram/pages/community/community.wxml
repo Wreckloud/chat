@@ -1,32 +1,68 @@
 <view class="community-page {{themeClass}}">
   <view class="community-toolbar">
     <view class="community-title">社区论坛</view>
-    <retro-button size="small" theme="primary" bindtap="goCreatePost">发帖</retro-button>
+    <retro-button size="small" theme="primary" bindtap="goCreatePost">发主题</retro-button>
   </view>
 
-  <retro-empty wx:if="{{posts.length === 0}}" description="暂无帖子" />
-
-  <view wx:else class="post-board">
+  <scroll-view class="board-strip" scroll-x>
     <view
-      wx:for="{{posts}}"
-      wx:key="postId"
-      class="post-row"
+      wx:for="{{boards}}"
+      wx:key="boardId"
+      class="board-chip {{item.boardId === activeBoardId ? 'board-chip-active' : ''}}"
+      bindtap="selectBoard"
+      data-id="{{item.boardId}}">
+      <view class="board-name">{{item.name}}</view>
+      <view class="board-meta">[{{item.threadCount}}/{{item.replyCount}}]</view>
+    </view>
+  </scroll-view>
+
+  <view class="tab-strip">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="value"
+      class="tab-item {{item.value === activeTab ? 'tab-item-active' : ''}}"
+      bindtap="selectTab"
+      data-tab="{{item.value}}">
+      {{item.label}}
+    </view>
+  </view>
+
+  <retro-empty wx:if="{{threads.length === 0}}" description="暂无主题" />
+
+  <view wx:else class="thread-board">
+    <view
+      wx:for="{{threads}}"
+      wx:key="threadId"
+      class="thread-row"
       bindtap="goPostDetail"
-      data-id="{{item.postId}}">
-      <view class="post-author" catchtap="goUserProfile" data-user="{{item.author}}">
-        <retro-avatar
-          class="post-avatar"
-          size="small"
-          shape="round"
-          image="{{item.author.avatar}}">
-          {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
-        </retro-avatar>
-        <view class="post-author-info">
-          <view class="post-author-name">{{item.author.nickname || item.author.wolfNo}}</view>
-          <view class="post-author-no">ID: {{item.author.wolfNo || '--'}}</view>
-        </view>
+      data-id="{{item.threadId}}">
+      <view class="thread-title-line">
+        <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag thread-tag-ann">[公告]</text>
+        <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag thread-tag-sticky">[置顶]</text>
+        <text wx:if="{{item.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
+        <text wx:if="{{item.status === 'LOCKED'}}" class="thread-tag thread-tag-locked">[锁]</text>
+        <text class="thread-title">{{item.title}}</text>
       </view>
-      <view class="post-content">{{item.content}}</view>
+      <view class="thread-meta-line">
+        <text class="thread-author">{{item.author.nickname || item.author.wolfNo || '行者'}}</text>
+        <text class="thread-stat">回复 {{item.replyCount}} / 浏览 {{item.viewCount}}</text>
+      </view>
+      <view class="thread-last-line">
+        <text class="thread-last-user">{{item.lastReplyUser.nickname || item.lastReplyUser.wolfNo || '--'}}</text>
+        <text class="thread-last-time">{{item.lastReplyTimeText || item.createTimeText}}</text>
+      </view>
+    </view>
+
+    <view class="thread-more-wrap">
+      <retro-button
+        wx:if="{{hasMore && !loading}}"
+        size="small"
+        theme="default"
+        bindtap="loadMoreThreads">
+        加载更多
+      </retro-button>
+      <text wx:elif="{{loading}}" class="thread-more-text">加载中...</text>
+      <text wx:else class="thread-more-text">没有更多主题</text>
     </view>
   </view>
 </view>

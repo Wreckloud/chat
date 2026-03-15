@@ -33,6 +33,47 @@
   box-shadow: var(--retro-panel-shadow);
 }
 
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.field-row.column {
+  justify-content: space-between;
+}
+
+.field-label {
+  width: 80rpx;
+  font-size: 24rpx;
+  color: var(--retro-muted-text);
+}
+
+.board-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.board-value {
+  height: 64rpx;
+  padding: 0 16rpx;
+  line-height: 64rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 24rpx;
+  color: var(--retro-page-text);
+}
+
+.title-input {
+  flex: 1;
+}
+
+.content-hint {
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
 .submit-btn {
   margin-top: 18rpx;
 }
