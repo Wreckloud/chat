@@ -85,7 +85,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
             return;
         }
-        requestHandler.accept(session, request);
+        try {
+            requestHandler.accept(session, request);
+        } catch (BaseException e) {
+            sendError(session, e.getCode(), e.getMessage(), request.getClientMsgId());
+        } catch (Exception e) {
+            log.warn("WS 请求处理异常: type={}, sessionId={}, error={}",
+                    request.getType(), session.getId(), e.getMessage());
+            sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", request.getClientMsgId());
+        }
     }
 
     @Override
@@ -216,18 +224,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
             return;
         }
-        if (!sessionUserService.isSessionUserExists(userId)) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
-            sessionManager.removeSession(session);
-            return;
-        }
 
         try {
+            if (!sessionUserService.isSessionUserExists(userId)) {
+                sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
+                sessionManager.removeSession(session);
+                return;
+            }
             handler.handle(userId, clientMsgId, request);
         } catch (BaseException e) {
             sendError(session, e.getCode(), e.getMessage(), clientMsgId);
         } catch (Exception e) {
-            log.error("WS {}失败: {}", scene, e.getMessage(), e);
+            log.error("WS {}失败: {}", scene, e.getMessage());
             sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
         }
     }

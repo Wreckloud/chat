@@ -2,7 +2,6 @@ package com.wreckloud.wolfchat.chat.websocket.session;
 
 import com.wreckloud.wolfchat.chat.presence.application.event.UserPresenceChangedEvent;
 import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
-import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @RequiredArgsConstructor
 public class WsSessionManager {
-    private final SessionUserService sessionUserService;
     private final UserPresenceService userPresenceService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -73,10 +71,6 @@ public class WsSessionManager {
     }
 
     public int sendToUser(Long userId, String payload) {
-        if (!sessionUserService.isSessionUserExists(userId)) {
-            removeUserSessions(userId);
-            return 0;
-        }
         Set<WebSocketSession> sessions = userSessions.get(userId);
         if (sessions == null || sessions.isEmpty()) {
             return 0;
@@ -110,28 +104,6 @@ public class WsSessionManager {
             successCount += sendToUser(userId, payload);
         }
         return successCount;
-    }
-
-    private void removeUserSessions(Long userId) {
-        Set<WebSocketSession> sessions = userSessions.remove(userId);
-        if (sessions == null || sessions.isEmpty()) {
-            return;
-        }
-        LocalDateTime lastSeenAt = userPresenceService.markOffline(userId);
-        if (lastSeenAt != null) {
-            publishPresenceChanged(userId, false, lastSeenAt);
-        }
-        for (WebSocketSession session : sessions) {
-            sessionUserMap.remove(session.getId());
-            try {
-                if (session.isOpen()) {
-                    session.close();
-                }
-            } catch (IOException e) {
-                log.warn("WS 关闭会话失败: userId={}, sessionId={}, error={}", userId, session.getId(), e.getMessage());
-            }
-        }
-        log.info("WS 清理用户会话: userId={}, count={}", userId, sessions.size());
     }
 
     public void refreshOnline(Long userId) {
