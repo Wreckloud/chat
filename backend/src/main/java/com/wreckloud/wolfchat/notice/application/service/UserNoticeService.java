@@ -33,6 +33,7 @@ public class UserNoticeService {
     private static final long DEFAULT_PAGE = 1L;
     private static final long DEFAULT_SIZE = 20L;
     private static final long MAX_SIZE = 50L;
+    private static final long MERGE_WINDOW_MINUTES = 5L;
     private static final String PAGE_ACHIEVEMENT = "/pages/achievement/achievement";
     private static final String PAGE_FOLLOW = "/pages/follow/follow";
     private static final String PAGE_THREAD_DETAIL_PREFIX = "/pages/post-detail/post-detail?threadId=";
@@ -141,6 +142,11 @@ public class UserNoticeService {
             return;
         }
         try {
+            LocalDateTime now = LocalDateTime.now();
+            if (tryMergeRecentUnreadNotice(userId, noticeType, content, bizId, now)) {
+                return;
+            }
+
             WfUserNotice notice = new WfUserNotice();
             notice.setUserId(userId);
             notice.setNoticeType(noticeType);
@@ -156,6 +162,49 @@ public class UserNoticeService {
             log.warn("写入通知失败: userId={}, type={}, bizType={}, bizId={}",
                     userId, noticeType, noticeType.getBizType(), bizId, ex);
         }
+    }
+
+    private boolean tryMergeRecentUnreadNotice(
+            Long userId,
+            NoticeType noticeType,
+            String content,
+            Long bizId,
+            LocalDateTime now
+    ) {
+        WfUserNotice recentNotice = findRecentUnreadNotice(userId, noticeType, bizId);
+        if (recentNotice == null || recentNotice.getCreateTime() == null) {
+            return false;
+        }
+
+        LocalDateTime mergeThreshold = now.minusMinutes(MERGE_WINDOW_MINUTES);
+        if (recentNotice.getCreateTime().isBefore(mergeThreshold)) {
+            return false;
+        }
+
+        LambdaUpdateWrapper<WfUserNotice> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfUserNotice::getId, recentNotice.getId())
+                .eq(WfUserNotice::getRead, false)
+                .set(WfUserNotice::getContent, content)
+                .set(WfUserNotice::getCreateTime, now)
+                .set(WfUserNotice::getReadTime, null);
+        int updateRows = wfUserNoticeMapper.update(null, updateWrapper);
+        return updateRows == 1;
+    }
+
+    private WfUserNotice findRecentUnreadNotice(Long userId, NoticeType noticeType, Long bizId) {
+        LambdaQueryWrapper<WfUserNotice> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfUserNotice::getUserId, userId)
+                .eq(WfUserNotice::getNoticeType, noticeType)
+                .eq(WfUserNotice::getRead, false);
+        if (bizId == null) {
+            queryWrapper.isNull(WfUserNotice::getBizId);
+        } else {
+            queryWrapper.eq(WfUserNotice::getBizId, bizId);
+        }
+        queryWrapper.orderByDesc(WfUserNotice::getCreateTime)
+                .orderByDesc(WfUserNotice::getId)
+                .last("LIMIT 1");
+        return wfUserNoticeMapper.selectOne(queryWrapper);
     }
 
     private List<UserNoticeVO> toNoticeVOList(List<WfUserNotice> records) {
