@@ -30,12 +30,8 @@ function buildCommonImPageMethods(options) {
       imPageHelper.onSendButtonTap(this, () => this.sendMessage())
     },
 
-    onSendStatusTap() {
-      imPageHelper.onSendStatusTap(this, () => this.sendMessage())
-    },
-
     async sendMessage() {
-      return imPageHelper.sendComposerTextMessage(this, imSendHelper, toastError)
+      return imPageHelper.sendComposerTextMessage(this, imSendHelper)
     },
 
     setMorePanelVisible(visible) {
@@ -51,7 +47,7 @@ function buildCommonImPageMethods(options) {
         uploadImage,
         uploadVideo,
         uploadFile
-      }, toastError)
+      })
     },
 
     onTapLink(e) {

@@ -2,101 +2,110 @@
   <retro-loading wx:if="{{loading && !thread}}" size="40rpx" text="加载中..." />
   <retro-empty wx:elif="{{!loading && !thread}}" description="主题不存在或已删除" />
 
-  <view wx:else>
-    <view class="thread-card">
-      <view class="thread-title-line">
-        <text wx:if="{{thread.threadType === 'ANNOUNCEMENT'}}" class="thread-tag thread-tag-ann">[公告]</text>
-        <text wx:elif="{{thread.threadType === 'STICKY'}}" class="thread-tag thread-tag-sticky">[置顶]</text>
-        <text wx:if="{{thread.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
-        <text wx:if="{{thread.status === 'LOCKED'}}" class="thread-tag thread-tag-locked">[锁]</text>
-        <text class="thread-title">{{thread.title}}</text>
-      </view>
-
-      <view class="thread-header">
-        <retro-avatar
-          class="author-avatar"
-          size="medium"
-          image="{{thread.author.avatar}}"
-          shape="round">
-          {{thread.author.nickname ? thread.author.nickname.charAt(0) : '行'}}
-        </retro-avatar>
-        <view class="thread-info">
-          <view class="thread-name">{{thread.author.nickname || thread.author.wolfNo}}</view>
-          <view class="thread-time">{{thread.createTimeText}}</view>
+  <view wx:else class="post-detail-main">
+    <scroll-view
+      class="post-detail-scroll"
+      scroll-y
+      lower-threshold="80"
+      bindscrolltolower="onReachBottom"
+      enable-back-to-top>
+      <view class="thread-card">
+        <view class="thread-title-line">
+          <text wx:if="{{thread.threadType === 'ANNOUNCEMENT'}}" class="thread-tag thread-tag-ann">[公告]</text>
+          <text wx:elif="{{thread.threadType === 'STICKY'}}" class="thread-tag thread-tag-sticky">[置顶]</text>
+          <text wx:if="{{thread.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
+          <text wx:if="{{thread.status === 'LOCKED'}}" class="thread-tag thread-tag-locked">[锁]</text>
+          <text class="thread-title">{{thread.title}}</text>
         </view>
-        <view class="thread-stat-wrap">
-          <view class="thread-stat">回 {{thread.replyCount}} / 看 {{thread.viewCount}}</view>
-          <view wx:if="{{canManageThread}}" class="thread-manage-actions">
-            <text class="manage-btn" bindtap="handleToggleLock">{{thread.status === 'LOCKED' ? '解锁' : '锁帖'}}</text>
-            <text wx:if="{{canStickyToggle}}" class="manage-btn" bindtap="handleToggleSticky">{{thread.threadType === 'STICKY' ? '取消置顶' : '置顶'}}</text>
-            <text class="manage-btn" bindtap="handleToggleEssence">{{thread.isEssence ? '取消精华' : '设精华'}}</text>
-            <text class="manage-btn danger" bindtap="handleDeleteThread">删帖</text>
+
+        <view class="thread-header">
+          <retro-avatar
+            class="author-avatar"
+            size="medium"
+            image="{{thread.author.avatar}}"
+            shape="round">
+            {{thread.author.nickname ? thread.author.nickname.charAt(0) : '行'}}
+          </retro-avatar>
+          <view class="thread-info">
+            <view class="thread-name">{{thread.author.nickname || thread.author.wolfNo}}</view>
+            <view class="thread-time">{{thread.createTimeText}}</view>
+          </view>
+          <view class="thread-stat-wrap">
+            <view class="thread-stat">回 {{thread.replyCount}} / 看 {{thread.viewCount}}</view>
+            <view wx:if="{{canManageThread}}" class="thread-manage-actions">
+              <text class="manage-btn" bindtap="handleToggleLock">{{thread.status === 'LOCKED' ? '解锁' : '锁帖'}}</text>
+              <text wx:if="{{canStickyToggle}}" class="manage-btn" bindtap="handleToggleSticky">{{thread.threadType === 'STICKY' ? '取消置顶' : '置顶'}}</text>
+              <text class="manage-btn" bindtap="handleToggleEssence">{{thread.isEssence ? '取消精华' : '设精华'}}</text>
+              <text class="manage-btn danger" bindtap="handleDeleteThread">删帖</text>
+            </view>
           </view>
         </view>
-      </view>
 
-      <view class="thread-content">{{content}}</view>
-      <view class="thread-last-line">
-        <text>最后回复：{{thread.lastReplyUser.nickname || thread.lastReplyUser.wolfNo || '--'}}</text>
-        <text>{{thread.lastReplyTimeText || thread.createTimeText}}</text>
-      </view>
-    </view>
-
-    <view>
-      <view class="section-title">楼层回复</view>
-      <retro-empty wx:if="{{replies.length === 0}}" description="暂无回复" />
-
-      <view wx:for="{{replies}}" wx:key="replyId" class="reply-item">
-        <view class="reply-header">
-          <view class="reply-floor">#{{item.floorNo}}</view>
-          <view class="reply-author">{{item.author.nickname || item.author.wolfNo}}</view>
-          <view class="reply-time">{{item.timeText}}</view>
-        </view>
-
-        <view wx:if="{{item.quoteReplyId}}" class="reply-quote">
-          引用 #{{item.quoteFloorNo}} {{item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}：
-        </view>
-        <view wx:if="{{item.quoteReplyId}}" class="reply-quote-content">{{item.quoteContent}}</view>
-        <view class="reply-content">{{item.content}}</view>
-
-        <view class="reply-actions">
-          <text class="quote-btn" bindtap="chooseQuote" data-reply="{{item}}">引用</text>
-          <text wx:if="{{item.canDelete}}" class="reply-delete-btn" bindtap="handleDeleteReply" data-id="{{item.replyId}}">删除</text>
+        <view class="thread-content">{{content}}</view>
+        <view class="thread-last-line">
+          <text>最后回复：{{thread.lastReplyUser.nickname || thread.lastReplyUser.wolfNo || '--'}}</text>
+          <text>{{thread.lastReplyTimeText || thread.createTimeText}}</text>
         </view>
       </view>
 
-      <view wx:if="{{replies.length > 0}}" class="reply-more-wrap">
+      <view>
+        <view class="section-title">楼层回复</view>
+        <retro-empty wx:if="{{replies.length === 0}}" description="暂无回复" />
+
+        <view wx:for="{{replies}}" wx:key="replyId" class="reply-item">
+          <view class="reply-header">
+            <view class="reply-floor">#{{item.floorNo}}</view>
+            <view class="reply-author">{{item.author.nickname || item.author.wolfNo}}</view>
+            <view class="reply-time">{{item.timeText}}</view>
+          </view>
+
+          <view wx:if="{{item.quoteReplyId}}" class="reply-quote">
+            引用 #{{item.quoteFloorNo}} {{item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}：
+          </view>
+          <view wx:if="{{item.quoteReplyId}}" class="reply-quote-content">{{item.quoteContent}}</view>
+          <view class="reply-content">{{item.content}}</view>
+
+          <view class="reply-actions">
+            <text class="quote-btn" bindtap="chooseQuote" data-reply="{{item}}">引用</text>
+            <text wx:if="{{item.canDelete}}" class="reply-delete-btn" bindtap="handleDeleteReply" data-id="{{item.replyId}}">删除</text>
+          </view>
+        </view>
+
+        <view wx:if="{{replies.length > 0}}" class="reply-more-wrap">
+          <retro-button
+            wx:if="{{replyHasMore && !replyLoading}}"
+            size="small"
+            theme="default"
+            bindtap="loadMoreReplies">
+            加载更多
+          </retro-button>
+          <text wx:elif="{{replyLoading}}" class="reply-more-text">加载中...</text>
+          <text wx:else class="reply-more-text">没有更多回复</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="reply-dock">
+      <view wx:if="{{quoteHint}}" class="quote-hint" bindtap="clearQuote">
+        {{quoteHint}}（点此取消）
+      </view>
+
+      <view class="reply-input">
+        <retro-input
+          class="reply-field"
+          placeholder="写下回复..."
+          value="{{replyContent}}"
+          maxlength="2000"
+          bind:input="onReplyInput"
+        />
         <retro-button
-          wx:if="{{replyHasMore && !replyLoading}}"
+          theme="primary"
           size="small"
-          theme="default"
-          bindtap="loadMoreReplies">
-          加载更多
+          disabled="{{!canReplySubmit}}"
+          bindtap="handleReply">
+          {{replySubmitting ? '提交中' : '回帖'}}
         </retro-button>
-        <text wx:elif="{{replyLoading}}" class="reply-more-text">加载中...</text>
-        <text wx:else class="reply-more-text">没有更多回复</text>
       </view>
-    </view>
-
-    <view wx:if="{{quoteHint}}" class="quote-hint" bindtap="clearQuote">
-      {{quoteHint}}（点此取消）
-    </view>
-
-    <view class="reply-input">
-      <retro-input
-        class="reply-field"
-        placeholder="写下回复..."
-        value="{{replyContent}}"
-        maxlength="2000"
-        bind:input="onReplyInput"
-      />
-      <retro-button
-        theme="primary"
-        size="small"
-        disabled="{{replySubmitting}}"
-        bindtap="handleReply">
-        {{replySubmitting ? '提交中' : '回帖'}}
-      </retro-button>
     </view>
   </view>
 </view>

@@ -99,9 +99,8 @@
   </scroll-view>
 
   <view id="im-dock" class="im-dock" style="bottom: {{keyboardHeightPx}}px;">
-    <view wx:if="{{connectionTip || sendStatusText}}" class="im-runtime-tip-bar">
+    <view wx:if="{{connectionTip}}" class="im-runtime-tip-bar">
       <text wx:if="{{connectionTip}}" class="im-runtime-tip im-runtime-tip-conn">{{connectionTip}}</text>
-      <text wx:if="{{sendStatusText}}" class="im-runtime-tip im-runtime-tip-send" bindtap="onSendStatusTap">{{sendStatusText}}</text>
     </view>
 
     <view id="im-composer" class="im-composer {{morePanelVisible ? 'is-panel-open' : ''}}">
@@ -136,7 +135,7 @@
           class="im-send-btn"
           size="medium"
           theme="primary"
-          disabled="{{sending}}"
+          disabled="{{sending || !canSendText}}"
           loading="{{sending}}"
           bindtap="onSendButtonTap">
           发送

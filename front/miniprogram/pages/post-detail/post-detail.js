@@ -59,6 +59,7 @@ Page({
     replyContent: '',
     quoteReplyId: null,
     quoteHint: '',
+    canReplySubmit: false,
     canManageThread: false,
     canStickyToggle: false,
     replySubmitting: false,
@@ -119,6 +120,8 @@ Page({
       content: detail.content || '',
       canManageThread: permission.canManageThread,
       canStickyToggle: permission.canStickyToggle
+    }, () => {
+      this.syncReplySubmitState()
     })
   },
 
@@ -169,8 +172,10 @@ Page({
   },
 
   onReplyInput(e) {
+    const replyContent = e.detail.value || ''
     this.setData({
-      replyContent: e.detail.value || ''
+      replyContent,
+      canReplySubmit: this.resolveCanReplySubmit(replyContent, this.data.replySubmitting, this.data.thread)
     })
   },
 
@@ -193,11 +198,9 @@ Page({
     if (this.data.replySubmitting) return
     const content = this.data.replyContent.trim()
     if (!content) {
-      toastError('请输入回复内容')
       return
     }
     if (this.data.thread && this.data.thread.status === 'LOCKED') {
-      toastError('主题已锁定，暂不可回复')
       return
     }
 
@@ -206,10 +209,12 @@ Page({
       payload.quoteReplyId = this.data.quoteReplyId
     }
 
-    this.setData({ replySubmitting: true })
+    this.setData({
+      replySubmitting: true,
+      canReplySubmit: false
+    })
     try {
       await request.post(`/forum/threads/${this.data.threadId}/replies`, payload)
-      toastSuccess('回复成功')
       this.setData({
         replyContent: '',
         ...EMPTY_QUOTE_DATA
@@ -219,9 +224,11 @@ Page({
         this.loadReplies({ reset: true, notifyError: false })
       ])
     } catch (error) {
-      toastError(error, '回复失败')
     } finally {
-      this.setData({ replySubmitting: false })
+      this.setData({
+        replySubmitting: false,
+        canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, false, this.data.thread)
+      })
     }
   },
 
@@ -338,5 +345,24 @@ Page({
 
   applyTheme() {
     applyPageTheme(this)
+  },
+
+  syncReplySubmitState() {
+    this.setData({
+      canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, this.data.replySubmitting, this.data.thread)
+    })
+  },
+
+  resolveCanReplySubmit(replyContent, replySubmitting, thread) {
+    if (replySubmitting) {
+      return false
+    }
+    if (!replyContent || !String(replyContent).trim()) {
+      return false
+    }
+    if (thread && thread.status === 'LOCKED') {
+      return false
+    }
+    return true
   }
 })

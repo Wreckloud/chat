@@ -15,35 +15,6 @@ function resolveConnectionTip(state) {
   return CONNECTION_TIP_MAP[key] || ''
 }
 
-function clearSendStatusTimer(page) {
-  if (!page || !page.sendStatusTimer) {
-    return
-  }
-  clearTimeout(page.sendStatusTimer)
-  page.sendStatusTimer = null
-}
-
-function setSendStatus(page, text, autoClearMs = 0) {
-  if (!page || !page.data || !Object.prototype.hasOwnProperty.call(page.data, 'sendStatusText')) {
-    return
-  }
-  clearSendStatusTimer(page)
-  if (page.data.sendStatusText !== text) {
-    page.setData({ sendStatusText: text })
-  }
-  if (autoClearMs > 0) {
-    page.sendStatusTimer = setTimeout(() => {
-      page.sendStatusTimer = null
-      if (page.pageUnloaded || !page.data) {
-        return
-      }
-      if (page.data.sendStatusText) {
-        page.setData({ sendStatusText: '' })
-      }
-    }, autoClearMs)
-  }
-}
-
 function initSocket(page, ws, onMessage) {
   if (page.wsHandler) {
     return
@@ -71,7 +42,6 @@ function teardownSocket(page, ws) {
     ws.offStateChange(page.wsStateHandler)
     page.wsStateHandler = null
   }
-  clearSendStatusTimer(page)
   if (!page.wsHandler) {
     return
   }
@@ -199,11 +169,13 @@ function loadMessages(page, request, options = {}) {
 
 function onMessageInput(page, event) {
   const value = event && event.detail ? event.detail.value : ''
-  const nextData = {
-    inputMessage: value
+  if (!page || !page.data) {
+    return
   }
-  if (page.data.sendStatusText) {
-    nextData.sendStatusText = ''
+
+  const nextData = { inputMessage: value }
+  if (Object.prototype.hasOwnProperty.call(page.data, 'canSendText')) {
+    nextData.canSendText = String(value || '').trim().length > 0
   }
   page.setData(nextData)
 }
@@ -252,17 +224,16 @@ function getSendDeps(page, depsFactory) {
   return page.imSendDeps
 }
 
-function getMediaSendDeps(page, uploaders, toastError) {
+function getMediaSendDeps(page, uploaders) {
   return getSendDeps(page, () => ({
     uploadImage: uploaders.uploadImage,
     uploadVideo: uploaders.uploadVideo,
-    uploadFile: uploaders.uploadFile,
-    toastError
+    uploadFile: uploaders.uploadFile
   }))
 }
 
-async function onDefaultMoreActionTap(page, event, imSendHelper, uploaders, toastError) {
-  const deps = getMediaSendDeps(page, uploaders, toastError)
+async function onDefaultMoreActionTap(page, event, imSendHelper, uploaders) {
+  const deps = getMediaSendDeps(page, uploaders)
   await imSendHelper.onMoreActionTap(page, event, {
     image: () => imSendHelper.chooseImageFromAlbum(page, deps),
     video: () => imSendHelper.chooseVideoFromAlbum(page, deps),
@@ -278,11 +249,10 @@ function onSendButtonTap(page, sendFn) {
   }
 }
 
-async function sendComposerText(page, sendTextFn, toastError) {
+async function sendComposerText(page, sendTextFn) {
   const content = String(page.data.inputMessage || '').trim()
   if (!content) {
     page.keepComposerOpenAfterSend = false
-    toastError('消息内容不能为空')
     return
   }
 
@@ -293,19 +263,13 @@ async function sendComposerText(page, sendTextFn, toastError) {
 
   const keepComposerOpen = page.keepComposerOpenAfterSend || imHelper.shouldKeepComposerAfterSend(page)
   page.keepComposerOpenAfterSend = false
-  setSendStatus(page, '发送中...')
   page.setData({ sending: true })
   try {
     await sendTextFn(content)
-    page.lastFailedInputContent = ''
-    setSendStatus(page, '')
   } catch (error) {
     if (page.pageUnloaded) {
       return
     }
-    page.lastFailedInputContent = content
-    setSendStatus(page, '发送失败，点击重试')
-    toastError(error, '发送失败')
   } finally {
     page.setData({ sending: false })
     if (keepComposerOpen) {
@@ -314,13 +278,12 @@ async function sendComposerText(page, sendTextFn, toastError) {
   }
 }
 
-async function sendComposerTextMessage(page, imSendHelper, toastError) {
+async function sendComposerTextMessage(page, imSendHelper) {
   return sendComposerText(
     page,
     (content) => imSendHelper.sendTextMessage(page, content, {
       clearInputOnSuccess: true
-    }),
-    toastError
+    })
   )
 }
 
@@ -351,23 +314,6 @@ function onMessageListUpper(page, loadMessagesFn) {
   }
 }
 
-function onSendStatusTap(page, sendFn) {
-  if (!page || page.data.sending) {
-    return
-  }
-  if (!String(page.data.sendStatusText || '').includes('点击重试')) {
-    return
-  }
-  if (!String(page.data.inputMessage || '').trim() && page.lastFailedInputContent) {
-    page.setData({
-      inputMessage: page.lastFailedInputContent
-    })
-  }
-  if (typeof sendFn === 'function') {
-    sendFn()
-  }
-}
-
 module.exports = {
   initSocket,
   teardownSocket,
@@ -385,8 +331,6 @@ module.exports = {
   toggleMorePanel,
   onDefaultMoreActionTap,
   onSendButtonTap,
-  onSendStatusTap,
-  setSendStatus,
   sendComposerTextMessage,
   onMessageListUpper,
   previewImage

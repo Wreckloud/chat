@@ -41,7 +41,7 @@ Page({
     dockHeightPx: 88,
     messageListBottomPx: 88,
     connectionTip: '',
-    sendStatusText: '',
+    canSendText: false,
     targetUser: {},
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,

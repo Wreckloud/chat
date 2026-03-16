@@ -14,9 +14,3 @@
 .im-runtime-tip-conn {
   color: var(--retro-muted-text);
 }
-
-.im-runtime-tip-send {
-  margin-left: auto;
-  color: var(--retro-link-text);
-  text-decoration: underline;
-}

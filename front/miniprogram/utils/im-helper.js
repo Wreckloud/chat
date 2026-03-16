@@ -177,9 +177,13 @@ function resolvePendingRequest(page, clientMsgId) {
   clearPendingTimer(page)
   page.pendingRequest = null
   if (pending.clearInputOnSuccess) {
-    page.setData({
+    const nextData = {
       inputMessage: ''
-    })
+    }
+    if (page.data && Object.prototype.hasOwnProperty.call(page.data, 'canSendText')) {
+      nextData.canSendText = false
+    }
+    page.setData(nextData)
   }
   pending.resolve()
   return true
@@ -405,23 +409,6 @@ function refocusComposerInput(page) {
   })
 }
 
-function showFileBatchResult(successCount, failedCount, firstError, toastErrorFn) {
-  if (failedCount === 0) {
-    wx.showToast({
-      title: `发送成功 ${successCount}`,
-      icon: 'none'
-    })
-    return
-  }
-
-  if (successCount > 0) {
-    toastErrorFn(`成功${successCount}个，失败${failedCount}个`)
-    return
-  }
-
-  toastErrorFn(firstError, '文件发送失败')
-}
-
 function chooseMedia(options) {
   return new Promise((resolve, reject) => {
     wx.chooseMedia({
@@ -449,16 +436,6 @@ function showEditableModal(options) {
       ...options,
       success: resolve,
       fail: () => resolve({ confirm: false, content: '' })
-    })
-  })
-}
-
-function showConfirmModal(options) {
-  return new Promise((resolve) => {
-    wx.showModal({
-      ...options,
-      success: (res) => resolve(Boolean(res.confirm)),
-      fail: () => resolve(false)
     })
   })
 }
@@ -586,11 +563,9 @@ module.exports = {
   measureDockHeight,
   shouldKeepComposerAfterSend,
   refocusComposerInput,
-  showFileBatchResult,
   chooseMedia,
   chooseMessageFile,
   showEditableModal,
-  showConfirmModal,
   downloadTempFile,
   openDocument,
   normalizeSharedLink,

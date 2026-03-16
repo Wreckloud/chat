@@ -42,7 +42,7 @@ Page({
     dockHeightPx: 88,
     messageListBottomPx: 88,
     connectionTip: '',
-    sendStatusText: '',
+    canSendText: false,
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
