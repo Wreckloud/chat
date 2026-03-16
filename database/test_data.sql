@@ -13,11 +13,13 @@ SET @seed_password_hash := '$2a$10$ENlIGWJCpjy8Dz63BNO4M.cJatv7N3l1LyBUJ6kVmFRLc
 -- 1) 用户主表
 INSERT INTO `wf_user` (
     `wolf_no`, `status`, `onboarding_status`, `onboarding_completed_at`,
-    `first_login_at`, `last_login_at`, `active_day_count`, `create_time`, `update_time`
+    `first_login_at`, `last_login_at`, `active_day_count`,
+    `equipped_title_code`, `equipped_title_name`, `equipped_title_color`,
+    `create_time`, `update_time`
 ) VALUES
-    ('1234567890', 'NORMAL', 'COMPLETED', '2026-03-09 10:00:00', '2026-03-09 10:00:00', '2026-03-10 10:00:00', 5, NOW(), NOW()),
-    ('1234567891', 'NORMAL', 'PENDING', NULL, '2026-03-09 11:00:00', '2026-03-10 09:00:00', 3, NOW(), NOW()),
-    ('1234567892', 'NORMAL', 'PENDING', NULL, '2026-03-09 12:00:00', '2026-03-10 08:30:00', 2, NOW(), NOW())
+    ('1234567890', 'NORMAL', 'COMPLETED', '2026-03-09 10:00:00', '2026-03-09 10:00:00', '2026-03-10 10:00:00', 5, 'WOLF_CUB', '小狼', '#5f7ea2', NOW(), NOW()),
+    ('1234567891', 'NORMAL', 'PENDING', NULL, '2026-03-09 11:00:00', '2026-03-10 09:00:00', 3, 'FIRST_POST', '初啸者', '#4f7f63', NOW(), NOW()),
+    ('1234567892', 'NORMAL', 'PENDING', NULL, '2026-03-09 12:00:00', '2026-03-10 08:30:00', 2, NULL, NULL, NULL, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     `status` = VALUES(`status`),
     `onboarding_status` = VALUES(`onboarding_status`),
@@ -25,6 +27,9 @@ ON DUPLICATE KEY UPDATE
     `first_login_at` = VALUES(`first_login_at`),
     `last_login_at` = VALUES(`last_login_at`),
     `active_day_count` = VALUES(`active_day_count`),
+    `equipped_title_code` = VALUES(`equipped_title_code`),
+    `equipped_title_name` = VALUES(`equipped_title_name`),
+    `equipped_title_color` = VALUES(`equipped_title_color`),
     `update_time` = NOW();
 
 SET @uid_1 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567890' LIMIT 1);
@@ -41,7 +46,36 @@ ON DUPLICATE KEY UPDATE
     `user_id` = VALUES(`user_id`),
     `update_time` = NOW();
 
--- 3) 用户资料
+-- 3) 成就定义与用户成就
+INSERT INTO `wf_achievement` (
+    `code`, `name`, `description`, `title_name`, `title_color`, `sort_no`, `enabled`
+) VALUES
+    ('WOLF_CUB', '初入群落', '注册成功后自动获得', '小狼', '#5f7ea2', 10, 1),
+    ('FIRST_POST', '初次发帖', '首次发布主题后获得', '初啸者', '#4f7f63', 20, 1),
+    ('FIRST_REPLY', '初次回帖', '首次回复主题后获得', '回声者', '#8a6d4b', 30, 1),
+    ('FIRST_FOLLOW', '初次关注', '首次关注其他行者后获得', '同行者', '#875f8c', 40, 1)
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`),
+    `description` = VALUES(`description`),
+    `title_name` = VALUES(`title_name`),
+    `title_color` = VALUES(`title_color`),
+    `sort_no` = VALUES(`sort_no`),
+    `enabled` = VALUES(`enabled`),
+    `update_time` = NOW();
+
+INSERT INTO `wf_user_achievement` (
+    `user_id`, `achievement_code`, `unlock_time`, `create_time`
+) VALUES
+    (@uid_1, 'WOLF_CUB', '2026-03-09 10:00:00', NOW()),
+    (@uid_1, 'FIRST_REPLY', '2026-03-10 10:15:00', NOW()),
+    (@uid_1, 'FIRST_FOLLOW', '2026-03-10 10:16:00', NOW()),
+    (@uid_2, 'WOLF_CUB', '2026-03-09 11:00:00', NOW()),
+    (@uid_2, 'FIRST_POST', '2026-03-10 09:45:00', NOW()),
+    (@uid_3, 'WOLF_CUB', '2026-03-09 12:00:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `unlock_time` = VALUES(`unlock_time`);
+
+-- 4) 用户资料
 INSERT INTO `wf_user_profile` (
     `user_id`, `nickname`, `avatar`, `signature`, `bio`, `create_time`, `update_time`
 ) VALUES
@@ -55,7 +89,7 @@ ON DUPLICATE KEY UPDATE
     `bio` = VALUES(`bio`),
     `update_time` = NOW();
 
--- 4) 认证信息（狼藉号密码 + 邮箱密码）
+-- 5) 认证信息（狼藉号密码 + 邮箱密码）
 INSERT INTO `wf_user_auth` (
     `user_id`, `auth_type`, `auth_identifier`, `credential_hash`, `verified`, `enabled`, `last_login_at`, `create_time`, `update_time`
 ) VALUES
@@ -71,7 +105,7 @@ ON DUPLICATE KEY UPDATE
     `last_login_at` = VALUES(`last_login_at`),
     `update_time` = NOW();
 
--- 5) 关注关系（1<->2 互关，1->3 单向）
+-- 6) 关注关系（1<->2 互关，1->3 单向）
 INSERT INTO `wf_follow` (
     `follower_id`, `followee_id`, `status`, `create_time`, `update_time`
 ) VALUES
@@ -82,7 +116,7 @@ ON DUPLICATE KEY UPDATE
     `status` = VALUES(`status`),
     `update_time` = NOW();
 
--- 6) 会话与消息（账号1 与 账号2）
+-- 7) 会话与消息（账号1 与 账号2）
 SET @conv_user_a := LEAST(@uid_1, @uid_2);
 SET @conv_user_b := GREATEST(@uid_1, @uid_2);
 
@@ -135,7 +169,7 @@ SET `last_message_id` = 990002,
     `update_time` = NOW()
 WHERE `id` = @conv_12;
 
--- 7) 大厅消息
+-- 8) 大厅消息
 INSERT INTO `wf_lobby_message` (
     `id`, `sender_id`, `content`, `msg_type`,
     `media_key`, `media_width`, `media_height`, `media_size`, `media_mime_type`, `create_time`
@@ -155,7 +189,7 @@ ON DUPLICATE KEY UPDATE
     `media_mime_type` = VALUES(`media_mime_type`),
     `create_time` = VALUES(`create_time`);
 
--- 8) 论坛基础测试数据（版块/主题/回复）
+-- 9) 论坛基础测试数据（版块/主题/回复）
 INSERT INTO `wf_forum_board` (
     `name`, `slug`, `description`, `sort_no`, `status`,
     `thread_count`, `reply_count`, `last_thread_id`, `last_reply_time`, `create_time`, `update_time`
@@ -268,7 +302,7 @@ SET `thread_count` = 1,
     `update_time` = NOW()
 WHERE `id` = @board_life;
 
--- 9) 版务日志样例
+-- 10) 版务日志样例
 INSERT INTO `wf_forum_moderation_log` (
     `id`, `operator_user_id`, `target_type`, `target_id`, `action`, `reason`, `create_time`
 ) VALUES
@@ -284,7 +318,7 @@ ON DUPLICATE KEY UPDATE
     `reason` = VALUES(`reason`),
     `create_time` = VALUES(`create_time`);
 
--- 10) 登录记录样例
+-- 11) 登录记录样例
 INSERT INTO `wf_login_record` (
     `id`, `user_id`, `login_method`, `login_result`, `fail_code`, `account_mask`, `ip`, `user_agent`, `client_type`, `client_version`, `login_time`
 ) VALUES
@@ -301,3 +335,22 @@ ON DUPLICATE KEY UPDATE
     `client_type` = VALUES(`client_type`),
     `client_version` = VALUES(`client_version`),
     `login_time` = VALUES(`login_time`);
+
+-- 12) 系统通知样例
+INSERT INTO `wf_user_notice` (
+    `id`, `user_id`, `notice_type`, `content`, `biz_type`, `biz_id`, `is_read`, `read_time`, `create_time`, `update_time`
+) VALUES
+    (940001, @uid_1, 'ACHIEVEMENT_UNLOCK', '你解锁了成就「初入群落」，获得头衔「小狼」', 'ACHIEVEMENT', NULL, 0, NULL, '2026-03-10 10:40:00', NOW()),
+    (940002, @uid_1, 'THREAD_LIKED', '你的主题收到新的点赞', 'THREAD', 980101, 0, NULL, '2026-03-10 10:42:00', NOW()),
+    (940003, @uid_1, 'THREAD_REPLIED', '你的主题收到新的回复', 'THREAD', 980101, 1, '2026-03-10 10:50:00', '2026-03-10 10:45:00', NOW()),
+    (940004, @uid_2, 'FOLLOW_RECEIVED', '你收到新的关注', 'FOLLOW', NULL, 0, NULL, '2026-03-10 10:47:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `user_id` = VALUES(`user_id`),
+    `notice_type` = VALUES(`notice_type`),
+    `content` = VALUES(`content`),
+    `biz_type` = VALUES(`biz_type`),
+    `biz_id` = VALUES(`biz_id`),
+    `is_read` = VALUES(`is_read`),
+    `read_time` = VALUES(`read_time`),
+    `create_time` = VALUES(`create_time`),
+    `update_time` = NOW();

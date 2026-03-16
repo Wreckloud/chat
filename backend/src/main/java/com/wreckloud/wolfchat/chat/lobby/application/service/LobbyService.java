@@ -132,6 +132,8 @@ public class LobbyService {
             item.setUserId(user.getId());
             item.setWolfNo(user.getWolfNo());
             item.setNickname(user.getNickname());
+            item.setEquippedTitleName(user.getEquippedTitleName());
+            item.setEquippedTitleColor(user.getEquippedTitleColor());
             item.setAvatar(user.getAvatar());
             item.setOnline(snapshot.isOnline());
             item.setLastActiveAt(snapshot.getLastActiveAt());

@@ -44,6 +44,7 @@ public class UserHomeService {
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
     private final WfForumBoardMapper wfForumBoardMapper;
+    private final UserAchievementService userAchievementService;
 
     /**
      * 获取行者主页
@@ -70,6 +71,7 @@ public class UserHomeService {
         vo.setReplyCount(toSafeInt(wfForumReplyMapper.selectVisibleCountByAuthorId(targetUserId)));
         vo.setTotalLikeCount(calculateTotalLikeCount(targetUserId));
         vo.setLastActiveAt(targetUser.getLastLoginAt());
+        vo.setShowcaseTitles(userAchievementService.listUserTitleShowcase(targetUserId));
         vo.setLatestThreads(listLatestThreads(targetUserId, HOME_LATEST_THREAD_LIMIT));
         return vo;
     }

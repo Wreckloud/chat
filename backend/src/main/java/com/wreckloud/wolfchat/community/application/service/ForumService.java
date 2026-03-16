@@ -2,6 +2,7 @@ package com.wreckloud.wolfchat.community.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
@@ -28,6 +29,7 @@ import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
+import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +64,8 @@ public class ForumService {
     private final WfForumThreadLikeMapper wfForumThreadLikeMapper;
     private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
     private final WfForumModerationLogMapper wfForumModerationLogMapper;
+    private final UserAchievementService userAchievementService;
+    private final UserNoticeService userNoticeService;
 
     public List<ForumBoardVO> listBoards() {
         return forumQueryService.listBoards();
@@ -93,6 +97,7 @@ public class ForumService {
 
         assertSingleRow(wfForumThreadMapper.insert(thread));
         updateBoardOnThreadCreate(boardId, thread.getId(), now);
+        userAchievementService.grantFirstPostAchievement(userId);
         return forumQueryService.buildThreadVO(userId, thread.getId());
     }
 
@@ -113,7 +118,10 @@ public class ForumService {
     public void updateThreadLikeStatus(Long userId, Long threadId, boolean liked) {
         WfForumThread thread = forumQueryService.getVisibleThreadOrThrow(threadId);
         if (liked) {
-            likeThread(userId, thread.getId());
+            boolean likedNow = likeThread(userId, thread.getId());
+            if (likedNow) {
+                userNoticeService.notifyThreadLiked(thread.getAuthorId(), thread.getId(), userId);
+            }
             return;
         }
         unlikeThread(userId, thread.getId());
@@ -144,6 +152,8 @@ public class ForumService {
         assertSingleRow(wfForumReplyMapper.insert(reply));
         updateThreadOnReply(threadId, userId, reply.getId(), now);
         updateBoardOnReply(thread.getBoardId(), threadId, now);
+        userAchievementService.grantFirstReplyAchievement(userId);
+        userNoticeService.notifyThreadReplied(thread.getAuthorId(), thread.getId(), userId);
         return forumQueryService.buildReplyVO(userId, reply.getId());
     }
 
@@ -151,7 +161,10 @@ public class ForumService {
     public void updateReplyLikeStatus(Long userId, Long replyId, boolean liked) {
         WfForumReply reply = forumQueryService.getVisibleReplyOrThrow(replyId);
         if (liked) {
-            likeReply(userId, reply.getId());
+            boolean likedNow = likeReply(userId, reply.getId());
+            if (likedNow) {
+                userNoticeService.notifyReplyLiked(reply.getAuthorId(), reply.getThreadId(), userId);
+            }
             return;
         }
         unlikeReply(userId, reply.getId());
@@ -274,9 +287,9 @@ public class ForumService {
         recordModerationLog(userId, LOG_TARGET_REPLY, replyId, LOG_ACTION_DELETE_REPLY, LOG_REASON_AUTHOR_OPERATION);
     }
 
-    private void likeThread(Long userId, Long threadId) {
+    private boolean likeThread(Long userId, Long threadId) {
         if (existsThreadLike(userId, threadId)) {
-            return;
+            return false;
         }
         WfForumThreadLike like = new WfForumThreadLike();
         like.setThreadId(threadId);
@@ -288,6 +301,7 @@ public class ForumService {
                 .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
                 .setSql("like_count = like_count + 1");
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
+        return true;
     }
 
     private void unlikeThread(Long userId, Long threadId) {
@@ -306,9 +320,9 @@ public class ForumService {
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
     }
 
-    private void likeReply(Long userId, Long replyId) {
+    private boolean likeReply(Long userId, Long replyId) {
         if (existsReplyLike(userId, replyId)) {
-            return;
+            return false;
         }
         WfForumReplyLike like = new WfForumReplyLike();
         like.setReplyId(replyId);
@@ -320,6 +334,7 @@ public class ForumService {
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .setSql("like_count = like_count + 1");
         assertSingleRow(wfForumReplyMapper.update(null, updateWrapper), ErrorCode.FORUM_REPLY_NOT_FOUND);
+        return true;
     }
 
     private void unlikeReply(Long userId, Long replyId) {

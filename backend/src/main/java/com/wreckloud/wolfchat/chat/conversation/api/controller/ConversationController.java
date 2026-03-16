@@ -43,6 +43,13 @@ public class ConversationController {
         return Result.success(conversationService.listConversationVOs(userId));
     }
 
+    @Operation(summary = "获取会话未读总数", description = "获取当前行者所有会话的未读总数")
+    @GetMapping("/unread-count")
+    public Result<Long> countUnread() {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(conversationService.getUnreadTotal(userId));
+    }
+
     @Operation(summary = "标记会话已读", description = "将当前行者在该会话中的未读数清零")
     @PutMapping("/{conversationId}/read")
     public Result<Void> markConversationRead(@PathVariable Long conversationId) {

@@ -2,6 +2,7 @@ package com.wreckloud.wolfchat.follow.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
 import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -10,6 +11,7 @@ import com.wreckloud.wolfchat.follow.domain.enums.FollowStatus;
 import com.wreckloud.wolfchat.follow.api.vo.FollowUserVO;
 import com.wreckloud.wolfchat.follow.domain.entity.WfFollow;
 import com.wreckloud.wolfchat.follow.infra.mapper.WfFollowMapper;
+import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ import java.util.stream.Collectors;
 public class FollowService {
     private final WfFollowMapper wfFollowMapper;
     private final UserService userService;
+    private final UserAchievementService userAchievementService;
+    private final UserNoticeService userNoticeService;
 
     /**
      * 关注行者
@@ -50,6 +54,8 @@ public class FollowService {
                 throw new BaseException(ErrorCode.FOLLOW_ALREADY);
             }
             updateFollowStatusById(follow.getId(), FollowStatus.FOLLOWING);
+            userAchievementService.grantFirstFollowAchievement(followerId);
+            userNoticeService.notifyFollowReceived(followeeId);
             return;
         }
 
@@ -61,6 +67,8 @@ public class FollowService {
         if (insertRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
         }
+        userAchievementService.grantFirstFollowAchievement(followerId);
+        userNoticeService.notifyFollowReceived(followeeId);
     }
 
     /**
@@ -213,6 +221,8 @@ public class FollowService {
         vo.setUserId(user.getId());
         vo.setWolfNo(user.getWolfNo());
         vo.setNickname(user.getNickname());
+        vo.setEquippedTitleName(user.getEquippedTitleName());
+        vo.setEquippedTitleColor(user.getEquippedTitleColor());
         vo.setAvatar(user.getAvatar());
         vo.setStatus(user.getStatus());
         vo.setMutual(mutual);

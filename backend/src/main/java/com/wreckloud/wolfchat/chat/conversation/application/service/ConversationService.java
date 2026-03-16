@@ -243,6 +243,8 @@ public class ConversationService {
             vo.setTargetUserId(targetUserId);
             vo.setTargetWolfNo(targetUser.getWolfNo());
             vo.setTargetNickname(targetUser.getNickname());
+            vo.setTargetEquippedTitleName(targetUser.getEquippedTitleName());
+            vo.setTargetEquippedTitleColor(targetUser.getEquippedTitleColor());
             vo.setTargetAvatar(targetUser.getAvatar());
             vo.setLastMessage(conversation.getLastMessage());
             vo.setLastMessageTime(conversation.getLastMessageTime());
@@ -267,6 +269,14 @@ public class ConversationService {
                 .map(conversation -> getTargetUserId(conversation, userId))
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    public long getUnreadTotal(Long userId) {
+        Long total = conversationMapper.selectUnreadTotalByUserId(userId);
+        if (total == null || total < 0) {
+            return 0L;
+        }
+        return total;
     }
 
     private Integer getUnreadCount(WfConversation conversation, Long userId) {

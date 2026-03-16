@@ -30,6 +30,12 @@ public class UserPublicVO {
     @Schema(description = "个人简介")
     private String bio;
 
+    @Schema(description = "当前佩戴头衔名称")
+    private String equippedTitleName;
+
+    @Schema(description = "当前佩戴头衔颜色")
+    private String equippedTitleColor;
+
     @Schema(description = "状态：NORMAL-正常，DISABLED-禁用或已注销")
     private UserStatus status;
 }

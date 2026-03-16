@@ -56,6 +56,15 @@ public class UserVO {
 
     @Schema(description = "活跃天数（按登录日期去重统计）")
     private Integer activeDayCount;
+
+    @Schema(description = "当前佩戴头衔编码")
+    private String equippedTitleCode;
+
+    @Schema(description = "当前佩戴头衔名称")
+    private String equippedTitleName;
+
+    @Schema(description = "当前佩戴头衔颜色")
+    private String equippedTitleColor;
 }
 
 

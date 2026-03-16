@@ -47,6 +47,9 @@ public class UserHomeVO {
     @Schema(description = "最近活跃时间")
     private LocalDateTime lastActiveAt;
 
+    @Schema(description = "头衔橱窗（最多3个）")
+    private List<UserTitleVO> showcaseTitles;
+
     @Schema(description = "最近发布主题（默认最多3条）")
     private List<UserHomeThreadVO> latestThreads;
 }

@@ -2,13 +2,16 @@ package com.wreckloud.wolfchat.account.api.controller;
 
 import com.wreckloud.wolfchat.account.api.dto.ChangePasswordDTO;
 import com.wreckloud.wolfchat.account.api.dto.SendBindEmailLinkDTO;
+import com.wreckloud.wolfchat.account.api.dto.UpdateEquippedTitleDTO;
 import com.wreckloud.wolfchat.account.api.dto.UpdateProfileDTO;
 import com.wreckloud.wolfchat.account.api.dto.UpdateOnboardingStatusDTO;
+import com.wreckloud.wolfchat.account.api.vo.UserAchievementVO;
 import com.wreckloud.wolfchat.account.api.vo.UserHomeThreadPageVO;
 import com.wreckloud.wolfchat.account.api.vo.UserHomeVO;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
+import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
 import com.wreckloud.wolfchat.account.application.service.UserHomeService;
 import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
@@ -27,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * @Description 行者 Controller
  * @Author Wreckloud
@@ -39,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
     private final UserService userService;
     private final UserHomeService userHomeService;
+    private final UserAchievementService userAchievementService;
     private final AuthService authService;
 
     /**
@@ -123,6 +129,38 @@ public class UserController {
         Long userId = UserContext.getRequiredUserId();
         userService.updateOnboardingStatus(userId, dto.getOnboardingStatus());
         return Result.success("引导状态更新成功", null);
+    }
+
+    /**
+     * 获取当前用户成就列表
+     */
+    @Operation(summary = "获取我的成就", description = "获取当前登录行者的成就与头衔信息（需要登录）")
+    @GetMapping("/me/achievements")
+    public Result<List<UserAchievementVO>> listMyAchievements() {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(userAchievementService.listMyAchievements(userId));
+    }
+
+    /**
+     * 佩戴头衔
+     */
+    @Operation(summary = "佩戴头衔", description = "佩戴已解锁成就对应头衔（需要登录）")
+    @PutMapping("/me/title/equip")
+    public Result<Void> equipTitle(@RequestBody @Validated UpdateEquippedTitleDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        userAchievementService.equipTitle(userId, dto.getAchievementCode());
+        return Result.success("佩戴成功", null);
+    }
+
+    /**
+     * 取消佩戴头衔
+     */
+    @Operation(summary = "取消佩戴头衔", description = "取消当前佩戴头衔（需要登录）")
+    @PutMapping("/me/title/unequip")
+    public Result<Void> unequipTitle() {
+        Long userId = UserContext.getRequiredUserId();
+        userAchievementService.unequipTitle(userId);
+        return Result.success("已取消佩戴", null);
     }
 
     /**

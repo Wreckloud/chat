@@ -46,6 +46,7 @@ public class AuthService {
     private final PasswordResetLinkService passwordResetLinkService;
     private final LoginRecordService loginRecordService;
     private final UserService userService;
+    private final UserAchievementService userAchievementService;
     private final UserAuthService userAuthService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
@@ -90,6 +91,7 @@ public class AuthService {
         }
 
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
+        userAchievementService.grantRegisterAchievement(user.getId());
 
         log.info("行者注册成功: wolfNo={}, nickname={}, email={}, userId={}", wolfNo, nickname, normalizedEmail, user.getId());
         return buildLoginVO(userService.getByIdOrThrow(user.getId()));

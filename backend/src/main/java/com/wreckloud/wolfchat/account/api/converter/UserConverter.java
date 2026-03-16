@@ -32,6 +32,9 @@ public final class UserConverter {
         userVO.setFirstLoginAt(user.getFirstLoginAt());
         userVO.setLastLoginAt(user.getLastLoginAt());
         userVO.setActiveDayCount(user.getActiveDayCount());
+        userVO.setEquippedTitleCode(user.getEquippedTitleCode());
+        userVO.setEquippedTitleName(user.getEquippedTitleName());
+        userVO.setEquippedTitleColor(user.getEquippedTitleColor());
         return userVO;
     }
 
@@ -46,6 +49,8 @@ public final class UserConverter {
         userVO.setAvatar(user.getAvatar());
         userVO.setSignature(user.getSignature());
         userVO.setBio(user.getBio());
+        userVO.setEquippedTitleName(user.getEquippedTitleName());
+        userVO.setEquippedTitleColor(user.getEquippedTitleColor());
         userVO.setStatus(user.getStatus());
         return userVO;
     }

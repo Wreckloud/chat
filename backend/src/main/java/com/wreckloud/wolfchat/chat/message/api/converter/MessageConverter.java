@@ -29,6 +29,8 @@ public final class MessageConverter {
         if (sender != null) {
             vo.setSenderWolfNo(sender.getWolfNo());
             vo.setSenderNickname(sender.getNickname());
+            vo.setSenderEquippedTitleName(sender.getEquippedTitleName());
+            vo.setSenderEquippedTitleColor(sender.getEquippedTitleColor());
             vo.setSenderAvatar(sender.getAvatar());
         }
         vo.setReceiverId(message.getReceiverId());

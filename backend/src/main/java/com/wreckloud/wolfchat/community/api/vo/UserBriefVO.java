@@ -20,6 +20,12 @@ public class UserBriefVO {
     @Schema(description = "昵称")
     private String nickname;
 
+    @Schema(description = "当前佩戴头衔名称")
+    private String equippedTitleName;
+
+    @Schema(description = "当前佩戴头衔颜色")
+    private String equippedTitleColor;
+
     @Schema(description = "头像URL")
     private String avatar;
 }

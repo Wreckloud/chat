@@ -26,6 +26,12 @@ public class LobbyMessageVO {
     @Schema(description = "发送者行者名")
     private String senderNickname;
 
+    @Schema(description = "发送者当前佩戴头衔名称")
+    private String senderEquippedTitleName;
+
+    @Schema(description = "发送者当前佩戴头衔颜色")
+    private String senderEquippedTitleColor;
+
     @Schema(description = "发送者头像")
     private String senderAvatar;
 
@@ -59,4 +65,3 @@ public class LobbyMessageVO {
     @Schema(description = "发送时间")
     private LocalDateTime createTime;
 }
-

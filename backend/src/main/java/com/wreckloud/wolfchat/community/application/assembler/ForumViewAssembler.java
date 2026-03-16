@@ -106,6 +106,8 @@ public class ForumViewAssembler {
         vo.setUserId(user.getId());
         vo.setWolfNo(user.getWolfNo());
         vo.setNickname(user.getNickname());
+        vo.setEquippedTitleName(user.getEquippedTitleName());
+        vo.setEquippedTitleColor(user.getEquippedTitleColor());
         vo.setAvatar(user.getAvatar());
         return vo;
     }

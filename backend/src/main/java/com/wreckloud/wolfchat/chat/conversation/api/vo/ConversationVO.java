@@ -25,6 +25,12 @@ public class ConversationVO {
     @Schema(description = "对方行者名")
     private String targetNickname;
 
+    @Schema(description = "对方当前佩戴头衔名称")
+    private String targetEquippedTitleName;
+
+    @Schema(description = "对方当前佩戴头衔颜色")
+    private String targetEquippedTitleColor;
+
     @Schema(description = "对方头像")
     private String targetAvatar;
 
