@@ -21,6 +21,7 @@
 17. 历史消息加载骨架已收敛：`im-page-helper.js` 统一 `loadMessages` 默认行为（分页加载、构建消息块、首屏滚底、资料预热）。
 18. 发送者资料预热已收敛：`im-user-helper.js` 统一 `ensureSenderProfiles`（消息内资料预热 + 按需补全），并清理页面未使用的 socket 拆除方法。
 19. 「更多」面板动作已收敛：`im-page-helper.js` 统一默认媒体动作分发与发送依赖构建，页面仅保留上传能力配置。
+20. 文本发送流程已收敛：`im-page-helper.js` 统一 `sendComposerTextMessage`，页面不再重复维护同一发送实现。
 
 ## 仍需收口（按建议顺序）
 

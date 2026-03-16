@@ -303,6 +303,16 @@ async function sendComposerText(page, sendTextFn, toastError) {
   }
 }
 
+async function sendComposerTextMessage(page, imSendHelper, toastError) {
+  return sendComposerText(
+    page,
+    (content) => imSendHelper.sendTextMessage(page, content, {
+      clearInputOnSuccess: true
+    }),
+    toastError
+  )
+}
+
 function previewImage(page, event) {
   const current = event && event.currentTarget && event.currentTarget.dataset
     ? event.currentTarget.dataset.url
@@ -359,6 +369,7 @@ module.exports = {
   onSendStatusTap,
   setSendStatus,
   sendComposerText,
+  sendComposerTextMessage,
   previewImage,
   resolveConnectionTip
 }

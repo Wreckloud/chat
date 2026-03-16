@@ -163,13 +163,7 @@ Page({
   },
 
   async sendMessage() {
-    return imPageHelper.sendComposerText(
-      this,
-      (content) => imSendHelper.sendTextMessage(this, content, {
-        clearInputOnSuccess: true
-      }),
-      toastError
-    )
+    return imPageHelper.sendComposerTextMessage(this, imSendHelper, toastError)
   },
 
   handleWsMessage(payload) {
