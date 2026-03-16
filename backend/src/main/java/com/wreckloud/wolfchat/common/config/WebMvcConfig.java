@@ -24,6 +24,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         // 认证接口放行
                         "/auth/**",
                         "/api/auth/**",
+                        "/admin/auth/**",
+                        "/api/admin/auth/**",
                         // OpenAPI 文档放行
                         "/v3/api-docs/**",
                         "/doc.html/**",

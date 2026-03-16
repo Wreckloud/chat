@@ -30,6 +30,10 @@ CREATE TABLE IF NOT EXISTS `wf_user` (
     `first_login_at` DATETIME DEFAULT NULL COMMENT '首次登录时间',
     `last_login_at` DATETIME DEFAULT NULL COMMENT '最近登录时间',
     `active_day_count` INT NOT NULL DEFAULT 0 COMMENT '活跃天数（按登录日期去重统计）',
+    `disabled_by_ban` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否因封禁导致禁用：0-否，1-是',
+    `equipped_title_code` VARCHAR(32) DEFAULT NULL COMMENT '当前佩戴头衔编码',
+    `equipped_title_name` VARCHAR(32) DEFAULT NULL COMMENT '当前佩戴头衔名称',
+    `equipped_title_color` VARCHAR(16) DEFAULT NULL COMMENT '当前佩戴头衔颜色',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -73,6 +77,53 @@ CREATE TABLE IF NOT EXISTS `wf_user_profile` (
     KEY `idx_nickname` (`nickname`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行者资料表';
 
+-- 成就定义表
+CREATE TABLE IF NOT EXISTS `wf_achievement` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `code` VARCHAR(32) NOT NULL COMMENT '成就编码',
+    `name` VARCHAR(64) NOT NULL COMMENT '成就名称',
+    `description` VARCHAR(255) DEFAULT NULL COMMENT '成就描述',
+    `title_name` VARCHAR(32) NOT NULL COMMENT '头衔名称',
+    `title_color` VARCHAR(16) DEFAULT NULL COMMENT '头衔颜色',
+    `sort_no` INT NOT NULL DEFAULT 0 COMMENT '排序号（越小越靠前）',
+    `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用：0-否，1-是',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`),
+    KEY `idx_enabled_sort` (`enabled`, `sort_no`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='成就定义表';
+
+-- 用户成就表
+CREATE TABLE IF NOT EXISTS `wf_user_achievement` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `achievement_code` VARCHAR(32) NOT NULL COMMENT '成就编码',
+    `unlock_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '解锁时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_achievement` (`user_id`, `achievement_code`),
+    KEY `idx_user_unlock_time` (`user_id`, `unlock_time`, `id`),
+    KEY `idx_achievement_code` (`achievement_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户成就表';
+
+-- 成就初始化
+INSERT INTO `wf_achievement` (
+    `code`, `name`, `description`, `title_name`, `title_color`, `sort_no`, `enabled`
+) VALUES
+    ('WOLF_CUB', '初入群落', '注册成功后自动获得', '小狼', '#5f7ea2', 10, 1),
+    ('FIRST_POST', '初次发帖', '首次发布主题后获得', '初啸者', '#4f7f63', 20, 1),
+    ('FIRST_REPLY', '初次回帖', '首次回复主题后获得', '回声者', '#8a6d4b', 30, 1),
+    ('FIRST_FOLLOW', '初次关注', '首次关注其他行者后获得', '同行者', '#875f8c', 40, 1)
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`),
+    `description` = VALUES(`description`),
+    `title_name` = VALUES(`title_name`),
+    `title_color` = VALUES(`title_color`),
+    `sort_no` = VALUES(`sort_no`),
+    `enabled` = VALUES(`enabled`),
+    `update_time` = NOW();
+
 -- 登录记录表
 CREATE TABLE IF NOT EXISTS `wf_login_record` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -91,6 +142,23 @@ CREATE TABLE IF NOT EXISTS `wf_login_record` (
     KEY `idx_result_login_time` (`login_result`, `login_time`),
     KEY `idx_login_time` (`login_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录记录表';
+
+-- 用户通知表
+CREATE TABLE IF NOT EXISTS `wf_user_notice` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '接收用户ID',
+    `notice_type` VARCHAR(32) NOT NULL COMMENT '通知类型',
+    `content` VARCHAR(255) NOT NULL COMMENT '通知内容',
+    `biz_type` VARCHAR(20) DEFAULT NULL COMMENT '业务类型：ACHIEVEMENT/FOLLOW/THREAD',
+    `biz_id` BIGINT DEFAULT NULL COMMENT '业务ID',
+    `is_read` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已读：0-未读，1-已读',
+    `read_time` DATETIME DEFAULT NULL COMMENT '已读时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_read_time` (`user_id`, `is_read`, `create_time`, `id`),
+    KEY `idx_user_create_time` (`user_id`, `create_time`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户通知表';
 
 -- 邮箱验证码使用 Redis 存储（不落库）
 

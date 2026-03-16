@@ -34,6 +34,7 @@ public enum ErrorCode {
     EMAIL_VERIFY_LINK_INVALID(2017, "认证链接无效或已失效"),
     EMAIL_REBIND_NOT_ALLOWED(2018, "邮箱已绑定，不支持换绑"),
     PASSWORD_RESET_LINK_INVALID(2019, "重置密码链接无效或已失效"),
+    ADMIN_FORBIDDEN(2020, "无管理端访问权限"),
 
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),
@@ -54,7 +55,10 @@ public enum ErrorCode {
     FORUM_THREAD_LOCKED(3017, "主题已锁定，暂不可回复"),
     FORUM_REPLY_NOT_FOUND(3018, "引用楼层不存在"),
     FORUM_BOARD_CLOSED(3019, "版块已关闭，暂不可发帖"),
-    FORUM_OPERATION_FORBIDDEN(3020, "无权限执行该操作");
+    FORUM_OPERATION_FORBIDDEN(3020, "无权限执行该操作"),
+    ACHIEVEMENT_NOT_FOUND(3021, "成就不存在"),
+    ACHIEVEMENT_NOT_UNLOCKED(3022, "成就尚未解锁"),
+    NOTICE_NOT_FOUND(3023, "通知不存在");
 
     /**
      * 错误码

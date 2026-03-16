@@ -46,6 +46,7 @@ public class UserService {
     private final WfUserProfileMapper wfUserProfileMapper;
     private final WfUserAuthMapper wfUserAuthMapper;
     private final UserAuthService userAuthService;
+    private final UserBanService userBanService;
     private final SessionUserService sessionUserService;
 
     /**
@@ -98,6 +99,12 @@ public class UserService {
      */
     public WfUser getEnabledByIdOrThrow(Long userId) {
         WfUser user = getByIdOrThrow(userId);
+        if (Boolean.TRUE.equals(user.getDisabledByBan())) {
+            boolean restored = userBanService.tryRestoreUserIfBanExpired(userId);
+            if (restored) {
+                user = getByIdOrThrow(userId);
+            }
+        }
         checkEnabled(user);
         return user;
     }
@@ -107,6 +114,12 @@ public class UserService {
      */
     public WfUser getEnabledByWolfNoOrThrow(String wolfNo) {
         WfUser user = getByWolfNoOrThrow(wolfNo);
+        if (Boolean.TRUE.equals(user.getDisabledByBan())) {
+            boolean restored = userBanService.tryRestoreUserIfBanExpired(user.getId());
+            if (restored) {
+                user = getByIdOrThrow(user.getId());
+            }
+        }
         checkEnabled(user);
         return user;
     }
@@ -186,7 +199,11 @@ public class UserService {
 
         LambdaUpdateWrapper<WfUser> userUpdateWrapper = new LambdaUpdateWrapper<>();
         userUpdateWrapper.eq(WfUser::getId, userId)
-                .set(WfUser::getStatus, UserStatus.DISABLED);
+                .set(WfUser::getStatus, UserStatus.DISABLED)
+                .set(WfUser::getDisabledByBan, false)
+                .set(WfUser::getEquippedTitleCode, null)
+                .set(WfUser::getEquippedTitleName, null)
+                .set(WfUser::getEquippedTitleColor, null);
         int userUpdateRows = wfUserMapper.update(null, userUpdateWrapper);
         if (userUpdateRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);

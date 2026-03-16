@@ -19,6 +19,11 @@
       "name": "wolfchat.oss.max-file-size-bytes",
       "type": "java.lang.Long",
       "description": "聊天文件上传大小上限（字节）。"
+    },
+    {
+      "name": "wolfchat.admin.console.allowed-user-ids",
+      "type": "java.util.List<java.lang.Long>",
+      "description": "管理端允许访问的用户ID列表。"
     }
   ]
 }

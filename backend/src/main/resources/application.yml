@@ -41,6 +41,11 @@ log:
     level: info
 
 wolfchat:
+  admin:
+    console:
+      # 管理端允许访问的用户ID
+      allowed-user-ids:
+        - 1
   ws:
     # WebSocket 允许的跨域来源模式
     allowed-origin-patterns:

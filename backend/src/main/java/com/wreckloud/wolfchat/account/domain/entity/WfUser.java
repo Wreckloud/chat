@@ -95,6 +95,26 @@ public class WfUser {
      */
     private Integer activeDayCount;
 
+    /**
+     * 是否因封禁导致禁用（用于到期后自动恢复）
+     */
+    private Boolean disabledByBan;
+
+    /**
+     * 当前佩戴头衔编码
+     */
+    private String equippedTitleCode;
+
+    /**
+     * 当前佩戴头衔名称
+     */
+    private String equippedTitleName;
+
+    /**
+     * 当前佩戴头衔颜色
+     */
+    private String equippedTitleColor;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
