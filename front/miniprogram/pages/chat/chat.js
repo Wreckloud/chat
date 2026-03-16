@@ -28,20 +28,24 @@ Page({
   },
 
   onLoad() {
-    if (!auth.requireLogin()) {
-      return
-    }
-    const userInfo = auth.getUserInfo()
-    this.currentUserId = userInfo ? Number(userInfo.userId) : 0
+    imPageHelper.handlePageLoad(this, auth, {
+      initContext: () => {
+        const userInfo = auth.getUserInfo()
+        this.currentUserId = userInfo ? Number(userInfo.userId) : 0
+      }
+    })
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    this.syncPinnedConversationIds()
-    this.initSocket()
-    this.loadLobbyMeta()
-    this.loadConversations()
+    imPageHelper.handlePageShow(this, auth, {
+      applyTheme: () => this.applyTheme(),
+      afterShow: () => {
+        this.syncPinnedConversationIds()
+        this.initSocket()
+        this.loadLobbyMeta()
+        this.loadConversations()
+      }
+    })
   },
 
   onHide() {
