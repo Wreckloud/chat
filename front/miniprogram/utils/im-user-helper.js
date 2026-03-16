@@ -90,6 +90,27 @@ function cacheSenderProfilesFromMessages(messages, cacheFn) {
   }
 }
 
+function ensureSenderProfiles(page, request, normalizeUser, messages, options = {}) {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return
+  }
+
+  cacheSenderProfilesFromMessages(messages, (user) => {
+    cacheUserProfile(page, normalizeUser, user)
+  })
+
+  if (!options.fetchMissing || !request || typeof request.get !== 'function') {
+    return
+  }
+
+  const senderIds = collectUniqueSenderIds(messages)
+  for (let index = 0; index < senderIds.length; index++) {
+    ensureUserProfileById(page, request, normalizeUser, senderIds[index], {
+      onLoaded: options.onLoaded
+    })
+  }
+}
+
 function loadCurrentUserProfile(page, request, normalizeUser, onLoaded) {
   return request.get('/users/me')
     .then(res => {
@@ -183,6 +204,7 @@ module.exports = {
   resolveSenderProfile,
   collectUniqueSenderIds,
   cacheSenderProfilesFromMessages,
+  ensureSenderProfiles,
   loadCurrentUserProfile,
   ensureUserProfileById,
   getUserIdFromTapEvent,

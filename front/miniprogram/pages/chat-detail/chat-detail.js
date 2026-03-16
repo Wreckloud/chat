@@ -97,10 +97,6 @@ Page({
     imPageHelper.initSocket(this, ws, payload => this.handleWsMessage(payload))
   },
 
-  teardownSocket() {
-    imPageHelper.teardownSocket(this, ws)
-  },
-
   loadConversation() {
     request.get('/conversations')
       .then(res => {
@@ -255,10 +251,29 @@ Page({
   },
 
   ensureSenderProfiles(messages) {
-    const senderIds = imUserHelper.collectUniqueSenderIds(messages)
-    for (let index = 0; index < senderIds.length; index++) {
-      this.ensureUserProfileById(senderIds[index])
-    }
+    imUserHelper.ensureSenderProfiles(this, request, normalizeUser, messages, {
+      fetchMissing: true,
+      onLoaded: (normalized) => {
+        const updates = {}
+        if (Number(this.currentUserId) === Number(normalized.userId)) {
+          this.currentUser = normalized
+        }
+
+        if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalized.userId)) {
+          updates.targetUser = normalized
+          wx.setNavigationBarTitle({
+            title: normalized.nickname || normalized.wolfNo || '聊天'
+          })
+        }
+
+        if (this.data.messages.length > 0) {
+          updates.messageBlocks = this.buildMessageBlocks(this.data.messages)
+        }
+        if (Object.keys(updates).length > 0) {
+          this.setData(updates)
+        }
+      }
+    })
   },
 
   ensureUserProfileById(userId) {

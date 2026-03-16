@@ -80,10 +80,6 @@ Page({
     imPageHelper.initSocket(this, ws, payload => this.handleWsMessage(payload))
   },
 
-  teardownSocket() {
-    imPageHelper.teardownSocket(this, ws)
-  },
-
   loadLobbyMeta() {
     return lobbyMetaHelper.loadLobbyMeta(this, request, (meta) => {
         const onlineCount = Number(meta.onlineCount) || 0
@@ -234,7 +230,7 @@ Page({
   },
 
   ensureSenderProfiles(messages) {
-    imUserHelper.cacheSenderProfilesFromMessages(messages, user => this.cacheUserProfile(user))
+    imUserHelper.ensureSenderProfiles(this, request, normalizeUser, messages)
   },
 
   applyTheme() {
