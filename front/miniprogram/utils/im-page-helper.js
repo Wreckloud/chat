@@ -117,6 +117,40 @@ function handlePageShow(page, auth, options = {}) {
   return true
 }
 
+function loadCurrentUserProfile(page, options = {}) {
+  if (!page) {
+    return Promise.resolve()
+  }
+  const loadFn = typeof options.loadFn === 'function' ? options.loadFn : null
+  const cacheUserProfile = typeof options.cacheUserProfile === 'function'
+    ? options.cacheUserProfile
+    : null
+  const buildMessageBlocks = typeof options.buildMessageBlocks === 'function'
+    ? options.buildMessageBlocks
+    : null
+
+  if (!loadFn) {
+    return Promise.resolve()
+  }
+
+  return loadFn((user) => {
+    if (cacheUserProfile) {
+      cacheUserProfile(user)
+    }
+    const messages = Array.isArray(page.data && page.data.messages)
+      ? page.data.messages
+      : []
+    if (messages.length > 0 && buildMessageBlocks) {
+      page.setData({
+        messageBlocks: buildMessageBlocks(messages)
+      })
+    }
+    if (typeof options.onLoaded === 'function') {
+      options.onLoaded(user)
+    }
+  })
+}
+
 function onMessageInput(page, event) {
   const value = event && event.detail ? event.detail.value : ''
   const nextData = {
@@ -256,6 +290,7 @@ module.exports = {
   cleanupPage,
   handlePageReady,
   handlePageShow,
+  loadCurrentUserProfile,
   onMessageInput,
   onKeyboardHeightChange,
   onComposerFocus,

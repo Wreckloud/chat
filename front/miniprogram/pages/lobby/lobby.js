@@ -117,19 +117,16 @@ Page({
   },
 
   loadCurrentUserProfile() {
-    return imUserHelper.loadCurrentUserProfile(
-      this,
-      request,
-      normalizeUser,
-      user => {
-        this.cacheUserProfile(user)
-        if (this.data.messages.length > 0) {
-          this.setData({
-            messageBlocks: this.buildMessageBlocks(this.data.messages)
-          })
-        }
-      }
-    )
+    return imPageHelper.loadCurrentUserProfile(this, {
+      loadFn: (onLoaded) => imUserHelper.loadCurrentUserProfile(
+        this,
+        request,
+        normalizeUser,
+        onLoaded
+      ),
+      cacheUserProfile: (user) => this.cacheUserProfile(user),
+      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages)
+    })
   },
 
   loadMessages() {
