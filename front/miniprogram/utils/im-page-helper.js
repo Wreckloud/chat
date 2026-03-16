@@ -409,9 +409,7 @@ module.exports = {
   onSendButtonTap,
   onSendStatusTap,
   setSendStatus,
-  sendComposerText,
   sendComposerTextMessage,
   onMessageListUpper,
-  previewImage,
-  resolveConnectionTip
+  previewImage
 }
