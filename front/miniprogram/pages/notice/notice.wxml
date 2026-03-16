@@ -9,7 +9,7 @@
       <view
         wx:for="{{list}}"
         wx:key="noticeId"
-        class="notice-item {{item.read ? 'notice-item-read' : ''}}"
+        class="notice-item {{item.read ? 'notice-item-read' : ''}} {{item.navigable ? 'notice-item-nav' : ''}}"
         bindtap="onTapNotice"
         data-id="{{item.noticeId}}">
         <view class="notice-row">
@@ -18,7 +18,10 @@
         </view>
         <view class="notice-meta">
           <text>{{item.typeText}}</text>
-          <text>{{item.timeText}}</text>
+          <view class="notice-meta-right">
+            <text>{{item.timeText}}</text>
+            <text wx:if="{{item.navigable}}" class="notice-nav-hint">[查看]</text>
+          </view>
         </view>
       </view>
     </block>

@@ -8,18 +8,6 @@ const { refreshNoticeUnreadBadge } = require('../../utils/tab-badge')
 
 const DEFAULT_PAGE = 1
 const DEFAULT_SIZE = 20
-const NOTICE_BIZ_TYPE = {
-  ACHIEVEMENT: 'ACHIEVEMENT',
-  FOLLOW: 'FOLLOW',
-  THREAD: 'THREAD'
-}
-const NOTICE_TYPE_TEXT_MAP = {
-  ACHIEVEMENT_UNLOCK: '成就',
-  FOLLOW_RECEIVED: '关注',
-  THREAD_LIKED: '点赞',
-  THREAD_REPLIED: '回复',
-  REPLY_LIKED: '点赞'
-}
 
 Page({
   data: {
@@ -81,9 +69,9 @@ Page({
       noticeId: item.noticeId,
       noticeType: item.noticeType || '',
       content: item.content || '',
-      bizType: item.bizType || '',
-      bizId: item.bizId || null,
-      typeText: NOTICE_TYPE_TEXT_MAP[item.noticeType] || '通知',
+      typeText: item.typeLabel || '通知',
+      actionUrl: item.actionUrl || '',
+      navigable: item.navigable === true,
       read: item.read === true,
       readTime: item.readTime || '',
       createTime: item.createTime || '',
@@ -144,20 +132,14 @@ Page({
   },
 
   navigateByNotice(notice) {
-    const bizType = notice.bizType
-    if (bizType === NOTICE_BIZ_TYPE.ACHIEVEMENT) {
-      wx.navigateTo({ url: '/pages/achievement/achievement' })
+    if (!notice || notice.navigable !== true) {
       return
     }
-    if (bizType === NOTICE_BIZ_TYPE.FOLLOW) {
-      wx.navigateTo({ url: '/pages/follow/follow' })
+    const actionUrl = String(notice.actionUrl || '').trim()
+    if (!actionUrl) {
       return
     }
-    if (bizType === NOTICE_BIZ_TYPE.THREAD && notice.bizId) {
-      wx.navigateTo({
-        url: `/pages/post-detail/post-detail?threadId=${notice.bizId}`
-      })
-    }
+    wx.navigateTo({ url: actionUrl })
   },
 
   onReachBottom() {

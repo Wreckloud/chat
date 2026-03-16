@@ -33,9 +33,9 @@ public class UserNoticeService {
     private static final long DEFAULT_PAGE = 1L;
     private static final long DEFAULT_SIZE = 20L;
     private static final long MAX_SIZE = 50L;
-    private static final String BIZ_TYPE_ACHIEVEMENT = "ACHIEVEMENT";
-    private static final String BIZ_TYPE_FOLLOW = "FOLLOW";
-    private static final String BIZ_TYPE_THREAD = "THREAD";
+    private static final String PAGE_ACHIEVEMENT = "/pages/achievement/achievement";
+    private static final String PAGE_FOLLOW = "/pages/follow/follow";
+    private static final String PAGE_THREAD_DETAIL_PREFIX = "/pages/post-detail/post-detail?threadId=";
 
     private final WfUserNoticeMapper wfUserNoticeMapper;
 
@@ -108,35 +108,35 @@ public class UserNoticeService {
         String content = StringUtils.hasText(safeTitleName)
                 ? "你解锁了成就「" + safeAchievementName + "」，获得头衔「" + safeTitleName + "」"
                 : "你解锁了成就「" + safeAchievementName + "」";
-        saveNoticeQuietly(userId, NoticeType.ACHIEVEMENT_UNLOCK, content, BIZ_TYPE_ACHIEVEMENT, achievementId);
+        saveNoticeQuietly(userId, NoticeType.ACHIEVEMENT_UNLOCK, content, achievementId);
     }
 
     public void notifyFollowReceived(Long userId) {
-        saveNoticeQuietly(userId, NoticeType.FOLLOW_RECEIVED, "你收到新的关注", BIZ_TYPE_FOLLOW, null);
+        saveNoticeQuietly(userId, NoticeType.FOLLOW_RECEIVED, "你收到新的关注", null);
     }
 
     public void notifyThreadLiked(Long threadAuthorId, Long threadId, Long operatorUserId) {
         if (isSelfNotice(threadAuthorId, operatorUserId)) {
             return;
         }
-        saveNoticeQuietly(threadAuthorId, NoticeType.THREAD_LIKED, "你的主题收到新的点赞", BIZ_TYPE_THREAD, threadId);
+        saveNoticeQuietly(threadAuthorId, NoticeType.THREAD_LIKED, "你的主题收到新的点赞", threadId);
     }
 
     public void notifyThreadReplied(Long threadAuthorId, Long threadId, Long operatorUserId) {
         if (isSelfNotice(threadAuthorId, operatorUserId)) {
             return;
         }
-        saveNoticeQuietly(threadAuthorId, NoticeType.THREAD_REPLIED, "你的主题收到新的回复", BIZ_TYPE_THREAD, threadId);
+        saveNoticeQuietly(threadAuthorId, NoticeType.THREAD_REPLIED, "你的主题收到新的回复", threadId);
     }
 
     public void notifyReplyLiked(Long replyAuthorId, Long threadId, Long operatorUserId) {
         if (isSelfNotice(replyAuthorId, operatorUserId)) {
             return;
         }
-        saveNoticeQuietly(replyAuthorId, NoticeType.REPLY_LIKED, "你的回复收到新的点赞", BIZ_TYPE_THREAD, threadId);
+        saveNoticeQuietly(replyAuthorId, NoticeType.REPLY_LIKED, "你的回复收到新的点赞", threadId);
     }
 
-    private void saveNoticeQuietly(Long userId, NoticeType noticeType, String content, String bizType, Long bizId) {
+    private void saveNoticeQuietly(Long userId, NoticeType noticeType, String content, Long bizId) {
         if (userId == null || noticeType == null || !StringUtils.hasText(content)) {
             return;
         }
@@ -145,7 +145,7 @@ public class UserNoticeService {
             notice.setUserId(userId);
             notice.setNoticeType(noticeType);
             notice.setContent(content);
-            notice.setBizType(bizType);
+            notice.setBizType(noticeType.getBizType());
             notice.setBizId(bizId);
             notice.setRead(false);
             int insertRows = wfUserNoticeMapper.insert(notice);
@@ -154,7 +154,7 @@ public class UserNoticeService {
             }
         } catch (Exception ex) {
             log.warn("写入通知失败: userId={}, type={}, bizType={}, bizId={}",
-                    userId, noticeType, bizType, bizId, ex);
+                    userId, noticeType, noticeType.getBizType(), bizId, ex);
         }
     }
 
@@ -169,13 +169,38 @@ public class UserNoticeService {
         UserNoticeVO vo = new UserNoticeVO();
         vo.setNoticeId(notice.getId());
         vo.setNoticeType(notice.getNoticeType());
+        vo.setTypeLabel(notice.getNoticeType() == null ? "通知" : notice.getNoticeType().getLabel());
         vo.setContent(notice.getContent());
         vo.setBizType(notice.getBizType());
         vo.setBizId(notice.getBizId());
+        String actionUrl = buildActionUrl(notice);
+        vo.setActionUrl(actionUrl);
+        vo.setNavigable(StringUtils.hasText(actionUrl));
         vo.setRead(Boolean.TRUE.equals(notice.getRead()));
         vo.setReadTime(notice.getReadTime());
         vo.setCreateTime(notice.getCreateTime());
         return vo;
+    }
+
+    private String buildActionUrl(WfUserNotice notice) {
+        if (notice == null || notice.getNoticeType() == null) {
+            return "";
+        }
+        switch (notice.getNoticeType()) {
+            case ACHIEVEMENT_UNLOCK:
+                return PAGE_ACHIEVEMENT;
+            case FOLLOW_RECEIVED:
+                return PAGE_FOLLOW;
+            case THREAD_LIKED:
+            case THREAD_REPLIED:
+            case REPLY_LIKED:
+                if (notice.getBizId() == null || notice.getBizId() <= 0L) {
+                    return "";
+                }
+                return PAGE_THREAD_DETAIL_PREFIX + notice.getBizId();
+            default:
+                return "";
+        }
     }
 
     private boolean isSelfNotice(Long targetUserId, Long operatorUserId) {

@@ -20,6 +20,9 @@ public class UserNoticeVO {
     @Schema(description = "通知类型")
     private NoticeType noticeType;
 
+    @Schema(description = "通知类型文案")
+    private String typeLabel;
+
     @Schema(description = "通知内容")
     private String content;
 
@@ -28,6 +31,12 @@ public class UserNoticeVO {
 
     @Schema(description = "业务ID")
     private Long bizId;
+
+    @Schema(description = "通知跳转地址（小程序页面路径）")
+    private String actionUrl;
+
+    @Schema(description = "是否可跳转")
+    private Boolean navigable;
 
     @Schema(description = "是否已读")
     private Boolean read;
