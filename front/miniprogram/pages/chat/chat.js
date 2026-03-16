@@ -29,7 +29,7 @@ Page({
 
   onLoad() {
     imPageHelper.handlePageLoad(this, auth, {
-      initContext: () => {
+      afterInit: () => {
         const userInfo = auth.getUserInfo()
         this.currentUserId = userInfo ? Number(userInfo.userId) : 0
       }
@@ -38,7 +38,7 @@ Page({
 
   onShow() {
     imPageHelper.handlePageShow(this, auth, {
-      applyTheme: () => this.applyTheme(),
+      beforeShow: () => this.applyTheme(),
       afterShow: () => {
         this.syncPinnedConversationIds()
         this.initSocket()

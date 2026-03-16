@@ -58,18 +58,16 @@ Page({
         this.setData({ conversationId })
         return true
       },
-      initContext: () => {
+      afterInit: () => {
         imUserHelper.initCurrentUserContext(this, auth, normalizeUser, {
           enableLoadingUserGuard: true
         })
-      },
-      afterInit: () => {
         this.markConversationRead(true)
-      },
-      loadCurrentUserProfile: () => this.loadCurrentUserProfile(),
-      loadMeta: () => this.loadConversation(),
-      loadMessages: () => this.loadMessages(),
-      initSocket: () => this.initSocket()
+        this.loadCurrentUserProfile()
+        this.loadConversation()
+        this.loadMessages()
+        this.initSocket()
+      }
     })
   },
 
@@ -79,7 +77,7 @@ Page({
 
   onShow() {
     imPageHelper.handlePageShow(this, auth, {
-      applyTheme: () => this.applyTheme(),
+      beforeShow: () => this.applyTheme(),
       afterShow: () => this.markConversationRead(true)
     })
   },

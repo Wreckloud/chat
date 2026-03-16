@@ -48,13 +48,13 @@ Page({
 
   onLoad() {
     imPageHelper.handlePageLoad(this, auth, {
-      initContext: () => {
+      afterInit: () => {
         imUserHelper.initCurrentUserContext(this, auth, normalizeUser)
-      },
-      loadCurrentUserProfile: () => this.loadCurrentUserProfile(),
-      loadMeta: () => this.loadLobbyMeta(),
-      loadMessages: () => this.loadMessages(),
-      initSocket: () => this.initSocket()
+        this.loadCurrentUserProfile()
+        this.loadLobbyMeta()
+        this.loadMessages()
+        this.initSocket()
+      }
     })
   },
 
@@ -64,7 +64,7 @@ Page({
 
   onShow() {
     imPageHelper.handlePageShow(this, auth, {
-      applyTheme: () => this.applyTheme(),
+      beforeShow: () => this.applyTheme(),
       afterShow: () => this.loadLobbyMeta()
     })
   },

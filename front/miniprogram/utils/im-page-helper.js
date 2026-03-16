@@ -108,26 +108,7 @@ function handlePageLoad(page, auth, options = {}) {
   }
   return pageLifecycleHelper.handleProtectedPageLoad(auth, {
     beforeInit: options.beforeInit,
-    afterInit: () => {
-      if (typeof options.initContext === 'function') {
-        options.initContext()
-      }
-      if (typeof options.afterInit === 'function') {
-        options.afterInit()
-      }
-      if (typeof options.loadCurrentUserProfile === 'function') {
-        options.loadCurrentUserProfile()
-      }
-      if (typeof options.loadMeta === 'function') {
-        options.loadMeta()
-      }
-      if (typeof options.loadMessages === 'function') {
-        options.loadMessages()
-      }
-      if (typeof options.initSocket === 'function') {
-        options.initSocket()
-      }
-    }
+    afterInit: options.afterInit
   })
 }
 
@@ -136,11 +117,7 @@ function handlePageShow(page, auth, options = {}) {
     return false
   }
   return pageLifecycleHelper.handleProtectedPageShow(auth, {
-    beforeShow: () => {
-      if (typeof options.applyTheme === 'function') {
-        options.applyTheme()
-      }
-    },
+    beforeShow: options.beforeShow,
     afterShow: () => {
       imHelper.measureDockHeight(page)
       if (typeof options.afterShow === 'function') {
