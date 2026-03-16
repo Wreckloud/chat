@@ -101,6 +101,37 @@ function handlePageReady(page) {
   imHelper.measureDockHeight(page)
 }
 
+function handlePageLoad(page, auth, options = {}) {
+  if (!page || !auth || typeof auth.requireLogin !== 'function') {
+    return false
+  }
+  if (!auth.requireLogin()) {
+    return false
+  }
+  if (typeof options.beforeInit === 'function' && options.beforeInit() === false) {
+    return false
+  }
+  if (typeof options.initContext === 'function') {
+    options.initContext()
+  }
+  if (typeof options.afterInit === 'function') {
+    options.afterInit()
+  }
+  if (typeof options.loadCurrentUserProfile === 'function') {
+    options.loadCurrentUserProfile()
+  }
+  if (typeof options.loadMeta === 'function') {
+    options.loadMeta()
+  }
+  if (typeof options.loadMessages === 'function') {
+    options.loadMessages()
+  }
+  if (typeof options.initSocket === 'function') {
+    options.initSocket()
+  }
+  return true
+}
+
 function handlePageShow(page, auth, options = {}) {
   if (!page || !auth || typeof auth.requireLogin !== 'function') {
     return false
@@ -128,7 +159,9 @@ function loadCurrentUserProfile(page, options = {}) {
     : null
   const buildMessageBlocks = typeof options.buildMessageBlocks === 'function'
     ? options.buildMessageBlocks
-    : null
+    : (typeof page.buildMessageBlocks === 'function'
+        ? (messages) => page.buildMessageBlocks(messages)
+        : null)
 
   if (!loadFn) {
     return Promise.resolve()
@@ -331,6 +364,15 @@ function previewImage(page, event) {
   })
 }
 
+function onMessageListUpper(page, loadMessagesFn) {
+  if (!page || !page.data || page.data.loading || !page.data.hasMore) {
+    return
+  }
+  if (typeof loadMessagesFn === 'function') {
+    loadMessagesFn()
+  }
+}
+
 function onSendStatusTap(page, sendFn) {
   if (!page || page.data.sending) {
     return
@@ -352,6 +394,7 @@ module.exports = {
   initSocket,
   teardownSocket,
   cleanupPage,
+  handlePageLoad,
   handlePageReady,
   handlePageShow,
   loadCurrentUserProfile,
@@ -362,14 +405,13 @@ module.exports = {
   onComposerBlur,
   setMorePanelVisible,
   toggleMorePanel,
-  getSendDeps,
-  getMediaSendDeps,
   onDefaultMoreActionTap,
   onSendButtonTap,
   onSendStatusTap,
   setSendStatus,
   sendComposerText,
   sendComposerTextMessage,
+  onMessageListUpper,
   previewImage,
   resolveConnectionTip
 }

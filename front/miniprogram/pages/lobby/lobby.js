@@ -47,14 +47,15 @@ Page({
   IM_SEND_TYPE: 'LOBBY_SEND',
 
   onLoad() {
-    if (!auth.requireLogin()) return
-
-    imUserHelper.initCurrentUserContext(this, auth, normalizeUser)
-
-    this.loadCurrentUserProfile()
-    this.loadLobbyMeta()
-    this.loadMessages()
-    this.initSocket()
+    imPageHelper.handlePageLoad(this, auth, {
+      initContext: () => {
+        imUserHelper.initCurrentUserContext(this, auth, normalizeUser)
+      },
+      loadCurrentUserProfile: () => this.loadCurrentUserProfile(),
+      loadMeta: () => this.loadLobbyMeta(),
+      loadMessages: () => this.loadMessages(),
+      initSocket: () => this.initSocket()
+    })
   },
 
   onReady() {
@@ -120,18 +121,13 @@ Page({
         normalizeUser,
         onLoaded
       ),
-      cacheUserProfile: (user) => this.cacheUserProfile(user),
-      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages)
+      cacheUserProfile: (user) => this.cacheUserProfile(user)
     })
   },
 
   loadMessages() {
     return imPageHelper.loadMessages(this, request, {
       url: '/lobby/messages',
-      parseRecords: (res) => {
-        const pageData = res && res.data ? res.data : {}
-        return Array.isArray(pageData.records) ? pageData.records : []
-      },
       onError: (err) => {
         toastError(err, '加载失败')
       }
@@ -264,7 +260,7 @@ Page({
   },
 
   onMessageListUpper() {
-    this.loadMessages()
+    imPageHelper.onMessageListUpper(this, () => this.loadMessages())
   },
 
   previewImage(e) {

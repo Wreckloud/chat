@@ -45,30 +45,32 @@ Page({
   IM_SEND_TYPE: 'SEND',
 
   onLoad(options) {
-    if (!auth.requireLogin()) return
-
-    const conversationId = Number(options.conversationId)
-    if (!conversationId) {
-      toastError('会话ID不能为空')
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 1500)
-      return
-    }
-
-    imUserHelper.initCurrentUserContext(this, auth, normalizeUser, {
-      enableLoadingUserGuard: true
+    imPageHelper.handlePageLoad(this, auth, {
+      beforeInit: () => {
+        const conversationId = Number(options.conversationId)
+        if (!conversationId) {
+          toastError('会话ID不能为空')
+          setTimeout(() => {
+            wx.navigateBack()
+          }, 1500)
+          return false
+        }
+        this.setData({ conversationId })
+        return true
+      },
+      initContext: () => {
+        imUserHelper.initCurrentUserContext(this, auth, normalizeUser, {
+          enableLoadingUserGuard: true
+        })
+      },
+      afterInit: () => {
+        this.markConversationRead(true)
+      },
+      loadCurrentUserProfile: () => this.loadCurrentUserProfile(),
+      loadMeta: () => this.loadConversation(),
+      loadMessages: () => this.loadMessages(),
+      initSocket: () => this.initSocket()
     })
-
-    this.setData({
-      conversationId
-    })
-
-    this.markConversationRead(true)
-    this.loadCurrentUserProfile()
-    this.loadConversation()
-    this.loadMessages()
-    this.initSocket()
   },
 
   onReady() {
@@ -138,8 +140,7 @@ Page({
         normalizeUser,
         onLoaded
       ),
-      cacheUserProfile: (user) => this.cacheUserProfile(user),
-      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages)
+      cacheUserProfile: (user) => this.cacheUserProfile(user)
     })
   },
 
@@ -338,7 +339,7 @@ Page({
   },
 
   onMessageListUpper() {
-    this.loadMessages()
+    imPageHelper.onMessageListUpper(this, () => this.loadMessages())
   },
 
   previewImage(e) {

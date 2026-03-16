@@ -22,6 +22,7 @@
 18. 发送者资料预热已收敛：`im-user-helper.js` 统一 `ensureSenderProfiles`（消息内资料预热 + 按需补全），并清理页面未使用的 socket 拆除方法。
 19. 「更多」面板动作已收敛：`im-page-helper.js` 统一默认媒体动作分发与发送依赖构建，页面仅保留上传能力配置。
 20. 文本发送流程已收敛：`im-page-helper.js` 统一 `sendComposerTextMessage`，页面不再重复维护同一发送实现。
+21. 页面初始化与上拉加载流程已收敛：`im-page-helper.js` 统一 `onLoad` 启动编排与 `onMessageListUpper` 加载条件，移除页面重复判定。
 
 ## 仍需收口（按建议顺序）
 
