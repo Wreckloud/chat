@@ -1,5 +1,6 @@
 const imHelper = require('./im-helper')
 const imMessageHelper = require('./im-message-helper')
+const pageLifecycleHelper = require('./page-lifecycle-helper')
 
 const CONNECTION_TIP_MAP = {
   CONNECTING: '连接中...',
@@ -102,51 +103,51 @@ function handlePageReady(page) {
 }
 
 function handlePageLoad(page, auth, options = {}) {
-  if (!page || !auth || typeof auth.requireLogin !== 'function') {
+  if (!page) {
     return false
   }
-  if (!auth.requireLogin()) {
-    return false
-  }
-  if (typeof options.beforeInit === 'function' && options.beforeInit() === false) {
-    return false
-  }
-  if (typeof options.initContext === 'function') {
-    options.initContext()
-  }
-  if (typeof options.afterInit === 'function') {
-    options.afterInit()
-  }
-  if (typeof options.loadCurrentUserProfile === 'function') {
-    options.loadCurrentUserProfile()
-  }
-  if (typeof options.loadMeta === 'function') {
-    options.loadMeta()
-  }
-  if (typeof options.loadMessages === 'function') {
-    options.loadMessages()
-  }
-  if (typeof options.initSocket === 'function') {
-    options.initSocket()
-  }
-  return true
+  return pageLifecycleHelper.handleProtectedPageLoad(auth, {
+    beforeInit: options.beforeInit,
+    afterInit: () => {
+      if (typeof options.initContext === 'function') {
+        options.initContext()
+      }
+      if (typeof options.afterInit === 'function') {
+        options.afterInit()
+      }
+      if (typeof options.loadCurrentUserProfile === 'function') {
+        options.loadCurrentUserProfile()
+      }
+      if (typeof options.loadMeta === 'function') {
+        options.loadMeta()
+      }
+      if (typeof options.loadMessages === 'function') {
+        options.loadMessages()
+      }
+      if (typeof options.initSocket === 'function') {
+        options.initSocket()
+      }
+    }
+  })
 }
 
 function handlePageShow(page, auth, options = {}) {
-  if (!page || !auth || typeof auth.requireLogin !== 'function') {
+  if (!page) {
     return false
   }
-  if (!auth.requireLogin()) {
-    return false
-  }
-  if (typeof options.applyTheme === 'function') {
-    options.applyTheme()
-  }
-  imHelper.measureDockHeight(page)
-  if (typeof options.afterShow === 'function') {
-    options.afterShow()
-  }
-  return true
+  return pageLifecycleHelper.handleProtectedPageShow(auth, {
+    beforeShow: () => {
+      if (typeof options.applyTheme === 'function') {
+        options.applyTheme()
+      }
+    },
+    afterShow: () => {
+      imHelper.measureDockHeight(page)
+      if (typeof options.afterShow === 'function') {
+        options.afterShow()
+      }
+    }
+  })
 }
 
 function loadCurrentUserProfile(page, options = {}) {

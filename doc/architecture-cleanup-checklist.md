@@ -31,6 +31,7 @@
 27. 版块统计查询已优化：`ForumService.refreshBoardStats` 改为数据库聚合统计与最新主题直查，避免全量加载主题再内存累加。
 28. IM Helper 导出面已收口：`im-page-helper.js` 移除仅内部使用的对外导出，降低误用与耦合风险。
 29. 受保护页面生命周期已统一：新增 `page-lifecycle-helper.js`，社区与个人相关页面统一登录校验与 `onLoad/onShow` 编排，减少重复模板代码。
+30. IM 生命周期已复用统一入口：`im-page-helper.js` 的 `handlePageLoad/handlePageShow` 改为复用 `page-lifecycle-helper.js`，去除重复登录校验模板。
 
 ## 仍需收口（按建议顺序）
 
