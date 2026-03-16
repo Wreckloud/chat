@@ -241,6 +241,25 @@ function getSendDeps(page, depsFactory) {
   return page.imSendDeps
 }
 
+function getMediaSendDeps(page, uploaders, toastError) {
+  return getSendDeps(page, () => ({
+    uploadImage: uploaders.uploadImage,
+    uploadVideo: uploaders.uploadVideo,
+    uploadFile: uploaders.uploadFile,
+    toastError
+  }))
+}
+
+async function onDefaultMoreActionTap(page, event, imSendHelper, uploaders, toastError) {
+  const deps = getMediaSendDeps(page, uploaders, toastError)
+  await imSendHelper.onMoreActionTap(page, event, {
+    image: () => imSendHelper.chooseImageFromAlbum(page, deps),
+    video: () => imSendHelper.chooseVideoFromAlbum(page, deps),
+    file: () => imSendHelper.chooseFileForShare(page, deps),
+    link: () => imSendHelper.shareLinkAsText(page, deps)
+  })
+}
+
 function onSendButtonTap(page, sendFn) {
   page.keepComposerOpenAfterSend = imHelper.shouldKeepComposerAfterSend(page)
   if (typeof sendFn === 'function') {
@@ -334,6 +353,8 @@ module.exports = {
   setMorePanelVisible,
   toggleMorePanel,
   getSendDeps,
+  getMediaSendDeps,
+  onDefaultMoreActionTap,
   onSendButtonTap,
   onSendStatusTap,
   setSendStatus,

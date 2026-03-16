@@ -246,21 +246,11 @@ Page({
   },
 
   async onMoreActionTap(e) {
-    await imSendHelper.onMoreActionTap(this, e, {
-      image: () => imSendHelper.chooseImageFromAlbum(this, this.getImSendDeps()),
-      video: () => imSendHelper.chooseVideoFromAlbum(this, this.getImSendDeps()),
-      file: () => imSendHelper.chooseFileForShare(this, this.getImSendDeps()),
-      link: () => imSendHelper.shareLinkAsText(this, this.getImSendDeps())
-    })
-  },
-
-  getImSendDeps() {
-    return imPageHelper.getSendDeps(this, () => ({
+    await imPageHelper.onDefaultMoreActionTap(this, e, imSendHelper, {
       uploadImage: uploadChatImage,
       uploadVideo: uploadChatVideo,
-      uploadFile: uploadChatFile,
-      toastError
-    }))
+      uploadFile: uploadChatFile
+    }, toastError)
   },
 
   onTapLink(e) {
