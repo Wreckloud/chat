@@ -7,6 +7,7 @@ const { normalizeUser } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
+const forumViewHelper = require('../../utils/forum-view-helper')
 
 const EMPTY_QUOTE_DATA = {
   quoteReplyId: null,
@@ -35,32 +36,11 @@ function confirmAction(options) {
   })
 }
 
-function mapThreadDetail(rawThread = {}) {
-  return {
-    ...rawThread,
-    author: normalizeUser(rawThread.author) || {},
-    lastReplyUser: normalizeUser(rawThread.lastReplyUser) || {},
-    createTimeText: time.formatPostTime(rawThread.createTime),
-    lastReplyTimeText: time.formatPostTime(rawThread.lastReplyTime)
-  }
-}
-
 function resolveThreadPermission(thread, currentUserId) {
   const canManageThread = !!currentUserId && currentUserId === thread.author?.userId
   return {
     canManageThread,
     canStickyToggle: canManageThread && thread.threadType !== 'ANNOUNCEMENT'
-  }
-}
-
-function mapReplyItem(rawReply, currentUserId, canManageThread) {
-  const author = normalizeUser(rawReply.author) || {}
-  return {
-    ...rawReply,
-    author,
-    quoteAuthor: normalizeUser(rawReply.quoteAuthor) || {},
-    timeText: time.formatPostTime(rawReply.createTime),
-    canDelete: !!currentUserId && (currentUserId === author.userId || canManageThread)
   }
 }
 
@@ -126,7 +106,7 @@ Page({
   async loadThreadDetail() {
     const res = await request.get(`/forum/threads/${this.data.threadId}`)
     const detail = res.data || {}
-    const thread = mapThreadDetail(detail.thread || {})
+    const thread = forumViewHelper.mapThread(detail.thread || {}, normalizeUser, time)
     const permission = resolveThreadPermission(thread, this.data.currentUserId)
     this.setData({
       thread,
@@ -150,11 +130,14 @@ Page({
         size: this.data.replySize
       })
       const list = (res.data.list || []).map(item => (
-        mapReplyItem(item, this.data.currentUserId, this.data.canManageThread)
+        forumViewHelper.mapReply(item, normalizeUser, time, {
+          currentUserId: this.data.currentUserId,
+          canManageThread: this.data.canManageThread
+        })
       ))
-      const mergedReplies = reset ? list : [...this.data.replies, ...list]
+      const mergedReplies = forumViewHelper.mergePagedList(this.data.replies, list, reset)
       const total = Number(res.data.total) || 0
-      const hasMore = mergedReplies.length < total
+      const hasMore = forumViewHelper.resolveHasMoreByTotal(mergedReplies.length, total)
       this.setData({
         replies: mergedReplies,
         replyHasMore: hasMore,

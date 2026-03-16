@@ -7,6 +7,7 @@ const { normalizeUser } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
+const forumViewHelper = require('../../utils/forum-view-helper')
 
 const THREAD_TABS = [
   { value: 'all', label: '全部' },
@@ -29,10 +30,6 @@ Page({
     themeClass: 'theme-retro-blue'
   },
 
-  onLoad() {
-    auth.requireLogin()
-  },
-
   onShow() {
     if (!auth.requireLogin()) return
     this.applyTheme()
@@ -50,12 +47,7 @@ Page({
     try {
       const res = await request.get('/forum/boards')
       const boards = res.data || []
-      let activeBoardId = this.data.activeBoardId
-      if (!activeBoardId && boards.length > 0) {
-        activeBoardId = boards[0].boardId
-      } else if (activeBoardId && !boards.some(item => item.boardId === activeBoardId)) {
-        activeBoardId = boards.length > 0 ? boards[0].boardId : null
-      }
+      const activeBoardId = forumViewHelper.resolveActiveBoardId(boards, this.data.activeBoardId)
       this.setData({ boards, activeBoardId })
     } catch (error) {
       toastError(error, '加载版块失败')
@@ -75,16 +67,10 @@ Page({
         tab: this.data.activeTab
       })
       const payload = res.data || {}
-      const list = (payload.list || []).map(item => ({
-        ...item,
-        author: normalizeUser(item.author) || {},
-        lastReplyUser: normalizeUser(item.lastReplyUser) || {},
-        createTimeText: time.formatPostTime(item.createTime),
-        lastReplyTimeText: time.formatPostTime(item.lastReplyTime)
-      }))
-      const mergedThreads = reset ? list : [...this.data.threads, ...list]
+      const list = forumViewHelper.mapThreadList(payload.list || [], normalizeUser, time)
+      const mergedThreads = forumViewHelper.mergePagedList(this.data.threads, list, reset)
       const total = Number(payload.total) || 0
-      const hasMore = mergedThreads.length < total
+      const hasMore = forumViewHelper.resolveHasMoreByTotal(mergedThreads.length, total)
       this.setData({
         threads: mergedThreads,
         total,

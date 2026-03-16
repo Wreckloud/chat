@@ -26,6 +26,7 @@
 22. 会话列表页清理流程已收敛：`chat.js` 统一 `onHide/onUnload` 退出清理入口，并收敛 `loadConversations` 的 loading 复位逻辑。
 23. 会话列表页生命周期已对齐：`chat.js` 的 `onLoad/onShow` 统一接入 `im-page-helper.js` 公共编排，登录校验与展示刷新行为一致。
 24. 高频预期日志已降噪：认证与参数类业务失败下调为 `debug`，WS 建连/断连与逐条送达日志下调为 `debug`，保留关键异常 `error`。
+25. 社区展示映射已收敛：新增 `forum-view-helper.js` 统一主题/回复映射、分页合并与 `hasMore` 计算，减少 `community.js` 与 `post-detail.js` 重复代码。
 
 ## 仍需收口（按建议顺序）
 
