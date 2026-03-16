@@ -48,34 +48,43 @@ public class ChatMediaService {
     private final OssStorageConfig ossStorageConfig;
     private final WfUserMapper wfUserMapper;
 
+    @FunctionalInterface
+    private interface MappedMimeValidator {
+        void validate(String extension, String mimeType);
+    }
+
     /**
      * 创建聊天图片上传策略
      */
     public OssPostPolicy createImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
-        String extension = normalizeExtension(dto.getExtension());
-        validateMappedExtension(extension, IMAGE_MIME_MAPPING, "暂不支持该图片格式");
-        validateImageMimeIfPresent(extension, dto.getMimeType());
-        Long maxSizeBytes = requireLimit(ossStorageConfig.getMaxImageSizeBytes(), "图片上传大小上限未配置");
-        validateMediaSize(dto.getSize(), maxSizeBytes, "图片大小超过上传限制");
-
-        String wolfNo = getWolfNoByUserId(userId);
-        String objectKey = buildObjectKey("image", wolfNo, extension);
-        return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+        return createMappedUploadPolicy(
+                userId,
+                dto,
+                "image",
+                IMAGE_MIME_MAPPING,
+                "暂不支持该图片格式",
+                ossStorageConfig.getMaxImageSizeBytes(),
+                "图片上传大小上限未配置",
+                "图片大小超过上传限制",
+                this::validateImageMimeIfPresent
+        );
     }
 
     /**
      * 创建聊天视频上传策略
      */
     public OssPostPolicy createVideoUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
-        String extension = normalizeExtension(dto.getExtension());
-        validateMappedExtension(extension, VIDEO_MIME_MAPPING, "暂不支持该视频格式");
-        validateVideoMimeIfPresent(dto.getMimeType());
-        Long maxSizeBytes = requireLimit(ossStorageConfig.getMaxVideoSizeBytes(), "视频上传大小上限未配置");
-        validateMediaSize(dto.getSize(), maxSizeBytes, "视频大小超过上传限制");
-
-        String wolfNo = getWolfNoByUserId(userId);
-        String objectKey = buildObjectKey("video", wolfNo, extension);
-        return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+        return createMappedUploadPolicy(
+                userId,
+                dto,
+                "video",
+                VIDEO_MIME_MAPPING,
+                "暂不支持该视频格式",
+                ossStorageConfig.getMaxVideoSizeBytes(),
+                "视频上传大小上限未配置",
+                "视频大小超过上传限制",
+                this::validateVideoMimeIfPresentIgnoreExtension
+        );
     }
 
     /**
@@ -126,50 +135,42 @@ public class ChatMediaService {
      * 校验图片消息元数据
      */
     public void validateImageMessage(Long userId, SendMessageCommand command) {
-        if (!MessageType.IMAGE.equals(command.getMsgType())) {
-            return;
-        }
-        String mediaKey = command.getMediaKey();
-        String wolfNo = getWolfNoByUserId(userId);
-        if (!StringUtils.hasText(mediaKey) || !buildMappedKeyPattern("image", wolfNo, IMAGE_MIME_MAPPING).matcher(mediaKey).matches()) {
-            throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, "图片对象无效");
-        }
-
-        String extension = extractExtension(mediaKey);
-        validateMappedExtension(extension, IMAGE_MIME_MAPPING, "暂不支持该图片格式");
-        validateImageMimeIfPresent(extension, command.getMediaMimeType());
-        validateMediaSize(
-                command.getMediaSize(),
-                requireLimit(ossStorageConfig.getMaxImageSizeBytes(), "图片上传大小上限未配置"),
-                "图片大小超过上传限制"
+        validateMappedMessage(
+                userId,
+                command,
+                MessageType.IMAGE,
+                "image",
+                IMAGE_MIME_MAPPING,
+                "图片对象无效",
+                "暂不支持该图片格式",
+                ossStorageConfig.getMaxImageSizeBytes(),
+                "图片上传大小上限未配置",
+                "图片大小超过上传限制",
+                "图片宽度不合法",
+                "图片高度不合法",
+                this::validateImageMimeIfPresent
         );
-        validatePositiveDimension(command.getMediaWidth(), "图片宽度不合法");
-        validatePositiveDimension(command.getMediaHeight(), "图片高度不合法");
     }
 
     /**
      * 校验视频消息元数据
      */
     public void validateVideoMessage(Long userId, SendMessageCommand command) {
-        if (!MessageType.VIDEO.equals(command.getMsgType())) {
-            return;
-        }
-        String mediaKey = command.getMediaKey();
-        String wolfNo = getWolfNoByUserId(userId);
-        if (!StringUtils.hasText(mediaKey) || !buildMappedKeyPattern("video", wolfNo, VIDEO_MIME_MAPPING).matcher(mediaKey).matches()) {
-            throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, "视频对象无效");
-        }
-
-        String extension = extractExtension(mediaKey);
-        validateMappedExtension(extension, VIDEO_MIME_MAPPING, "暂不支持该视频格式");
-        validateVideoMimeIfPresent(command.getMediaMimeType());
-        validateMediaSize(
-                command.getMediaSize(),
-                requireLimit(ossStorageConfig.getMaxVideoSizeBytes(), "视频上传大小上限未配置"),
-                "视频大小超过上传限制"
+        validateMappedMessage(
+                userId,
+                command,
+                MessageType.VIDEO,
+                "video",
+                VIDEO_MIME_MAPPING,
+                "视频对象无效",
+                "暂不支持该视频格式",
+                ossStorageConfig.getMaxVideoSizeBytes(),
+                "视频上传大小上限未配置",
+                "视频大小超过上传限制",
+                "视频宽度不合法",
+                "视频高度不合法",
+                this::validateVideoMimeIfPresentIgnoreExtension
         );
-        validatePositiveDimension(command.getMediaWidth(), "视频宽度不合法");
-        validatePositiveDimension(command.getMediaHeight(), "视频高度不合法");
     }
 
     /**
@@ -196,6 +197,64 @@ public class ChatMediaService {
         if (command.getMediaWidth() != null || command.getMediaHeight() != null) {
             throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, "文件消息不支持宽高字段");
         }
+    }
+
+    private OssPostPolicy createMappedUploadPolicy(Long userId,
+                                                   ApplyChatUploadPolicyDTO dto,
+                                                   String category,
+                                                   Map<String, String> mimeMapping,
+                                                   String unsupportedTypeMessage,
+                                                   Long configuredMaxSize,
+                                                   String maxSizeConfigMessage,
+                                                   String exceedSizeMessage,
+                                                   MappedMimeValidator mimeValidator) {
+        String extension = normalizeExtension(dto.getExtension());
+        validateMappedExtension(extension, mimeMapping, unsupportedTypeMessage);
+        mimeValidator.validate(extension, dto.getMimeType());
+        Long maxSizeBytes = requireLimit(configuredMaxSize, maxSizeConfigMessage);
+        validateMediaSize(dto.getSize(), maxSizeBytes, exceedSizeMessage);
+
+        String wolfNo = getWolfNoByUserId(userId);
+        String objectKey = buildObjectKey(category, wolfNo, extension);
+        return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+    }
+
+    private void validateMappedMessage(Long userId,
+                                       SendMessageCommand command,
+                                       MessageType expectedType,
+                                       String category,
+                                       Map<String, String> mimeMapping,
+                                       String invalidObjectMessage,
+                                       String unsupportedTypeMessage,
+                                       Long configuredMaxSize,
+                                       String maxSizeConfigMessage,
+                                       String exceedSizeMessage,
+                                       String invalidWidthMessage,
+                                       String invalidHeightMessage,
+                                       MappedMimeValidator mimeValidator) {
+        if (!expectedType.equals(command.getMsgType())) {
+            return;
+        }
+        String mediaKey = command.getMediaKey();
+        String wolfNo = getWolfNoByUserId(userId);
+        if (!StringUtils.hasText(mediaKey) || !buildMappedKeyPattern(category, wolfNo, mimeMapping).matcher(mediaKey).matches()) {
+            throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, invalidObjectMessage);
+        }
+
+        String extension = extractExtension(mediaKey);
+        validateMappedExtension(extension, mimeMapping, unsupportedTypeMessage);
+        mimeValidator.validate(extension, command.getMediaMimeType());
+        validateMediaSize(
+                command.getMediaSize(),
+                requireLimit(configuredMaxSize, maxSizeConfigMessage),
+                exceedSizeMessage
+        );
+        validatePositiveDimension(command.getMediaWidth(), invalidWidthMessage);
+        validatePositiveDimension(command.getMediaHeight(), invalidHeightMessage);
+    }
+
+    private void validateVideoMimeIfPresentIgnoreExtension(String extension, String mimeType) {
+        validateVideoMimeIfPresent(mimeType);
     }
 
     private void validateMappedExtension(String extension, Map<String, String> mimeMapping, String errorMessage) {
