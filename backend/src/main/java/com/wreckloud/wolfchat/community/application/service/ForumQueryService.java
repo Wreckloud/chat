@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.community.application.assembler.ForumViewAssembler;
 import com.wreckloud.wolfchat.community.api.vo.ForumBoardVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
@@ -56,6 +57,7 @@ public class ForumQueryService {
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
     private final UserService userService;
+    private final ForumViewAssembler forumViewAssembler;
 
     public List<ForumBoardVO> listBoards() {
         LambdaQueryWrapper<WfForumBoard> queryWrapper = new LambdaQueryWrapper<>();
@@ -68,7 +70,7 @@ public class ForumQueryService {
 
         List<ForumBoardVO> list = new ArrayList<>(boards.size());
         for (WfForumBoard board : boards) {
-            list.add(toBoardVO(board));
+            list.add(forumViewAssembler.toBoardVO(board));
         }
         return list;
     }
@@ -93,10 +95,10 @@ public class ForumQueryService {
         for (WfForumThread thread : records) {
             WfUser author = userMap.get(thread.getAuthorId());
             WfUser lastReplyUser = userMap.get(thread.getLastReplyUserId());
-            list.add(toThreadVO(thread, author, lastReplyUser));
+            list.add(forumViewAssembler.toThreadVO(thread, author, lastReplyUser));
         }
 
-        return toThreadPageVO(list, result.getTotal(), page, size);
+        return forumViewAssembler.toThreadPageVO(list, result.getTotal(), page, size);
     }
 
     public ForumThreadDetailVO getThreadDetail(Long threadId) {
@@ -130,10 +132,10 @@ public class ForumQueryService {
             WfUser author = userMap.get(reply.getAuthorId());
             WfForumReply quoteReply = quoteReplyMap.get(reply.getQuoteReplyId());
             WfUser quoteAuthor = quoteReply == null ? null : userMap.get(quoteReply.getAuthorId());
-            list.add(toReplyVO(reply, author, quoteReply, quoteAuthor));
+            list.add(forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor));
         }
 
-        return toReplyPageVO(list, result.getTotal(), page, size);
+        return forumViewAssembler.toReplyPageVO(list, result.getTotal(), page, size);
     }
 
     public ForumThreadVO buildThreadVO(Long threadId) {
@@ -146,7 +148,7 @@ public class ForumQueryService {
             userIds.add(thread.getLastReplyUserId());
         }
         Map<Long, WfUser> userMap = loadUserMap(userIds);
-        return toThreadVO(thread, userMap.get(thread.getAuthorId()), userMap.get(thread.getLastReplyUserId()));
+        return forumViewAssembler.toThreadVO(thread, userMap.get(thread.getAuthorId()), userMap.get(thread.getLastReplyUserId()));
     }
 
     public ForumReplyVO buildReplyVO(Long replyId) {
@@ -163,7 +165,7 @@ public class ForumQueryService {
         Map<Long, WfUser> userMap = loadUserMap(userIds);
         WfUser author = userMap.get(reply.getAuthorId());
         WfUser quoteAuthor = quoteReply == null ? null : userMap.get(quoteReply.getAuthorId());
-        return toReplyVO(reply, author, quoteReply, quoteAuthor);
+        return forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor);
     }
 
     public WfForumBoard getBoardOrThrow(Long boardId) {
@@ -303,86 +305,4 @@ public class ForumQueryService {
         return loadUserMap(userIds);
     }
 
-    private ForumBoardVO toBoardVO(WfForumBoard board) {
-        ForumBoardVO vo = new ForumBoardVO();
-        vo.setBoardId(board.getId());
-        vo.setName(board.getName());
-        vo.setSlug(board.getSlug());
-        vo.setDescription(board.getDescription());
-        vo.setSortNo(board.getSortNo());
-        vo.setStatus(board.getStatus());
-        vo.setThreadCount(normalizeCount(board.getThreadCount()));
-        vo.setReplyCount(normalizeCount(board.getReplyCount()));
-        vo.setLastReplyTime(board.getLastReplyTime());
-        return vo;
-    }
-
-    private ForumThreadPageVO toThreadPageVO(List<ForumThreadVO> list, long total, long page, long size) {
-        ForumThreadPageVO pageVO = new ForumThreadPageVO();
-        pageVO.setList(list);
-        pageVO.setTotal(total);
-        pageVO.setPage(page);
-        pageVO.setSize(size);
-        return pageVO;
-    }
-
-    private ForumReplyPageVO toReplyPageVO(List<ForumReplyVO> list, long total, long page, long size) {
-        ForumReplyPageVO pageVO = new ForumReplyPageVO();
-        pageVO.setList(list);
-        pageVO.setTotal(total);
-        pageVO.setPage(page);
-        pageVO.setSize(size);
-        return pageVO;
-    }
-
-    private ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser) {
-        ForumThreadVO vo = new ForumThreadVO();
-        vo.setThreadId(thread.getId());
-        vo.setBoardId(thread.getBoardId());
-        vo.setTitle(thread.getTitle());
-        vo.setThreadType(thread.getThreadType());
-        vo.setStatus(thread.getStatus());
-        vo.setIsEssence(Boolean.TRUE.equals(thread.getIsEssence()));
-        vo.setViewCount(normalizeCount(thread.getViewCount()));
-        vo.setReplyCount(normalizeCount(thread.getReplyCount()));
-        vo.setLastReplyTime(thread.getLastReplyTime());
-        vo.setCreateTime(thread.getCreateTime());
-        vo.setAuthor(toUserBriefVO(author));
-        vo.setLastReplyUser(toUserBriefVO(lastReplyUser));
-        return vo;
-    }
-
-    private ForumReplyVO toReplyVO(WfForumReply reply, WfUser author, WfForumReply quoteReply, WfUser quoteAuthor) {
-        ForumReplyVO vo = new ForumReplyVO();
-        vo.setReplyId(reply.getId());
-        vo.setThreadId(reply.getThreadId());
-        vo.setFloorNo(reply.getFloorNo());
-        vo.setContent(reply.getContent());
-        vo.setCreateTime(reply.getCreateTime());
-        vo.setAuthor(toUserBriefVO(author));
-
-        if (quoteReply != null) {
-            vo.setQuoteReplyId(quoteReply.getId());
-            vo.setQuoteFloorNo(quoteReply.getFloorNo());
-            vo.setQuoteAuthor(toUserBriefVO(quoteAuthor));
-            vo.setQuoteContent(quoteReply.getContent());
-        }
-        return vo;
-    }
-
-    private UserBriefVO toUserBriefVO(WfUser user) {
-        if (user == null) {
-            return null;
-        }
-        UserBriefVO vo = new UserBriefVO();
-        vo.setUserId(user.getId());
-        vo.setWolfNo(user.getWolfNo());
-        vo.setNickname(user.getNickname());
-        vo.setAvatar(user.getAvatar());
-        return vo;
-    }
-
-    private int normalizeCount(Integer count) {
-        return count == null || count < 0 ? 0 : count;
-    }
 }
