@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BaseException.class)
     public Result<?> handleBaseException(BaseException e) {
-        log.info("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        log.debug("业务异常: code={}, message={}", e.getCode(), e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
 
@@ -39,10 +39,10 @@ public class GlobalExceptionHandler {
     public Result<?> handleParamException(Exception e, HttpServletRequest request) {
         String message = resolveParamErrorMessage(e);
         if (isLoginRequest(request)) {
-            log.info("登录参数异常: {}", message);
+            log.debug("登录参数异常: {}", message);
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.info("参数异常: {}", message);
+        log.debug("参数异常: {}", message);
         return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
     }
 
@@ -52,10 +52,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request) {
         if (isLoginRequest(request)) {
-            log.info("登录请求体异常: {}", e.getMessage());
+            log.debug("登录请求体异常: {}", e.getMessage());
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.info("请求体异常: {}", e.getMessage());
+        log.debug("请求体异常: {}", e.getMessage());
         return Result.error(ErrorCode.PARAM_ERROR);
     }
 

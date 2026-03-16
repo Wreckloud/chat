@@ -36,7 +36,7 @@ public class WsSessionManager {
         Long existingUserId = sessionUserMap.get(sessionId);
         if (existingUserId != null && !existingUserId.equals(userId)) {
             removeSession(session);
-            log.info("WS 重绑会话: oldUserId={}, newUserId={}, sessionId={}", existingUserId, userId, sessionId);
+            log.debug("WS 重绑会话: oldUserId={}, newUserId={}, sessionId={}", existingUserId, userId, sessionId);
         }
         userSessions.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(session);
         sessionUserMap.put(sessionId, userId);
@@ -44,7 +44,7 @@ public class WsSessionManager {
         if (becameOnline) {
             publishPresenceChanged(userId, true, null);
         }
-        log.info("WS 绑定会话: userId={}, sessionId={}", userId, sessionId);
+        log.debug("WS 绑定会话: userId={}, sessionId={}", userId, sessionId);
     }
 
     public void removeSession(WebSocketSession session) {
@@ -63,7 +63,7 @@ public class WsSessionManager {
                 }
             }
         }
-        log.info("WS 解绑会话: userId={}, sessionId={}", userId, session.getId());
+        log.debug("WS 解绑会话: userId={}, sessionId={}", userId, session.getId());
     }
 
     public Long getUserId(WebSocketSession session) {

@@ -59,7 +59,7 @@ public class AuthController {
             LoginVO loginVO = authService.login(dto.getAccount(), dto.getLoginKey(), request);
             return Result.success("登录成功", loginVO);
         } catch (BaseException e) {
-            log.info("登录失败: code={}", e.getCode());
+            log.debug("登录失败: code={}", e.getCode());
             return Result.error(ErrorCode.LOGIN_FAILED);
         } catch (Exception e) {
             log.error("登录异常", e);
@@ -106,7 +106,7 @@ public class AuthController {
             authService.resetPasswordByToken(token, newLoginKey, confirmLoginKey);
             return ResponseEntity.ok(buildResultPage(true, "密码重置成功", "密码已更新，请返回小程序使用新密码登录。"));
         } catch (BaseException e) {
-            log.info("重置密码失败: code={}", e.getCode());
+            log.debug("重置密码失败: code={}", e.getCode());
             if (isRetryableResetError(e)) {
                 return ResponseEntity.badRequest().body(buildResetPasswordFormPage(token, e.getMessage()));
             }
@@ -128,7 +128,7 @@ public class AuthController {
             authService.verifyBindEmailByToken(token);
             return ResponseEntity.ok(buildResultPage(true, "邮箱认证成功", "邮箱已认证，现在可以使用邮箱 + 密码登录。"));
         } catch (BaseException e) {
-            log.info("邮箱认证失败: code={}", e.getCode());
+            log.debug("邮箱认证失败: code={}", e.getCode());
             return ResponseEntity.badRequest().body(buildResultPage(false, "邮箱认证失败", e.getMessage()));
         } catch (Exception e) {
             log.error("邮箱认证异常", e);

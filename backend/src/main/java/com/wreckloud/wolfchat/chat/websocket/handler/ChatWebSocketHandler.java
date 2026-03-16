@@ -70,7 +70,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
-        log.info("WS 连接建立: sessionId={}", session.getId());
+        log.debug("WS 连接建立: sessionId={}", session.getId());
     }
 
     @Override
@@ -99,7 +99,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         sessionManager.removeSession(session);
-        log.info("WS 连接关闭: sessionId={}, status={}", session.getId(), status);
+        log.debug("WS 连接关闭: sessionId={}, status={}", session.getId(), status);
     }
 
     private WsRequest parseRequest(WebSocketSession session, String payload) {
@@ -264,7 +264,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
         if (successCount > 0) {
             messageService.markDelivered(List.of(message.getId()));
-            log.info("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
+            log.debug("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
         }
     }
 
