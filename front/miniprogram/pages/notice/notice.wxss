@@ -24,6 +24,28 @@
   border-bottom: 1rpx solid var(--retro-row-border);
 }
 
+.notice-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  padding: 10rpx 4rpx 12rpx;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.notice-filter-item {
+  padding: 2rpx 8rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.notice-filter-item-active {
+  color: var(--retro-accent-text);
+  border-color: var(--retro-accent-text);
+  background: rgba(255, 255, 255, 0.78);
+}
+
 .notice-title {
   font-size: 28rpx;
   font-weight: 600;

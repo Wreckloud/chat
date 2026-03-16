@@ -8,14 +8,28 @@ const { refreshNoticeUnreadBadge } = require('../../utils/tab-badge')
 
 const DEFAULT_PAGE = 1
 const DEFAULT_SIZE = 20
+const NOTICE_FILTER_KEY_ALL = 'ALL'
+const NOTICE_FILTER_KEY_INTERACTION = 'INTERACTION'
+const NOTICE_FILTER_KEY_FOLLOW = 'FOLLOW'
+const NOTICE_FILTER_KEY_ACHIEVEMENT = 'ACHIEVEMENT'
+const NOTICE_FILTER_OPTIONS = [
+  { key: NOTICE_FILTER_KEY_ALL, label: '全部' },
+  { key: NOTICE_FILTER_KEY_INTERACTION, label: '互动' },
+  { key: NOTICE_FILTER_KEY_FOLLOW, label: '关注' },
+  { key: NOTICE_FILTER_KEY_ACHIEVEMENT, label: '成就' }
+]
+const INTERACTION_NOTICE_TYPES = new Set(['THREAD_LIKED', 'THREAD_REPLIED', 'REPLY_LIKED'])
 
 Page({
   data: {
     list: [],
+    filteredList: [],
     loading: false,
     page: DEFAULT_PAGE,
     size: DEFAULT_SIZE,
     hasMore: true,
+    activeFilterKey: NOTICE_FILTER_KEY_ALL,
+    filterOptions: NOTICE_FILTER_OPTIONS,
     themeClass: 'theme-retro-blue'
   },
 
@@ -51,8 +65,10 @@ Page({
       const total = Number(pageData.total) || mergedList.length
       const current = Number(pageData.page) || nextPage
       const hasMore = mergedList.length < total
+      const filteredList = this.buildFilteredList(mergedList, this.data.activeFilterKey)
       this.setData({
         list: mergedList,
+        filteredList,
         page: current + 1,
         hasMore
       })
@@ -101,7 +117,10 @@ Page({
             read: true
           }
         })
-        this.setData({ list })
+        this.setData({
+          list,
+          filteredList: this.buildFilteredList(list, this.data.activeFilterKey)
+        })
         refreshNoticeUnreadBadge()
       } catch (error) {
         toastError(error, '操作失败')
@@ -124,11 +143,49 @@ Page({
         ...item,
         read: true
       }))
-      this.setData({ list })
+      this.setData({
+        list,
+        filteredList: this.buildFilteredList(list, this.data.activeFilterKey)
+      })
       refreshNoticeUnreadBadge()
     } catch (error) {
       toastError(error, '操作失败')
     }
+  },
+
+  onTapFilter(e) {
+    const filterKey = String(e.currentTarget.dataset.key || '')
+    if (!filterKey || filterKey === this.data.activeFilterKey) {
+      return
+    }
+    this.setData({
+      activeFilterKey: filterKey,
+      filteredList: this.buildFilteredList(this.data.list, filterKey)
+    })
+  },
+
+  buildFilteredList(sourceList, filterKey) {
+    const list = Array.isArray(sourceList) ? sourceList : []
+    if (filterKey === NOTICE_FILTER_KEY_ALL) {
+      return list
+    }
+    return list.filter(item => this.matchFilter(item, filterKey))
+  },
+
+  matchFilter(item, filterKey) {
+    if (!item || !item.noticeType) {
+      return false
+    }
+    if (filterKey === NOTICE_FILTER_KEY_ACHIEVEMENT) {
+      return item.noticeType === 'ACHIEVEMENT_UNLOCK'
+    }
+    if (filterKey === NOTICE_FILTER_KEY_FOLLOW) {
+      return item.noticeType === 'FOLLOW_RECEIVED'
+    }
+    if (filterKey === NOTICE_FILTER_KEY_INTERACTION) {
+      return INTERACTION_NOTICE_TYPES.has(item.noticeType)
+    }
+    return true
   },
 
   navigateByNotice(notice) {
