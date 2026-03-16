@@ -96,12 +96,7 @@ public class ForumQueryService {
             list.add(toThreadVO(thread, author, lastReplyUser));
         }
 
-        ForumThreadPageVO pageVO = new ForumThreadPageVO();
-        pageVO.setList(list);
-        pageVO.setTotal(result.getTotal());
-        pageVO.setPage(page);
-        pageVO.setSize(size);
-        return pageVO;
+        return toThreadPageVO(list, result.getTotal(), page, size);
     }
 
     public ForumThreadDetailVO getThreadDetail(Long threadId) {
@@ -138,12 +133,7 @@ public class ForumQueryService {
             list.add(toReplyVO(reply, author, quoteReply, quoteAuthor));
         }
 
-        ForumReplyPageVO pageVO = new ForumReplyPageVO();
-        pageVO.setList(list);
-        pageVO.setTotal(result.getTotal());
-        pageVO.setPage(page);
-        pageVO.setSize(size);
-        return pageVO;
+        return toReplyPageVO(list, result.getTotal(), page, size);
     }
 
     public ForumThreadVO buildThreadVO(Long threadId) {
@@ -325,6 +315,24 @@ public class ForumQueryService {
         vo.setReplyCount(normalizeCount(board.getReplyCount()));
         vo.setLastReplyTime(board.getLastReplyTime());
         return vo;
+    }
+
+    private ForumThreadPageVO toThreadPageVO(List<ForumThreadVO> list, long total, long page, long size) {
+        ForumThreadPageVO pageVO = new ForumThreadPageVO();
+        pageVO.setList(list);
+        pageVO.setTotal(total);
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        return pageVO;
+    }
+
+    private ForumReplyPageVO toReplyPageVO(List<ForumReplyVO> list, long total, long page, long size) {
+        ForumReplyPageVO pageVO = new ForumReplyPageVO();
+        pageVO.setList(list);
+        pageVO.setTotal(total);
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        return pageVO;
     }
 
     private ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser) {
