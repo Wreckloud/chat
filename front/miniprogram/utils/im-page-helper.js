@@ -1,4 +1,5 @@
 const imHelper = require('./im-helper')
+const imMessageHelper = require('./im-message-helper')
 
 const CONNECTION_TIP_MAP = {
   CONNECTING: '连接中...',
@@ -151,6 +152,40 @@ function loadCurrentUserProfile(page, options = {}) {
   })
 }
 
+function loadMessages(page, request, options = {}) {
+  if (!page || !request || typeof request.get !== 'function' || !options.url) {
+    return Promise.resolve()
+  }
+  return imMessageHelper.loadPagedMessages(page, request, {
+    url: options.url,
+    parseRecords: typeof options.parseRecords === 'function'
+      ? options.parseRecords
+      : (res) => (res && res.data && res.data.records) || [],
+    buildMessageBlocks: (messages) => page.buildMessageBlocks(messages),
+    onLoaded: (payload) => {
+      if (typeof page.ensureSenderProfiles === 'function') {
+        page.ensureSenderProfiles(payload.messages)
+      }
+      if (typeof options.onLoaded === 'function') {
+        options.onLoaded(payload)
+      }
+    },
+    onFirstPageLoaded: (messages) => {
+      if (typeof page.scrollToBottom === 'function') {
+        page.scrollToBottom()
+      }
+      if (typeof options.onFirstPageLoaded === 'function') {
+        options.onFirstPageLoaded(messages)
+      }
+    },
+    onError: (err) => {
+      if (typeof options.onError === 'function') {
+        options.onError(err)
+      }
+    }
+  })
+}
+
 function onMessageInput(page, event) {
   const value = event && event.detail ? event.detail.value : ''
   const nextData = {
@@ -291,6 +326,7 @@ module.exports = {
   handlePageReady,
   handlePageShow,
   loadCurrentUserProfile,
+  loadMessages,
   onMessageInput,
   onKeyboardHeightChange,
   onComposerFocus,

@@ -18,6 +18,7 @@
 14. 聊天页面生命周期清理已收敛：`im-page-helper.js` 统一 `onReady/onShow/onUnload` 公共流程，页面仅保留场景差异逻辑。
 15. 聊天 WS 公共处理已收敛：`im-ws-helper.js` 统一 `ERROR/ACK` 分支分发，页面只处理业务消息类型差异。
 16. 当前用户资料加载已收敛：`im-page-helper.js` 统一 `loadCurrentUserProfile + messageBlocks` 刷新流程。
+17. 历史消息加载骨架已收敛：`im-page-helper.js` 统一 `loadMessages` 默认行为（分页加载、构建消息块、首屏滚底、资料预热）。
 
 ## 仍需收口（按建议顺序）
 

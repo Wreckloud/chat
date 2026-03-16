@@ -148,18 +148,12 @@ Page({
   },
 
   loadMessages() {
-    return imMessageHelper.loadPagedMessages(this, request, {
+    return imPageHelper.loadMessages(this, request, {
       url: `/conversations/${this.data.conversationId}/messages`,
-      parseRecords: (res) => (res && res.data && res.data.records) || [],
-      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
-      onLoaded: ({ messages, records }) => {
-        this.ensureSenderProfiles(messages)
+      onLoaded: ({ records }) => {
         if (records.length > 0) {
           this.markConversationRead()
         }
-      },
-      onFirstPageLoaded: () => {
-        this.scrollToBottom()
       },
       onError: (err) => {
         toastError(err, '加载失败')

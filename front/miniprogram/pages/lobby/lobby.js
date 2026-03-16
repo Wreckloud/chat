@@ -130,18 +130,11 @@ Page({
   },
 
   loadMessages() {
-    return imMessageHelper.loadPagedMessages(this, request, {
+    return imPageHelper.loadMessages(this, request, {
       url: '/lobby/messages',
       parseRecords: (res) => {
         const pageData = res && res.data ? res.data : {}
         return Array.isArray(pageData.records) ? pageData.records : []
-      },
-      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
-      onLoaded: ({ messages }) => {
-        this.ensureSenderProfiles(messages)
-      },
-      onFirstPageLoaded: () => {
-        this.scrollToBottom()
       },
       onError: (err) => {
         toastError(err, '加载失败')
