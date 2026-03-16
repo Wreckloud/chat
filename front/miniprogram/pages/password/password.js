@@ -7,6 +7,7 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { PASSWORD_PAGE_COPY } = require('../../constants/copy')
 const { normalizeText } = require('../../utils/account')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const {
   evaluatePasswordStrength,
   getPasswordStrengthInlineText
@@ -25,14 +26,15 @@ Page({
   },
 
   onLoad() {
-    if (!auth.requireLogin()) {
-      return
-    }
+    pageLifecycleHelper.handleProtectedPageLoad(auth)
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+      }
+    })
   },
 
   onOldPasswordInput(e) {

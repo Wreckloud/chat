@@ -6,6 +6,7 @@ const request = require('../../utils/request')
 const { normalizeUser } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 Page({
   data: {
@@ -20,38 +21,43 @@ Page({
   },
 
   onLoad(options) {
-    if (!auth.requireLogin()) {
-      return
-    }
+    let targetUserId = 0
+    pageLifecycleHelper.handleProtectedPageLoad(auth, {
+      beforeInit: () => {
+        const userId = Number(options && options.userId)
+        if (!userId) {
+          toastError('用户信息缺失')
+          setTimeout(() => {
+            wx.navigateBack()
+          }, 1500)
+          return false
+        }
 
-    const currentUser = auth.getUserInfo()
-    const currentUserId = currentUser ? currentUser.userId : null
-    const userId = Number(options && options.userId)
-    if (!userId) {
-      toastError('用户信息缺失')
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 1500)
-      return
-    }
-
-    const isSelf = currentUserId === userId
-
-    this.setData({
-      userInfo: null,
-      isSelf
+        const currentUser = auth.getUserInfo()
+        const currentUserId = currentUser ? currentUser.userId : null
+        const isSelf = currentUserId === userId
+        this.setData({
+          userInfo: null,
+          isSelf
+        })
+        targetUserId = userId
+        return true
+      },
+      afterInit: () => {
+        wx.setNavigationBarTitle({
+          title: '行者主页'
+        })
+        this.loadUserInfo(targetUserId)
+      }
     })
-
-    wx.setNavigationBarTitle({
-      title: '行者主页'
-    })
-
-    this.loadUserInfo(userId)
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+      }
+    })
   },
 
   async loadUserInfo(userId) {

@@ -8,6 +8,7 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 const EMPTY_QUOTE_DATA = {
   quoteReplyId: null,
@@ -66,27 +67,32 @@ Page({
   },
 
   onLoad(options) {
-    if (!auth.requireLogin()) {
-      return
-    }
-
-    const threadId = Number(options.threadId)
-    if (!threadId) {
-      toastError('参数错误')
-      return
-    }
-
-    const userInfo = auth.getUserInfo()
-    this.setData({
-      threadId,
-      currentUserId: userInfo && userInfo.userId ? userInfo.userId : null
+    pageLifecycleHelper.handleProtectedPageLoad(auth, {
+      beforeInit: () => {
+        const threadId = Number(options.threadId)
+        if (!threadId) {
+          toastError('参数错误')
+          return false
+        }
+        const userInfo = auth.getUserInfo()
+        this.setData({
+          threadId,
+          currentUserId: userInfo && userInfo.userId ? userInfo.userId : null
+        })
+        return true
+      },
+      afterInit: () => {
+        this.loadPage()
+      }
     })
-    this.loadPage()
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+      }
+    })
   },
 
   async loadPage() {

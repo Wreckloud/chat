@@ -5,6 +5,7 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 Page({
   data: {
@@ -18,19 +19,23 @@ Page({
   },
 
   onLoad(options) {
-    if (!auth.requireLogin()) {
-      return
-    }
-    const preselectBoardId = Number(options.boardId)
-    if (preselectBoardId) {
-      this.preselectBoardId = preselectBoardId
-    }
-    this.loadBoards()
+    pageLifecycleHelper.handleProtectedPageLoad(auth, {
+      afterInit: () => {
+        const preselectBoardId = Number(options.boardId)
+        if (preselectBoardId) {
+          this.preselectBoardId = preselectBoardId
+        }
+        this.loadBoards()
+      }
+    })
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+      }
+    })
   },
 
   async loadBoards() {

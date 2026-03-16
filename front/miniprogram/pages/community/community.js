@@ -8,6 +8,7 @@ const { toastError } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 const THREAD_TABS = [
   { value: 'all', label: '全部' },
@@ -31,9 +32,12 @@ Page({
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    this.loadBoardsAndThreads()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+        this.loadBoardsAndThreads()
+      }
+    })
   },
 
   async loadBoardsAndThreads() {

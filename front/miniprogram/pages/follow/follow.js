@@ -6,6 +6,7 @@ const auth = require('../../utils/auth')
 const { normalizeUserList, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 const FOLLOW_API_BY_TAB = {
   following: '/follow/following',
@@ -22,15 +23,16 @@ Page({
   },
 
   onLoad() {
-    if (!auth.requireLogin()) {
-      return
-    }
+    pageLifecycleHelper.handleProtectedPageLoad(auth)
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    this.loadList()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+        this.loadList()
+      }
+    })
   },
 
   switchTab(e) {

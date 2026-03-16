@@ -7,6 +7,7 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { EMAIL_BIND_PAGE_COPY } = require('../../constants/copy')
 const { normalizeEmail, isValidEmail } = require('../../utils/account')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 Page({
   data: {
@@ -25,15 +26,16 @@ Page({
   },
 
   onLoad() {
-    if (!auth.requireLogin()) {
-      return
-    }
+    pageLifecycleHelper.handleProtectedPageLoad(auth)
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    this.loadUserInfo()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+        this.loadUserInfo()
+      }
+    })
   },
 
   async loadUserInfo() {

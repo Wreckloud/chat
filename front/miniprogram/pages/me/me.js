@@ -6,6 +6,7 @@ const auth = require('../../utils/auth')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { setThemeName, listThemes } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
+const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 function confirmAction(options) {
   return new Promise(resolve => {
@@ -31,18 +32,22 @@ Page({
   },
 
   onLoad() {
-    if (!auth.requireLogin()) {
-      return
-    }
-    this.setData({
-      themeOptions: listThemes()
+    pageLifecycleHelper.handleProtectedPageLoad(auth, {
+      afterInit: () => {
+        this.setData({
+          themeOptions: listThemes()
+        })
+      }
     })
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    this.loadUserInfo()
+    pageLifecycleHelper.handleProtectedPageShow(auth, {
+      afterShow: () => {
+        this.applyTheme()
+        this.loadUserInfo()
+      }
+    })
   },
 
   async loadUserInfo() {
