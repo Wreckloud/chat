@@ -1,3 +1,5 @@
+const { attachDisplayTitle } = require('./title')
+
 function resolveActiveBoardId(boards, currentBoardId) {
   if (!Array.isArray(boards) || boards.length === 0) {
     return null
@@ -19,8 +21,16 @@ function mapThread(rawThread, normalizeUser, time) {
     replyCount,
     likeCount,
     likedByCurrentUser: rawThread.likedByCurrentUser === true,
-    author: normalizeUser(rawThread.author) || {},
-    lastReplyUser: normalizeUser(rawThread.lastReplyUser) || {},
+    author: attachDisplayTitle(
+      normalizeUser(rawThread.author) || {},
+      rawThread.author && rawThread.author.equippedTitleName,
+      rawThread.author && rawThread.author.equippedTitleColor
+    ),
+    lastReplyUser: attachDisplayTitle(
+      normalizeUser(rawThread.lastReplyUser) || {},
+      rawThread.lastReplyUser && rawThread.lastReplyUser.equippedTitleName,
+      rawThread.lastReplyUser && rawThread.lastReplyUser.equippedTitleColor
+    ),
     createTimeText: time.formatPostTime(rawThread.createTime),
     lastReplyTimeText: time.formatPostTime(rawThread.lastReplyTime)
   }
@@ -45,7 +55,11 @@ function resolveHasMoreByTotal(currentSize, total) {
 }
 
 function mapReply(rawReply, normalizeUser, time, options = {}) {
-  const author = normalizeUser(rawReply.author) || {}
+  const author = attachDisplayTitle(
+    normalizeUser(rawReply.author) || {},
+    rawReply.author && rawReply.author.equippedTitleName,
+    rawReply.author && rawReply.author.equippedTitleColor
+  )
   const currentUserId = Number(options.currentUserId) || 0
   const canManageThread = options.canManageThread === true
   const likeCount = Number(rawReply.likeCount) || 0
@@ -54,7 +68,11 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
     likeCount,
     likedByCurrentUser: rawReply.likedByCurrentUser === true,
     author,
-    quoteAuthor: normalizeUser(rawReply.quoteAuthor) || {},
+    quoteAuthor: attachDisplayTitle(
+      normalizeUser(rawReply.quoteAuthor) || {},
+      rawReply.quoteAuthor && rawReply.quoteAuthor.equippedTitleName,
+      rawReply.quoteAuthor && rawReply.quoteAuthor.equippedTitleColor
+    ),
     timeText: time.formatPostTime(rawReply.createTime),
     canDelete: currentUserId > 0 && (currentUserId === Number(author.userId) || canManageThread)
   }

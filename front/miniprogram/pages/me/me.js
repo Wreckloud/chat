@@ -7,6 +7,7 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const { setThemeName, listThemes } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
+const { setNoticeBadge } = require('../../utils/tab-badge')
 
 const QUICK_ACTIONS = [
   {
@@ -15,6 +16,20 @@ const QUICK_ACTIONS = [
     desc: '管理互关关系',
     type: 'nav',
     url: '/pages/follow/follow'
+  },
+  {
+    key: 'achievement',
+    title: '成就头衔',
+    desc: '查看成就并管理佩戴',
+    type: 'nav',
+    url: '/pages/achievement/achievement'
+  },
+  {
+    key: 'notice',
+    title: '系统通知',
+    desc: '查看系统提醒',
+    type: 'nav',
+    url: '/pages/notice/notice'
   },
   {
     key: 'my_posts',
@@ -39,12 +54,6 @@ const ACCOUNT_ACTIONS = [
   }
 ]
 
-const ONBOARDING_STATUS_TEXT = {
-  PENDING: '引导进行中',
-  COMPLETED: '引导已完成',
-  SKIPPED: '引导已跳过'
-}
-
 function confirmAction(options) {
   return new Promise(resolve => {
     wx.showModal({
@@ -59,26 +68,13 @@ function confirmAction(options) {
   })
 }
 
-function resolveEmailStatusText(userInfo) {
-  if (!userInfo || !userInfo.email) {
-    return '邮箱未绑定'
-  }
-  return userInfo.emailVerified ? '邮箱已认证' : '邮箱待认证'
-}
-
-function resolveOnboardingStatusText(userInfo) {
-  const status = userInfo && userInfo.onboardingStatus ? String(userInfo.onboardingStatus) : ''
-  return ONBOARDING_STATUS_TEXT[status] || '引导未设置'
-}
-
 Page({
   data: {
     userInfo: null,
-    emailStatusText: '',
-    onboardingStatusText: '',
     loading: false,
     themeName: 'retro_blue',
     themeClass: 'theme-retro-blue',
+    noticeUnreadCount: 0,
     themeOptions: [],
     quickActions: QUICK_ACTIONS,
     accountActions: ACCOUNT_ACTIONS
@@ -99,6 +95,7 @@ Page({
       afterShow: () => {
         this.applyTheme()
         this.loadUserInfo()
+        this.loadNoticeUnreadCount()
       }
     })
   },
@@ -118,6 +115,19 @@ Page({
       toastError(error, '加载失败')
     } finally {
       this.setData({ loading: false })
+    }
+  },
+
+  async loadNoticeUnreadCount() {
+    try {
+      const res = await request.get('/notices/unread-count')
+      const unreadCount = Number(res && res.data) || 0
+      const normalizedUnreadCount = unreadCount > 0 ? unreadCount : 0
+      this.setData({ noticeUnreadCount: normalizedUnreadCount })
+      setNoticeBadge(normalizedUnreadCount)
+    } catch (error) {
+      this.setData({ noticeUnreadCount: 0 })
+      setNoticeBadge(0)
     }
   },
 
@@ -241,17 +251,13 @@ Page({
   applyUserInfo(userInfo) {
     if (!userInfo) {
       this.setData({
-        userInfo: null,
-        emailStatusText: '',
-        onboardingStatusText: ''
+        userInfo: null
       })
       return
     }
 
     this.setData({
-      userInfo,
-      emailStatusText: resolveEmailStatusText(userInfo),
-      onboardingStatusText: resolveOnboardingStatusText(userInfo)
+      userInfo
     })
   }
 })

@@ -1,0 +1,70 @@
+<view class="achievement-page {{themeClass}}">
+  <view class="retro-card equipped-card">
+    <view class="section-head">
+      <view class="section-title">当前佩戴</view>
+      <retro-button
+        wx:if="{{userInfo && userInfo.equippedTitleName}}"
+        size="small"
+        theme="default"
+        disabled="{{equipping}}"
+        bindtap="handleUnequip">
+        取消佩戴
+      </retro-button>
+    </view>
+
+    <view wx:if="{{userInfo && userInfo.equippedTitleName}}" class="equipped-main">
+      <text
+        class="equipped-title-badge"
+        style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
+        [{{userInfo.equippedTitleName}}]
+      </text>
+      <text class="equipped-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
+    </view>
+    <view wx:else class="equipped-empty">未佩戴头衔</view>
+  </view>
+
+  <view class="retro-card list-card">
+    <view class="section-head">
+      <view class="section-title">我的成就</view>
+      <view class="section-sub">解锁后可佩戴头衔</view>
+    </view>
+
+    <retro-loading wx:if="{{loading && achievements.length === 0}}" size="36rpx" text="加载中..." />
+    <retro-empty wx:elif="{{achievements.length === 0}}" description="暂无成就" />
+
+    <view wx:else class="achievement-list">
+      <view wx:for="{{achievements}}" wx:key="achievementCode" class="achievement-item">
+        <view class="achievement-main">
+          <view class="achievement-name-row">
+            <text class="achievement-name">{{item.name}}</text>
+            <text
+              wx:if="{{item.titleName}}"
+              class="achievement-title-badge"
+              style="{{item.titleColor ? 'color:' + item.titleColor + ';' : ''}}">
+              [{{item.titleName}}]
+            </text>
+          </view>
+          <view class="achievement-desc">{{item.description || '--'}}</view>
+          <view class="achievement-meta">
+            <text>{{item.unlocked ? '已解锁' : '未解锁'}}</text>
+            <text wx:if="{{item.unlocked}}">解锁于 {{item.unlockTimeText}}</text>
+          </view>
+        </view>
+
+        <view class="achievement-action">
+          <retro-button
+            wx:if="{{item.unlocked && !item.equipped}}"
+            size="small"
+            theme="primary"
+            disabled="{{equipping}}"
+            bindtap="handleEquip"
+            data-code="{{item.achievementCode}}">
+            佩戴
+          </retro-button>
+          <text wx:elif="{{item.equipped}}" class="equipped-flag">[已佩戴]</text>
+          <text wx:else class="locked-flag">[未解锁]</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

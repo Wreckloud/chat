@@ -5,6 +5,8 @@ const TOKEN_KEY = 'wolfchat_token'
 const USER_INFO_KEY = 'wolfchat_user_info'
 const LOGIN_PAGE_URL = '/pages/login/login'
 const { DEFAULT_AVATAR } = require('./user')
+const TAB_INDEX_CHAT = 0
+const TAB_INDEX_ME = 2
 let authRedirecting = false
 
 const auth = {
@@ -86,6 +88,8 @@ const auth = {
   logout() {
     this.removeToken()
     this.removeUserInfo()
+    wx.removeTabBarBadge({ index: TAB_INDEX_CHAT })
+    wx.removeTabBarBadge({ index: TAB_INDEX_ME })
   },
 
   /**

@@ -99,6 +99,7 @@ page {
 .im-name-line {
   flex: 3;
   align-items: flex-start;
+  gap: 6rpx;
 }
 
 .im-time-line {
@@ -111,6 +112,20 @@ page {
   font-size: var(--retro-chat-name-font-size);
   line-height: 1.15;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.im-title-badge {
+  flex-shrink: 0;
+  max-width: 180rpx;
+  padding: 0 6rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 19rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -143,6 +158,16 @@ page {
 .im-cluster-self .im-name-line,
 .im-cluster-self .im-time-line {
   justify-content: flex-end;
+}
+
+.im-cluster-self .im-title-badge {
+  order: 2;
+  margin-left: 6rpx;
+  margin-right: 0;
+}
+
+.im-cluster-self .im-name {
+  order: 1;
 }
 
 .im-line {

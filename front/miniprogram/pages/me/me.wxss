@@ -41,7 +41,30 @@
   margin-left: 14rpx;
 }
 
+.identity-name-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6rpx;
+}
+
+.identity-title-badge {
+  flex-shrink: 0;
+  max-width: 180rpx;
+  padding: 0 8rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .identity-name {
+  min-width: 0;
+  flex: 1;
   font-size: 30rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
@@ -71,21 +94,6 @@
   right: 14rpx;
   font-size: 20rpx;
   color: var(--retro-accent-text);
-}
-
-.identity-tags {
-  margin-top: 12rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-}
-
-.identity-tag {
-  padding: 4rpx 10rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: var(--retro-chip-bg);
-  color: var(--retro-chip-text);
-  font-size: 20rpx;
 }
 
 .section-card {
@@ -133,6 +141,19 @@
   font-size: 24rpx;
   font-weight: 600;
   color: var(--retro-body-text);
+}
+
+.quick-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.quick-badge {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: var(--retro-accent-text);
 }
 
 .quick-desc {

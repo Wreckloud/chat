@@ -4,6 +4,7 @@
  * @date 2024-12-18
  */
 const { getThemeName, applyTabBar } = require('./utils/theme')
+const { refreshAllTabBadges } = require('./utils/tab-badge')
 
 App({
   syncTheme() {
@@ -12,10 +13,12 @@ App({
 
   onLaunch() {
     this.syncTheme()
+    refreshAllTabBadges()
   },
 
   onShow() {
     this.syncTheme()
+    refreshAllTabBadges()
   },
 
   onError(error) {

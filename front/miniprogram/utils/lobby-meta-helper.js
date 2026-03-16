@@ -1,3 +1,5 @@
+const { formatNameWithTitle, normalizeTitleName } = require('./title')
+
 function buildLobbyActiveText(latestActiveAt, time) {
   if (!latestActiveAt) {
     return '最近活跃 --'
@@ -14,7 +16,10 @@ function buildRecentUsersText(recentUsers, normalizeUser, time) {
     .slice(0, 6)
     .map(item => {
       const user = normalizeUser(item) || {}
-      const name = user.nickname || user.wolfNo || '行者'
+      const name = formatNameWithTitle(
+        user,
+        normalizeTitleName(item.equippedTitleName)
+      )
       if (item.online === true) {
         return `${name}(在线)`
       }
@@ -66,4 +71,3 @@ module.exports = {
   scheduleLobbyMetaRefresh,
   clearLobbyMetaTimer
 }
-

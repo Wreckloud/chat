@@ -166,6 +166,21 @@
   min-width: 0;
 }
 
+.session-title-badge {
+  flex-shrink: 0;
+  max-width: 132rpx;
+  padding: 0 6rpx;
+  margin-right: 6rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 19rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .session-name {
   max-width: 200rpx;
   font-size: var(--retro-session-name-font-size);

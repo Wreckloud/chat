@@ -172,12 +172,21 @@ Page({
     imMessageHelper.appendMessage(this, message, {
       isValidMessage: (current) => Boolean(current && current.messageId),
       isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
-      beforeAppend: (current) => this.cacheUserProfile({
-        userId: current.senderId,
-        wolfNo: current.senderWolfNo,
-        nickname: current.senderNickname,
-        avatar: current.senderAvatar
-      }),
+      beforeAppend: (current) => {
+        const senderProfile = {
+          userId: current.senderId,
+          wolfNo: current.senderWolfNo,
+          nickname: current.senderNickname,
+          avatar: current.senderAvatar
+        }
+        if (Object.prototype.hasOwnProperty.call(current, 'senderEquippedTitleName')) {
+          senderProfile.equippedTitleName = current.senderEquippedTitleName
+        }
+        if (Object.prototype.hasOwnProperty.call(current, 'senderEquippedTitleColor')) {
+          senderProfile.equippedTitleColor = current.senderEquippedTitleColor
+        }
+        this.cacheUserProfile(senderProfile)
+      },
       buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
       afterAppend: () => this.scrollToBottom()
     })

@@ -14,6 +14,8 @@ const imWsHelper = require('../../utils/im-ws-helper')
 const lobbyMetaHelper = require('../../utils/lobby-meta-helper')
 const conversationViewHelper = require('../../utils/conversation-view-helper')
 const conversationActionHelper = require('../../utils/conversation-action-helper')
+const { attachDisplayTitle } = require('../../utils/title')
+const { setChatBadge, refreshChatUnreadBadge } = require('../../utils/tab-badge')
 const PRESENCE_FLUSH_DELAY_MS = 80
 const CONVERSATION_RELOAD_DELAY_MS = 300
 
@@ -68,9 +70,11 @@ Page({
       .then(res => {
         const list = (res.data || []).map(item => this.formatConversationItem(item))
         this.setData(this.buildConversationViewData(list))
+        this.syncChatUnreadBadge(list)
       })
       .catch(err => {
         toastError(err, '加载失败')
+        refreshChatUnreadBadge()
       })
       .finally(() => {
         if (!this.data.loading) {
@@ -148,6 +152,7 @@ Page({
     list[idx] = item
 
     this.setData(this.buildConversationViewData(list))
+    this.syncChatUnreadBadge(list)
   },
 
   loadLobbyMeta() {
@@ -309,6 +314,7 @@ Page({
           return this.withConversationSwipeActions(nextItem)
         })
         this.setData(this.buildConversationViewData(nextList))
+        this.syncChatUnreadBadge(nextList)
         toastSuccess(readTogglePlan.markRead ? '已标为已读' : '已标为未读')
       })
       .catch(err => {
@@ -337,14 +343,19 @@ Page({
   },
 
   formatConversationItem(item) {
+    const withDisplayTitle = attachDisplayTitle(
+      item,
+      item.targetEquippedTitleName,
+      item.targetEquippedTitleColor
+    )
     const conversationId = Number(item.conversationId)
     const pinned = (this.pinnedConversationIds || []).includes(conversationId)
-    const isOnline = this.resolveOnlineStatus(item)
-    const lastMessageTime = item.lastMessageTime || ''
-    const lastSeenAt = item.lastSeenAt || ''
-    const unreadCount = Number(item.unreadCount) || 0
+    const isOnline = this.resolveOnlineStatus(withDisplayTitle)
+    const lastMessageTime = withDisplayTitle.lastMessageTime || ''
+    const lastSeenAt = withDisplayTitle.lastSeenAt || ''
+    const unreadCount = Number(withDisplayTitle.unreadCount) || 0
     return {
-      ...item,
+      ...withDisplayTitle,
       pinned,
       isOnline,
       lastSeenAt,
@@ -417,6 +428,18 @@ Page({
 
   sortConversationList(sourceList) {
     return conversationViewHelper.sortConversationList(sourceList)
+  },
+
+  syncChatUnreadBadge(list) {
+    const conversationList = Array.isArray(list) ? list : (this.data.conversationList || [])
+    const unreadTotal = conversationList.reduce((sum, item) => {
+      const count = Number(item.unreadCount)
+      if (!Number.isFinite(count) || count <= 0) {
+        return sum
+      }
+      return sum + Math.floor(count)
+    }, 0)
+    setChatBadge(unreadTotal)
   },
 
   syncPinnedConversationIds() {

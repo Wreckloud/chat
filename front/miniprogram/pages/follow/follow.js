@@ -7,6 +7,7 @@ const { normalizeUserList, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
+const { attachDisplayTitle } = require('../../utils/title')
 
 const FOLLOW_API_BY_TAB = {
   following: '/follow/following',
@@ -50,8 +51,13 @@ Page({
 
     try {
       const res = await request.get(url)
+      const list = normalizeUserList(res.data || []).map(item => attachDisplayTitle(
+        item,
+        item.equippedTitleName,
+        item.equippedTitleColor
+      ))
       this.setData({
-        list: normalizeUserList(res.data || [])
+        list
       })
     } catch (error) {
       toastError(error, '加载失败')

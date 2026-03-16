@@ -36,10 +36,36 @@
   flex: 1;
 }
 
+.nickname-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6rpx;
+}
+
+.profile-title-badge {
+  flex-shrink: 0;
+  max-width: 180rpx;
+  padding: 0 8rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .nickname {
+  min-width: 0;
+  flex: 1;
   font-size: 30rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wolfno {
@@ -100,6 +126,47 @@
   margin-top: 8rpx;
   font-size: 20rpx;
   color: var(--retro-muted-text);
+}
+
+.showcase-card {
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+  padding: 14rpx;
+}
+
+.section-sub {
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.showcase-empty {
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+}
+
+.showcase-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.showcase-item {
+  max-width: 220rpx;
+}
+
+.showcase-title {
+  display: block;
+  max-width: 100%;
+  padding: 4rpx 10rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .meta-card {

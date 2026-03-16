@@ -12,6 +12,8 @@ const imUserHelper = require('../../utils/im-user-helper')
 const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
 const imConfig = require('../../utils/im-config')
+const { resolveDisplayName, attachDisplayTitle } = require('../../utils/title')
+const { refreshChatUnreadBadge } = require('../../utils/tab-badge')
 const buildCommonImPageMethods = require('../../utils/im-page-methods')
 
 const commonImPageMethods = buildCommonImPageMethods({
@@ -121,20 +123,23 @@ Page({
           userId: conversation.targetUserId,
           nickname: conversation.targetNickname,
           wolfNo: conversation.targetWolfNo,
-          avatar: conversation.targetAvatar
+          avatar: conversation.targetAvatar,
+          equippedTitleName: conversation.targetEquippedTitleName,
+          equippedTitleColor: conversation.targetEquippedTitleColor
         }) || {}
-        this.cacheUserProfile(normalized)
+        const targetUser = this.attachUserDisplayFields(normalized)
+        this.cacheUserProfile(targetUser)
 
         this.setData({
-          targetUser: normalized,
+          targetUser,
           messageBlocks: this.buildMessageBlocks(this.data.messages)
         })
 
         wx.setNavigationBarTitle({
-          title: normalized.nickname || normalized.wolfNo || '聊天'
+          title: resolveDisplayName(targetUser)
         })
 
-        this.ensureUserProfileById(normalized.userId)
+        this.ensureUserProfileById(targetUser.userId)
       })
       .catch(err => {
         toastError(err, '加载失败')
@@ -225,7 +230,7 @@ Page({
   },
 
   cacheUserProfile(user) {
-    imUserHelper.cacheUserProfile(this, normalizeUser, user)
+    imUserHelper.cacheUserProfile(this, normalizeUser, this.attachUserDisplayFields(user))
   },
 
   ensureSenderProfiles(messages) {
@@ -251,16 +256,17 @@ Page({
     if (!normalized || !normalized.userId) {
       return
     }
+    const normalizedUser = this.attachUserDisplayFields(normalized)
 
     const updates = {}
-    if (Number(this.currentUserId) === Number(normalized.userId)) {
-      this.currentUser = normalized
+    if (Number(this.currentUserId) === Number(normalizedUser.userId)) {
+      this.currentUser = normalizedUser
     }
 
-    if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalized.userId)) {
-      updates.targetUser = normalized
+    if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalizedUser.userId)) {
+      updates.targetUser = normalizedUser
       wx.setNavigationBarTitle({
-        title: normalized.nickname || normalized.wolfNo || '聊天'
+        title: resolveDisplayName(normalizedUser)
       })
     }
 
@@ -270,6 +276,15 @@ Page({
     if (Object.keys(updates).length > 0) {
       this.setData(updates)
     }
+  },
+
+  attachUserDisplayFields(user) {
+    const normalized = normalizeUser(user) || {}
+    return attachDisplayTitle(
+      normalized,
+      normalized.equippedTitleName,
+      normalized.equippedTitleColor
+    )
   },
 
   applyTheme() {
@@ -307,6 +322,7 @@ Page({
     this.lastMarkReadAt = now
     this.markReadLoading = true
     return request.put(`/conversations/${this.data.conversationId}/read`)
+      .then(() => refreshChatUnreadBadge())
       .catch(() => {})
       .finally(() => {
         this.markReadLoading = false

@@ -483,12 +483,19 @@ function buildMessageBlocks(messages, context) {
 
   for (let index = 0; index < messages.length; index++) {
     const message = messages[index]
-    cacheUserProfile({
+    const senderProfile = {
       userId: message.senderId,
       wolfNo: message.senderWolfNo,
       nickname: message.senderNickname,
       avatar: message.senderAvatar
-    })
+    }
+    if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleName')) {
+      senderProfile.equippedTitleName = message.senderEquippedTitleName
+    }
+    if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleColor')) {
+      senderProfile.equippedTitleColor = message.senderEquippedTitleColor
+    }
+    cacheUserProfile(senderProfile)
 
     const currentDateLabel = time.formatMessageDividerDate(message.createTime)
     const showDivider = !prevDateLabel || currentDateLabel !== prevDateLabel
@@ -506,6 +513,8 @@ function buildMessageBlocks(messages, context) {
     const senderName = sender.nickname || sender.wolfNo || '未知用户'
     const senderInitial = senderName ? senderName.charAt(0) : '行'
     const senderAvatar = sender.avatar || ''
+    const senderTitleName = String(sender.equippedTitleName || '').trim()
+    const senderTitleColor = String(sender.equippedTitleColor || '').trim()
     const senderChanged = !currentCluster || Number(currentCluster.senderId) !== Number(message.senderId)
     const splitByGap = isMessageMergeGapExceeded(previousMessage, message, gapMs)
 
@@ -518,6 +527,8 @@ function buildMessageBlocks(messages, context) {
         senderName,
         senderInitial,
         senderAvatar,
+        senderTitleName,
+        senderTitleColor,
         headerTimeText: time.formatMessageMetaTime(message.createTime),
         rows: []
       }

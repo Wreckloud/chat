@@ -7,6 +7,7 @@ const { toastError, toastSuccess } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { LOGIN_PAGE_COPY } = require('../../constants/copy')
 const { normalizeText, normalizeEmail, isValidEmail } = require('../../utils/account')
+const { refreshAllTabBadges } = require('../../utils/tab-badge')
 const {
   evaluatePasswordStrength,
   getPasswordStrengthInlineText
@@ -243,6 +244,7 @@ Page({
     }
     auth.setToken(authPayload.token)
     auth.setUserInfo(authPayload.userInfo)
+    refreshAllTabBadges()
   },
 
   applyTheme() {

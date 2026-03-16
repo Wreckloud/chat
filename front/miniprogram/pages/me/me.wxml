@@ -12,15 +12,18 @@
         </retro-avatar>
 
         <view class="identity-meta">
-          <view class="identity-name">{{userInfo.nickname || userInfo.wolfNo}}</view>
+          <view class="identity-name-line">
+            <text
+              wx:if="{{userInfo.equippedTitleName}}"
+              class="identity-title-badge"
+              style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
+              [{{userInfo.equippedTitleName}}]
+            </text>
+            <text class="identity-name">{{userInfo.nickname || userInfo.wolfNo}}</text>
+          </view>
           <view class="identity-wolf">狼藉号 {{userInfo.wolfNo || '--'}}</view>
           <view class="identity-email">{{userInfo.email || '未绑定邮箱'}}</view>
         </view>
-      </view>
-
-      <view class="identity-tags">
-        <view class="identity-tag">{{emailStatusText}}</view>
-        <view class="identity-tag">{{onboardingStatusText}}</view>
       </view>
     </view>
 
@@ -37,7 +40,10 @@
           class="quick-item"
           bindtap="onTapQuickAction"
           data-key="{{item.key}}">
-          <view class="quick-title">{{item.title}}</view>
+          <view class="quick-title-row">
+            <text class="quick-title">{{item.title}}</text>
+            <text wx:if="{{item.key === 'notice' && noticeUnreadCount > 0}}" class="quick-badge">[{{noticeUnreadCount}}]</text>
+          </view>
           <view class="quick-desc">{{item.desc}}</view>
         </view>
       </view>

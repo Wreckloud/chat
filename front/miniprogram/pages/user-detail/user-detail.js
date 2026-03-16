@@ -8,6 +8,7 @@ const { toastError } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
+const { attachDisplayTitle, normalizeTitleName, normalizeTitleColor } = require('../../utils/title')
 
 function formatCount(value) {
   const number = Number(value)
@@ -42,6 +43,7 @@ Page({
     threadCountText: '0',
     replyCountText: '0',
     lastActiveText: '--',
+    showcaseTitles: [],
     latestThreads: [],
     themeClass: 'theme-retro-blue'
   },
@@ -85,7 +87,18 @@ Page({
     try {
       const res = await request.get(`/users/${this.data.targetUserId}/home`)
       const home = res.data || {}
-      const userInfo = normalizeUser(home.user)
+      const userInfo = attachDisplayTitle(
+        normalizeUser(home.user),
+        home.user && home.user.equippedTitleName,
+        home.user && home.user.equippedTitleColor
+      )
+      const showcaseTitles = Array.isArray(home.showcaseTitles)
+        ? home.showcaseTitles.slice(0, 3).map(item => ({
+          achievementCode: item.achievementCode || '',
+          titleName: normalizeTitleName(item.titleName),
+          titleColor: normalizeTitleColor(item.titleColor)
+        })).filter(item => item.titleName)
+        : []
       this.setData({
         userInfo,
         isSelf: home.self === true,
@@ -98,6 +111,7 @@ Page({
         threadCountText: formatCount(home.threadCount),
         replyCountText: formatCount(home.replyCount),
         lastActiveText: time.formatPostTime(home.lastActiveAt) || '--',
+        showcaseTitles,
         latestThreads: Array.isArray(home.latestThreads) ? home.latestThreads.map(mapThread) : []
       })
     } catch (error) {

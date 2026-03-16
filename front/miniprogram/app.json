@@ -5,6 +5,8 @@
     "pages/lobby/lobby",
     "pages/community/community",
     "pages/me/me",
+    "pages/notice/notice",
+    "pages/achievement/achievement",
     "pages/profile/profile",
     "pages/email/email",
     "pages/password/password",

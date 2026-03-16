@@ -17,7 +17,9 @@ const EMPTY_QUOTE_DATA = {
 
 function buildQuoteHint(reply) {
   if (!reply) return ''
-  const author = reply.author && (reply.author.nickname || reply.author.wolfNo) ? (reply.author.nickname || reply.author.wolfNo) : '行者'
+  const author = reply.author && (reply.author.displayName || reply.author.nickname || reply.author.wolfNo)
+    ? (reply.author.displayName || reply.author.nickname || reply.author.wolfNo)
+    : '行者'
   const content = (reply.content || '').replace(/\s+/g, ' ').trim()
   const contentPreview = content.length > 24 ? `${content.slice(0, 24)}...` : content
   return `引用 #${reply.floorNo} ${author}: ${contentPreview}`

@@ -1,0 +1,156 @@
+.achievement-page {
+  min-height: 100vh;
+  padding: 22rpx 18rpx 28rpx;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
+  box-sizing: border-box;
+}
+
+.retro-card {
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+  padding: 16rpx;
+}
+
+.list-card {
+  margin-top: 12rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--retro-strong-text);
+}
+
+.section-sub {
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.equipped-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8rpx;
+}
+
+.equipped-title-badge {
+  flex-shrink: 0;
+  max-width: 180rpx;
+  padding: 0 8rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 21rpx;
+  line-height: 1.3;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.equipped-name {
+  min-width: 0;
+  flex: 1;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--retro-strong-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.equipped-empty {
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+}
+
+.achievement-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.achievement-item:last-child {
+  border-bottom: none;
+}
+
+.achievement-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.achievement-name-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6rpx;
+}
+
+.achievement-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--retro-body-text);
+}
+
+.achievement-title-badge {
+  flex-shrink: 0;
+  max-width: 180rpx;
+  padding: 0 6rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 19rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.achievement-desc {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}
+
+.achievement-meta {
+  margin-top: 4rpx;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.achievement-action {
+  flex-shrink: 0;
+}
+
+.equipped-flag,
+.locked-flag {
+  font-size: 20rpx;
+}
+
+.equipped-flag {
+  color: var(--retro-accent-text);
+}
+
+.locked-flag {
+  color: var(--retro-muted-text);
+}

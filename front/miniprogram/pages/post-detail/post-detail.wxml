@@ -31,7 +31,15 @@
               {{thread.author.nickname ? thread.author.nickname.charAt(0) : '行'}}
             </retro-avatar>
             <view class="thread-info">
-              <view class="thread-name">{{thread.author.nickname || thread.author.wolfNo}}</view>
+              <view class="thread-name-line">
+                <text
+                  wx:if="{{thread.author.displayTitleName}}"
+                  class="user-title-badge"
+                  style="{{thread.author.displayTitleColor ? 'color:' + thread.author.displayTitleColor + ';' : ''}}">
+                  [{{thread.author.displayTitleName}}]
+                </text>
+                <text class="thread-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
+              </view>
               <view class="thread-time">{{thread.createTimeText}}</view>
             </view>
           </view>
@@ -51,7 +59,16 @@
 
         <view class="thread-content">{{content}}</view>
         <view class="thread-last-line">
-          <text>最后回复：{{thread.lastReplyUser.nickname || thread.lastReplyUser.wolfNo || '--'}}</text>
+          <view class="thread-last-user-line">
+            <text class="thread-last-prefix">最后回复：</text>
+            <text
+              wx:if="{{thread.lastReplyUser.displayTitleName}}"
+              class="user-title-badge"
+              style="{{thread.lastReplyUser.displayTitleColor ? 'color:' + thread.lastReplyUser.displayTitleColor + ';' : ''}}">
+              [{{thread.lastReplyUser.displayTitleName}}]
+            </text>
+            <text class="thread-last-user">{{thread.lastReplyUser.displayName || thread.lastReplyUser.nickname || thread.lastReplyUser.wolfNo || '--'}}</text>
+          </view>
           <text>{{thread.lastReplyTimeText || thread.createTimeText}}</text>
         </view>
       </view>
@@ -74,7 +91,15 @@
                 {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
               </retro-avatar>
               <view class="reply-info">
-                <view class="reply-author">{{item.author.nickname || item.author.wolfNo}}</view>
+                <view class="reply-author-line">
+                  <text
+                    wx:if="{{item.author.displayTitleName}}"
+                    class="user-title-badge"
+                    style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
+                    [{{item.author.displayTitleName}}]
+                  </text>
+                  <text class="reply-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
+                </view>
                 <view class="reply-time">{{item.timeText}}</view>
               </view>
             </view>
@@ -82,7 +107,14 @@
           </view>
 
           <view wx:if="{{item.quoteReplyId}}" class="reply-quote">
-            引用 #{{item.quoteFloorNo}} {{item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}：
+            引用 #{{item.quoteFloorNo}}
+            <text
+              wx:if="{{item.quoteAuthor.displayTitleName}}"
+              class="user-title-badge"
+              style="{{item.quoteAuthor.displayTitleColor ? 'color:' + item.quoteAuthor.displayTitleColor + ';' : ''}}">
+              [{{item.quoteAuthor.displayTitleName}}]
+            </text>
+            {{item.quoteAuthor.displayName || item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}：
           </view>
           <view wx:if="{{item.quoteReplyId}}" class="reply-quote-content">{{item.quoteContent}}</view>
           <view class="reply-content">{{item.content}}</view>

@@ -35,8 +35,31 @@
   margin-left: 12rpx;
 }
 
+.im-header-name-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6rpx;
+}
+
+.im-header-title-badge {
+  flex-shrink: 0;
+  max-width: 140rpx;
+  padding: 0 6rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 19rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .im-header-name {
   display: block;
+  min-width: 0;
+  flex: 1;
   max-width: 410rpx;
   font-size: 29rpx;
   font-weight: 600;

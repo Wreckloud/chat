@@ -155,6 +155,28 @@
   white-space: nowrap;
 }
 
+.thread-author-line,
+.thread-last-user-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.thread-title-badge {
+  flex-shrink: 0;
+  max-width: 130rpx;
+  padding: 0 6rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 18rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .thread-last-time {
   flex-shrink: 0;
 }

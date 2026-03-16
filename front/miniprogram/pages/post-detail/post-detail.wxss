@@ -98,12 +98,20 @@
 }
 
 .thread-name {
-  max-width: 100%;
+  min-width: 0;
+  flex: 1;
   font-size: 28rpx;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.thread-name-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
 }
 
 .thread-time {
@@ -159,6 +167,25 @@
   gap: 10rpx;
   font-size: 21rpx;
   color: var(--retro-muted-text);
+}
+
+.thread-last-user-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.thread-last-prefix {
+  flex-shrink: 0;
+}
+
+.thread-last-user {
+  min-width: 0;
+  max-width: 260rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section-title {
@@ -221,11 +248,20 @@
 }
 
 .reply-author {
+  min-width: 0;
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 24rpx;
   font-weight: 600;
+}
+
+.reply-author-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
 }
 
 .reply-time {
@@ -238,6 +274,20 @@
   margin-top: 8rpx;
   font-size: 21rpx;
   color: var(--retro-muted-text);
+}
+
+.user-title-badge {
+  flex-shrink: 0;
+  max-width: 130rpx;
+  padding: 0 6rpx;
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 18rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .reply-quote-content {

@@ -59,9 +59,15 @@
                 {{item.targetNickname ? item.targetNickname.charAt(0) : '行'}}
               </retro-avatar>
 
-              <view class="session-user-meta">
-                <view class="session-name-line">
-                  <text class="session-name">{{item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
+                <view class="session-user-meta">
+                  <view class="session-name-line">
+                  <text
+                    wx:if="{{item.displayTitleName}}"
+                    class="session-title-badge"
+                    style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
+                    [{{item.displayTitleName}}]
+                  </text>
+                  <text class="session-name">{{item.displayName || item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
                   <text wx:if="{{item.unreadCount > 0}}" class="session-unread">[{{item.unreadCount}}]</text>
                 </view>
                 <text class="session-presence {{item.isOnline ? 'session-presence-online' : ''}}">{{item.presenceText}}</text>

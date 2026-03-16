@@ -12,12 +12,16 @@ function cacheUserProfile(page, normalizeUser, user) {
   }
 
   const existing = page.userProfileMap[userId] || {}
+  const hasTitleName = Object.prototype.hasOwnProperty.call(user, 'equippedTitleName')
+  const hasTitleColor = Object.prototype.hasOwnProperty.call(user, 'equippedTitleColor')
   // 仅补齐缺失字段，避免后续不完整数据覆盖已缓存资料。
   const merged = {
     userId,
     wolfNo: user.wolfNo || existing.wolfNo,
     nickname: user.nickname || existing.nickname,
-    avatar: user.avatar || existing.avatar
+    avatar: user.avatar || existing.avatar,
+    equippedTitleName: hasTitleName ? user.equippedTitleName : existing.equippedTitleName,
+    equippedTitleColor: hasTitleColor ? user.equippedTitleColor : existing.equippedTitleColor
   }
   page.userProfileMap[userId] = normalizeUser(merged)
 }
@@ -81,12 +85,19 @@ function cacheSenderProfilesFromMessages(messages, cacheFn) {
     }
 
     cachedSenderIdMap[senderId] = true
-    cacheFn({
+    const senderProfile = {
       userId: message.senderId,
       wolfNo: message.senderWolfNo,
       nickname: message.senderNickname,
       avatar: message.senderAvatar
-    })
+    }
+    if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleName')) {
+      senderProfile.equippedTitleName = message.senderEquippedTitleName
+    }
+    if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleColor')) {
+      senderProfile.equippedTitleColor = message.senderEquippedTitleColor
+    }
+    cacheFn(senderProfile)
   }
 }
 

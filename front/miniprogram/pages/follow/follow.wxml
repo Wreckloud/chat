@@ -19,7 +19,13 @@
         </retro-avatar>
         <view class="user-meta">
           <view class="user-name-line">
-            <text class="user-name">{{item.nickname || item.wolfNo}}</text>
+            <text
+              wx:if="{{item.displayTitleName}}"
+              class="user-title-badge"
+              style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
+              [{{item.displayTitleName}}]
+            </text>
+            <text class="user-name">{{item.displayName || item.nickname || item.wolfNo}}</text>
             <text wx:if="{{item.mutual}}" class="mutual-tag">互关</text>
           </view>
           <view class="user-no">ID: {{item.wolfNo || '--'}}</view>

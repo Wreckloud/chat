@@ -12,7 +12,15 @@
         </retro-avatar>
 
         <view class="profile-info">
-          <view class="nickname">{{userInfo.nickname || userInfo.wolfNo}}</view>
+          <view class="nickname-line">
+            <text
+              wx:if="{{userInfo.displayTitleName}}"
+              class="profile-title-badge"
+              style="{{userInfo.displayTitleColor ? 'color:' + userInfo.displayTitleColor + ';' : ''}}">
+              [{{userInfo.displayTitleName}}]
+            </text>
+            <text class="nickname">{{userInfo.displayName || userInfo.nickname || userInfo.wolfNo}}</text>
+          </view>
           <view class="wolfno">狼藉号 {{userInfo.wolfNo || '--'}}</view>
           <view wx:if="{{userInfo.signature}}" class="signature">{{userInfo.signature}}</view>
           <view wx:if="{{userInfo.bio}}" class="bio">{{userInfo.bio}}</view>
@@ -52,6 +60,23 @@
       <view class="core-stat">
         <view class="core-value">{{followerCountText}}</view>
         <view class="core-label">粉丝数</view>
+      </view>
+    </view>
+
+    <view class="showcase-card">
+      <view class="section-head">
+        <view class="section-title">头衔橱窗</view>
+        <view class="section-sub">最多展示 3 个</view>
+      </view>
+      <view wx:if="{{showcaseTitles.length === 0}}" class="showcase-empty">暂无头衔</view>
+      <view wx:else class="showcase-list">
+        <view wx:for="{{showcaseTitles}}" wx:key="achievementCode" class="showcase-item">
+          <text
+            class="showcase-title"
+            style="{{item.titleColor ? 'color:' + item.titleColor + ';' : ''}}">
+            [{{item.titleName}}]
+          </text>
+        </view>
       </view>
     </view>
 
