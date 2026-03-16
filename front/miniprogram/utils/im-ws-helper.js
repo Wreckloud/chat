@@ -46,8 +46,44 @@ function handleWsAck(page, payload, options = {}) {
   return resolved
 }
 
+function handleCommonPayload(page, payload, options = {}) {
+  const payloadType = getPayloadType(payload)
+  if (!payloadType) {
+    return {
+      handled: true,
+      payloadType
+    }
+  }
+
+  if (payloadType === 'ERROR') {
+    handleWsError(page, payload, options.toastError)
+    return {
+      handled: true,
+      payloadType
+    }
+  }
+
+  if (payloadType === 'ACK') {
+    handleWsAck(page, payload, {
+      consumeWhenResolved: options.consumeWhenResolved,
+      onMessage: options.onAckMessage,
+      onAfterAck: options.onAfterAck
+    })
+    return {
+      handled: true,
+      payloadType
+    }
+  }
+
+  return {
+    handled: false,
+    payloadType
+  }
+}
+
 module.exports = {
   getPayloadType,
   handleWsError,
-  handleWsAck
+  handleWsAck,
+  handleCommonPayload
 }

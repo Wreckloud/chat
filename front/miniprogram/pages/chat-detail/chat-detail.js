@@ -205,23 +205,16 @@ Page({
   },
 
   handleWsMessage(payload) {
-    const payloadType = imWsHelper.getPayloadType(payload)
-    if (!payloadType) return
-
-    if (payloadType === 'ERROR') {
-      imWsHelper.handleWsError(this, payload, toastError)
+    const commonHandled = imWsHelper.handleCommonPayload(this, payload, {
+      toastError,
+      consumeWhenResolved: false,
+      onAckMessage: message => this.appendMessage(message)
+    })
+    if (commonHandled.handled) {
       return
     }
 
-    if (payloadType === 'ACK') {
-      imWsHelper.handleWsAck(this, payload, {
-        consumeWhenResolved: false,
-        onMessage: message => this.appendMessage(message)
-      })
-      return
-    }
-
-    if (payloadType === 'MESSAGE') {
+    if (commonHandled.payloadType === 'MESSAGE') {
       this.appendMessage(payload.data)
       if (payload.data && Number(payload.data.senderId) !== Number(this.currentUserId)) {
         this.markConversationRead()

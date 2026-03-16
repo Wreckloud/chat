@@ -187,28 +187,21 @@ Page({
   },
 
   handleWsMessage(payload) {
-    const payloadType = imWsHelper.getPayloadType(payload)
-    if (!payloadType) return
+    const commonHandled = imWsHelper.handleCommonPayload(this, payload, {
+      toastError,
+      onAckMessage: message => this.appendMessage(message),
+      onAfterAck: () => this.scheduleLobbyMetaRefresh()
+    })
+    if (commonHandled.handled) {
+      return
+    }
 
-    if (payloadType === 'PRESENCE') {
+    if (commonHandled.payloadType === 'PRESENCE') {
       this.scheduleLobbyMetaRefresh()
       return
     }
 
-    if (payloadType === 'ERROR') {
-      imWsHelper.handleWsError(this, payload, toastError)
-      return
-    }
-
-    if (payloadType === 'ACK') {
-      imWsHelper.handleWsAck(this, payload, {
-        onMessage: message => this.appendMessage(message),
-        onAfterAck: () => this.scheduleLobbyMetaRefresh()
-      })
-      return
-    }
-
-    if (payloadType === 'LOBBY_MESSAGE') {
+    if (commonHandled.payloadType === 'LOBBY_MESSAGE') {
       this.appendMessage(payload.data)
       this.scheduleLobbyMetaRefresh()
     }
