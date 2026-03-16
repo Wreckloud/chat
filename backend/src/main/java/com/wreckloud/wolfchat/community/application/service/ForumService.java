@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 论坛门面服务：读操作委托给查询服务，写操作在此统一编排。
@@ -312,25 +313,10 @@ public class ForumService {
     }
 
     private void refreshBoardStats(Long boardId) {
-        LambdaQueryWrapper<WfForumThread> countQueryWrapper = new LambdaQueryWrapper<>();
-        countQueryWrapper.eq(WfForumThread::getBoardId, boardId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
-        List<WfForumThread> threads = wfForumThreadMapper.selectList(countQueryWrapper);
-
-        int threadCount = threads.size();
-        int replyCount = 0;
-        for (WfForumThread thread : threads) {
-            replyCount += normalizeCount(thread.getReplyCount());
-        }
-
-        LambdaQueryWrapper<WfForumThread> lastThreadQueryWrapper = new LambdaQueryWrapper<>();
-        lastThreadQueryWrapper.eq(WfForumThread::getBoardId, boardId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
-                .orderByDesc(WfForumThread::getLastReplyTime)
-                .orderByDesc(WfForumThread::getCreateTime)
-                .orderByDesc(WfForumThread::getId)
-                .last("LIMIT 1");
-        WfForumThread lastThread = wfForumThreadMapper.selectOne(lastThreadQueryWrapper);
+        Map<String, Object> boardStats = wfForumThreadMapper.selectBoardStats(boardId);
+        int threadCount = parseStatsCount(boardStats, "threadCount");
+        int replyCount = parseStatsCount(boardStats, "replyCount");
+        WfForumThread lastThread = wfForumThreadMapper.selectLatestVisibleByBoardId(boardId);
 
         LambdaUpdateWrapper<WfForumBoard> boardUpdateWrapper = new LambdaUpdateWrapper<>();
         boardUpdateWrapper.eq(WfForumBoard::getId, boardId)
@@ -391,7 +377,15 @@ public class ForumService {
         }
     }
 
-    private int normalizeCount(Integer count) {
-        return count == null || count < 0 ? 0 : count;
+    private int parseStatsCount(Map<String, Object> boardStats, String key) {
+        if (boardStats == null) {
+            return 0;
+        }
+        Object value = boardStats.get(key);
+        if (!(value instanceof Number)) {
+            return 0;
+        }
+        int count = ((Number) value).intValue();
+        return Math.max(count, 0);
     }
 }

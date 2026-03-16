@@ -28,6 +28,7 @@
 24. 高频预期日志已降噪：认证与参数类业务失败下调为 `debug`，WS 建连/断连与逐条送达日志下调为 `debug`，保留关键异常 `error`。
 25. 社区展示映射已收敛：新增 `forum-view-helper.js` 统一主题/回复映射、分页合并与 `hasMore` 计算，减少 `community.js` 与 `post-detail.js` 重复代码。
 26. 媒体校验规则已收敛：`ChatMediaService` 抽取图片/视频上传策略与消息校验公共模板，减少重复分支并统一错误边界。
+27. 版块统计查询已优化：`ForumService.refreshBoardStats` 改为数据库聚合统计与最新主题直查，避免全量加载主题再内存累加。
 
 ## 仍需收口（按建议顺序）
 
