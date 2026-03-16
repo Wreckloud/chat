@@ -23,6 +23,7 @@
 19. 「更多」面板动作已收敛：`im-page-helper.js` 统一默认媒体动作分发与发送依赖构建，页面仅保留上传能力配置。
 20. 文本发送流程已收敛：`im-page-helper.js` 统一 `sendComposerTextMessage`，页面不再重复维护同一发送实现。
 21. 页面初始化与上拉加载流程已收敛：`im-page-helper.js` 统一 `onLoad` 启动编排与 `onMessageListUpper` 加载条件，移除页面重复判定。
+22. 会话列表页清理流程已收敛：`chat.js` 统一 `onHide/onUnload` 退出清理入口，并收敛 `loadConversations` 的 loading 复位逻辑。
 
 ## 仍需收口（按建议顺序）
 

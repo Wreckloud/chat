@@ -45,14 +45,11 @@ Page({
   },
 
   onHide() {
-    this.clearPerformanceTimers()
-    this.teardownSocket()
+    this.cleanupPageState()
   },
 
   onUnload() {
-    this.clearPerformanceTimers()
-    this.clearLobbyMetaTimer()
-    this.teardownSocket()
+    this.cleanupPageState({ clearLobbyMeta: true })
   },
 
   /**
@@ -66,13 +63,15 @@ Page({
     return request.get('/conversations')
       .then(res => {
         const list = (res.data || []).map(item => this.formatConversationItem(item))
-        this.setData({
-          ...this.buildConversationViewData(list),
-          loading: false
-        })
+        this.setData(this.buildConversationViewData(list))
       })
       .catch(err => {
         toastError(err, '加载失败')
+      })
+      .finally(() => {
+        if (!this.data.loading) {
+          return
+        }
         this.setData({ loading: false })
       })
   },
@@ -89,6 +88,14 @@ Page({
    */
   teardownSocket() {
     imPageHelper.teardownSocket(this, ws)
+  },
+
+  cleanupPageState(options = {}) {
+    this.clearPerformanceTimers()
+    if (options.clearLobbyMeta) {
+      this.clearLobbyMetaTimer()
+    }
+    this.teardownSocket()
   },
 
   /**
@@ -279,7 +286,7 @@ Page({
           })
         }
       }
-      })
+    })
   },
 
   toggleConversationReadState(conversationId) {
