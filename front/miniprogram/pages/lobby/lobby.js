@@ -58,14 +58,14 @@ Page({
   },
 
   onReady() {
-    imHelper.measureDockHeight(this)
+    imPageHelper.handlePageReady(this)
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    imHelper.measureDockHeight(this)
-    this.loadLobbyMeta()
+    imPageHelper.handlePageShow(this, auth, {
+      applyTheme: () => this.applyTheme(),
+      afterShow: () => this.loadLobbyMeta()
+    })
   },
 
   onUnload() {

@@ -15,6 +15,7 @@
 11. 消息规则校验入口已统一：私聊与 Lobby 均复用 `ChatMediaService.validateMessagePayload`，不再分别维护类型分支。
 12. 聊天连接态与发送态提示已统一：`ws.js` 提供状态订阅，`im-page-helper.js` 统一连接提示与发送失败点击重试。
 13. 媒体发送状态提示已统一：图片/视频/文件/链接发送复用 `im-page-helper.js` 的发送状态展示，不再仅文本消息可见。
+14. 聊天页面生命周期清理已收敛：`im-page-helper.js` 统一 `onReady/onShow/onUnload` 公共流程，页面仅保留场景差异逻辑。
 
 ## 仍需收口（按建议顺序）
 

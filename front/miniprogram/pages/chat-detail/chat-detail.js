@@ -72,14 +72,14 @@ Page({
   },
 
   onReady() {
-    imHelper.measureDockHeight(this)
+    imPageHelper.handlePageReady(this)
   },
 
   onShow() {
-    if (!auth.requireLogin()) return
-    this.applyTheme()
-    this.markConversationRead(true)
-    imHelper.measureDockHeight(this)
+    imPageHelper.handlePageShow(this, auth, {
+      applyTheme: () => this.applyTheme(),
+      afterShow: () => this.markConversationRead(true)
+    })
   },
 
   onUnload() {

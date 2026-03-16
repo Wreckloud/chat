@@ -93,6 +93,30 @@ function cleanupPage(page, ws, options = {}) {
   teardownSocket(page, ws)
 }
 
+function handlePageReady(page) {
+  if (!page) {
+    return
+  }
+  imHelper.measureDockHeight(page)
+}
+
+function handlePageShow(page, auth, options = {}) {
+  if (!page || !auth || typeof auth.requireLogin !== 'function') {
+    return false
+  }
+  if (!auth.requireLogin()) {
+    return false
+  }
+  if (typeof options.applyTheme === 'function') {
+    options.applyTheme()
+  }
+  imHelper.measureDockHeight(page)
+  if (typeof options.afterShow === 'function') {
+    options.afterShow()
+  }
+  return true
+}
+
 function onMessageInput(page, event) {
   const value = event && event.detail ? event.detail.value : ''
   const nextData = {
@@ -230,6 +254,8 @@ module.exports = {
   initSocket,
   teardownSocket,
   cleanupPage,
+  handlePageReady,
+  handlePageShow,
   onMessageInput,
   onKeyboardHeightChange,
   onComposerFocus,
