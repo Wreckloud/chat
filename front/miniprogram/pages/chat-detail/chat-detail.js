@@ -83,17 +83,14 @@ Page({
   },
 
   onUnload() {
-    this.pageUnloaded = true
-    imHelper.resetKeyboardHeight(this)
-    imHelper.clearScrollToBottomTimer(this)
-    imHelper.clearRefocusComposerTimer(this)
-    imHelper.rejectPendingRequest(this, new Error('页面已关闭'))
-    imHelper.clearPendingTimer(this)
-    if (this.markReadThrottleTimer) {
-      clearTimeout(this.markReadThrottleTimer)
-      this.markReadThrottleTimer = null
-    }
-    this.teardownSocket()
+    imPageHelper.cleanupPage(this, ws, {
+      beforeTeardown: () => {
+        if (this.markReadThrottleTimer) {
+          clearTimeout(this.markReadThrottleTimer)
+          this.markReadThrottleTimer = null
+        }
+      }
+    })
   },
 
   initSocket() {

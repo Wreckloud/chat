@@ -69,14 +69,11 @@ Page({
   },
 
   onUnload() {
-    this.pageUnloaded = true
-    imHelper.resetKeyboardHeight(this)
-    imHelper.clearScrollToBottomTimer(this)
-    imHelper.clearRefocusComposerTimer(this)
-    this.clearLobbyMetaTimer()
-    imHelper.rejectPendingRequest(this, new Error('页面已关闭'))
-    imHelper.clearPendingTimer(this)
-    this.teardownSocket()
+    imPageHelper.cleanupPage(this, ws, {
+      beforeTeardown: () => {
+        this.clearLobbyMetaTimer()
+      }
+    })
   },
 
   initSocket() {

@@ -77,6 +77,22 @@ function teardownSocket(page, ws) {
   page.wsHandler = null
 }
 
+function cleanupPage(page, ws, options = {}) {
+  if (!page) {
+    return
+  }
+  page.pageUnloaded = true
+  imHelper.resetKeyboardHeight(page)
+  imHelper.clearScrollToBottomTimer(page)
+  imHelper.clearRefocusComposerTimer(page)
+  imHelper.rejectPendingRequest(page, new Error('页面已关闭'))
+  imHelper.clearPendingTimer(page)
+  if (typeof options.beforeTeardown === 'function') {
+    options.beforeTeardown()
+  }
+  teardownSocket(page, ws)
+}
+
 function onMessageInput(page, event) {
   const value = event && event.detail ? event.detail.value : ''
   const nextData = {
@@ -197,7 +213,7 @@ function onSendStatusTap(page, sendFn) {
   if (!page || page.data.sending) {
     return
   }
-  if (!String(page.data.sendStatusText || '').includes('发送失败')) {
+  if (!String(page.data.sendStatusText || '').includes('点击重试')) {
     return
   }
   if (!String(page.data.inputMessage || '').trim() && page.lastFailedInputContent) {
@@ -213,6 +229,7 @@ function onSendStatusTap(page, sendFn) {
 module.exports = {
   initSocket,
   teardownSocket,
+  cleanupPage,
   onMessageInput,
   onKeyboardHeightChange,
   onComposerFocus,
@@ -222,6 +239,7 @@ module.exports = {
   getSendDeps,
   onSendButtonTap,
   onSendStatusTap,
+  setSendStatus,
   sendComposerText,
   previewImage,
   resolveConnectionTip

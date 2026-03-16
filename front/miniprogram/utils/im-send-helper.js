@@ -1,4 +1,5 @@
 const imHelper = require('./im-helper')
+const imPageHelper = require('./im-page-helper')
 
 const DEFAULT_MORE_ACTIONS = [
   { key: 'image', label: '多图', icon: '图', subLabel: '相册' },
@@ -43,6 +44,7 @@ async function chooseImageFromAlbum(page, deps) {
       return
     }
 
+    imPageHelper.setSendStatus(page, '发送图片中...')
     page.setData({ sending: true })
     for (let index = 0; index < tempFiles.length; index++) {
       const media = await deps.uploadImage(tempFiles[index])
@@ -56,13 +58,16 @@ async function chooseImageFromAlbum(page, deps) {
         })
       )
     }
+    imPageHelper.setSendStatus(page, '')
   } catch (error) {
     if (page.pageUnloaded) {
       return
     }
     if (imHelper.isUserCancelError(error)) {
+      imPageHelper.setSendStatus(page, '')
       return
     }
+    imPageHelper.setSendStatus(page, '发送失败，请重试', 3000)
     deps.toastError(error, '图片发送失败')
   } finally {
     page.setData({ sending: false })
@@ -84,6 +89,7 @@ async function chooseVideoFromAlbum(page, deps) {
     if (!tempFile || !tempFile.tempFilePath) {
       return
     }
+    imPageHelper.setSendStatus(page, '发送视频中...')
     page.setData({ sending: true })
     const media = await deps.uploadVideo(tempFile)
     await page.sendWsMessageWithAck(
@@ -95,13 +101,16 @@ async function chooseVideoFromAlbum(page, deps) {
         mediaMimeType: media.mediaMimeType
       })
     )
+    imPageHelper.setSendStatus(page, '')
   } catch (error) {
     if (page.pageUnloaded) {
       return
     }
     if (imHelper.isUserCancelError(error)) {
+      imPageHelper.setSendStatus(page, '')
       return
     }
+    imPageHelper.setSendStatus(page, '发送失败，请重试', 3000)
     deps.toastError(error, '视频发送失败')
   } finally {
     page.setData({ sending: false })
@@ -164,6 +173,7 @@ async function chooseFileForShare(page, deps) {
     let firstError = null
 
     for (let attempt = 1; attempt <= 2; attempt++) {
+      imPageHelper.setSendStatus(page, '发送文件中...')
       page.setData({ sending: true })
       const batchResult = await sendFileBatch(page, pendingFiles, deps)
       page.setData({ sending: false })
@@ -175,11 +185,13 @@ async function chooseFileForShare(page, deps) {
       }
 
       if (failedCount === 0) {
+        imPageHelper.setSendStatus(page, '')
         imHelper.showFileBatchResult(totalSuccessCount, 0, null, deps.toastError)
         return
       }
 
       if (attempt >= 2) {
+        imPageHelper.setSendStatus(page, '发送失败，请重试', 3000)
         imHelper.showFileBatchResult(totalSuccessCount, failedCount, firstError, deps.toastError)
         return
       }
@@ -191,6 +203,7 @@ async function chooseFileForShare(page, deps) {
         cancelText: '取消'
       })
       if (!shouldRetry) {
+        imPageHelper.setSendStatus(page, '发送失败，请重试', 3000)
         imHelper.showFileBatchResult(totalSuccessCount, failedCount, firstError, deps.toastError)
         return
       }
@@ -201,8 +214,10 @@ async function chooseFileForShare(page, deps) {
       return
     }
     if (imHelper.isUserCancelError(error)) {
+      imPageHelper.setSendStatus(page, '')
       return
     }
+    imPageHelper.setSendStatus(page, '发送失败，请重试', 3000)
     deps.toastError(error, '文件发送失败')
   } finally {
     page.setData({ sending: false })
@@ -229,12 +244,15 @@ async function shareLinkAsText(page, deps) {
   }
 
   page.setData({ sending: true })
+  imPageHelper.setSendStatus(page, '发送链接中...')
   try {
     await sendTextMessage(page, link)
+    imPageHelper.setSendStatus(page, '')
   } catch (error) {
     if (page.pageUnloaded) {
       return
     }
+    imPageHelper.setSendStatus(page, '发送失败，请重试', 3000)
     deps.toastError(error, '链接发送失败')
   } finally {
     page.setData({ sending: false })
