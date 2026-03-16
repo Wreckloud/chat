@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -13,7 +15,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -74,6 +79,16 @@ public class UserPresenceService {
         ZSetOperations<String, String> zSetOps = stringRedisTemplate.opsForZSet();
         cleanupExpiredOnline(cutoff, zSetOps);
 
+        Set<String> members = new LinkedHashSet<>();
+        for (ConversationVO conversation : conversationList) {
+            Long targetUserId = conversation.getTargetUserId();
+            if (targetUserId != null) {
+                members.add(String.valueOf(targetUserId));
+            }
+        }
+        Map<String, Double> onlineScoreMap = batchQueryScores(ONLINE_ZSET_KEY, members);
+        Map<String, Double> activeScoreMap = batchQueryScores(ACTIVE_ZSET_KEY, members);
+
         for (ConversationVO conversation : conversationList) {
             Long targetUserId = conversation.getTargetUserId();
             if (targetUserId == null) {
@@ -82,11 +97,11 @@ public class UserPresenceService {
                 continue;
             }
             String member = String.valueOf(targetUserId);
-            Double onlineScore = zSetOps.score(ONLINE_ZSET_KEY, member);
+            Double onlineScore = onlineScoreMap.get(member);
             boolean online = onlineScore != null && onlineScore.longValue() >= cutoff;
             conversation.setIsOnline(online);
             if (!online) {
-                Double activeScore = zSetOps.score(ACTIVE_ZSET_KEY, member);
+                Double activeScore = activeScoreMap.get(member);
                 conversation.setLastSeenAt(parseEpochMillis(activeScore));
             }
         }
@@ -120,6 +135,14 @@ public class UserPresenceService {
             return Collections.emptyList();
         }
 
+        Set<String> members = new LinkedHashSet<>();
+        for (ZSetOperations.TypedTuple<String> tuple : activeTuples) {
+            if (StringUtils.hasText(tuple.getValue())) {
+                members.add(tuple.getValue());
+            }
+        }
+        Map<String, Double> onlineScoreMap = batchQueryScores(ONLINE_ZSET_KEY, members);
+
         List<PresenceSnapshot> snapshots = new ArrayList<>(activeTuples.size());
         for (ZSetOperations.TypedTuple<String> tuple : activeTuples) {
             String rawUserId = tuple.getValue();
@@ -132,7 +155,7 @@ public class UserPresenceService {
             if (lastActiveAt == null) {
                 continue;
             }
-            Double onlineScore = zSetOps.score(ONLINE_ZSET_KEY, rawUserId);
+            Double onlineScore = onlineScoreMap.get(rawUserId);
             boolean online = onlineScore != null && onlineScore.longValue() >= cutoff;
             snapshots.add(new PresenceSnapshot(userId, online, lastActiveAt));
         }
@@ -141,6 +164,39 @@ public class UserPresenceService {
 
     private void cleanupExpiredOnline(long cutoff, ZSetOperations<String, String> zSetOps) {
         zSetOps.removeRangeByScore(ONLINE_ZSET_KEY, Double.NEGATIVE_INFINITY, cutoff - 1);
+    }
+
+    private Map<String, Double> batchQueryScores(String key, Set<String> members) {
+        if (members == null || members.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<String> memberList = new ArrayList<>(members);
+        List<Object> scoreResults = stringRedisTemplate.executePipelined(new SessionCallback<Object>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) {
+                @SuppressWarnings("unchecked")
+                RedisOperations<String, String> stringOps = (RedisOperations<String, String>) operations;
+                for (String member : memberList) {
+                    stringOps.opsForZSet().score(key, member);
+                }
+                return null;
+            }
+        });
+
+        Map<String, Double> scoreMap = new HashMap<>(memberList.size());
+        if (scoreResults == null || scoreResults.isEmpty()) {
+            return scoreMap;
+        }
+        int resultSize = Math.min(memberList.size(), scoreResults.size());
+        for (int index = 0; index < resultSize; index++) {
+            Object rawScore = scoreResults.get(index);
+            if (!(rawScore instanceof Double)) {
+                continue;
+            }
+            scoreMap.put(memberList.get(index), (Double) rawScore);
+        }
+        return scoreMap;
     }
 
     private Long parseUserId(String rawUserId) {

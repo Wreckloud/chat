@@ -34,6 +34,7 @@
 30. IM 生命周期已复用统一入口：`im-page-helper.js` 的 `handlePageLoad/handlePageShow` 改为复用 `page-lifecycle-helper.js`，去除重复登录校验模板。
 31. 聊天详情用户资料回填已收敛：`chat-detail.js` 抽取 `applyLoadedUserProfile` 统一处理 targetUser/当前用户/消息块刷新，去除重复回填逻辑。
 32. 聊天页生命周期参数已统一：`chat.js`/`chat-detail.js`/`lobby.js` 全部改用 `beforeInit/afterInit/beforeShow/afterShow`，并删除 `im-page-helper.js` 旧参数分支。
+33. 在线状态批量查询已优化：`UserPresenceService` 对会话在线态与最近活跃态改为 Redis pipeline 批量 `score` 查询，减少循环请求往返。
 
 ## 仍需收口（按建议顺序）
 
