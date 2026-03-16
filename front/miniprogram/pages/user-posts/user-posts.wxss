@@ -1,0 +1,66 @@
+.user-posts-page {
+  min-height: 100vh;
+  padding: 22rpx 18rpx 30rpx;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
+  box-sizing: border-box;
+}
+
+.user-posts-main {
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+  padding: 0 14rpx;
+}
+
+.thread-item {
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.thread-item:last-child {
+  border-bottom: none;
+}
+
+.thread-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.thread-tag {
+  font-size: 20rpx;
+  color: var(--retro-accent-text);
+}
+
+.thread-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: var(--retro-body-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-meta-row,
+.thread-time-row {
+  margin-top: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.more-row {
+  padding: 12rpx 0;
+  display: flex;
+  justify-content: center;
+}
+
+.more-text {
+  font-size: 21rpx;
+  color: var(--retro-muted-text);
+}

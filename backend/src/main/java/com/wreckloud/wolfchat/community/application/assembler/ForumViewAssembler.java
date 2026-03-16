@@ -52,7 +52,7 @@ public class ForumViewAssembler {
         return pageVO;
     }
 
-    public ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser) {
+    public ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser, boolean likedByCurrentUser) {
         ForumThreadVO vo = new ForumThreadVO();
         vo.setThreadId(thread.getId());
         vo.setBoardId(thread.getBoardId());
@@ -62,6 +62,8 @@ public class ForumViewAssembler {
         vo.setIsEssence(Boolean.TRUE.equals(thread.getIsEssence()));
         vo.setViewCount(normalizeCount(thread.getViewCount()));
         vo.setReplyCount(normalizeCount(thread.getReplyCount()));
+        vo.setLikeCount(normalizeCount(thread.getLikeCount()));
+        vo.setLikedByCurrentUser(likedByCurrentUser);
         vo.setLastReplyTime(thread.getLastReplyTime());
         vo.setCreateTime(thread.getCreateTime());
         vo.setAuthor(toUserBriefVO(author));
@@ -69,13 +71,19 @@ public class ForumViewAssembler {
         return vo;
     }
 
-    public ForumReplyVO toReplyVO(WfForumReply reply, WfUser author, WfForumReply quoteReply, WfUser quoteAuthor) {
+    public ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser) {
+        return toThreadVO(thread, author, lastReplyUser, false);
+    }
+
+    public ForumReplyVO toReplyVO(WfForumReply reply, WfUser author, WfForumReply quoteReply, WfUser quoteAuthor, boolean likedByCurrentUser) {
         ForumReplyVO vo = new ForumReplyVO();
         vo.setReplyId(reply.getId());
         vo.setThreadId(reply.getThreadId());
         vo.setFloorNo(reply.getFloorNo());
         vo.setContent(reply.getContent());
         vo.setCreateTime(reply.getCreateTime());
+        vo.setLikeCount(normalizeCount(reply.getLikeCount()));
+        vo.setLikedByCurrentUser(likedByCurrentUser);
         vo.setAuthor(toUserBriefVO(author));
         if (quoteReply != null) {
             vo.setQuoteReplyId(quoteReply.getId());
@@ -84,6 +92,10 @@ public class ForumViewAssembler {
             vo.setQuoteContent(quoteReply.getContent());
         }
         return vo;
+    }
+
+    public ForumReplyVO toReplyVO(WfForumReply reply, WfUser author, WfForumReply quoteReply, WfUser quoteAuthor) {
+        return toReplyVO(reply, author, quoteReply, quoteAuthor, false);
     }
 
     private UserBriefVO toUserBriefVO(WfUser user) {

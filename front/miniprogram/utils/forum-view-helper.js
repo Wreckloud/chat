@@ -10,8 +10,15 @@ function resolveActiveBoardId(boards, currentBoardId) {
 }
 
 function mapThread(rawThread, normalizeUser, time) {
+  const viewCount = Number(rawThread.viewCount) || 0
+  const replyCount = Number(rawThread.replyCount) || 0
+  const likeCount = Number(rawThread.likeCount) || 0
   return {
     ...rawThread,
+    viewCount,
+    replyCount,
+    likeCount,
+    likedByCurrentUser: rawThread.likedByCurrentUser === true,
     author: normalizeUser(rawThread.author) || {},
     lastReplyUser: normalizeUser(rawThread.lastReplyUser) || {},
     createTimeText: time.formatPostTime(rawThread.createTime),
@@ -41,8 +48,11 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
   const author = normalizeUser(rawReply.author) || {}
   const currentUserId = Number(options.currentUserId) || 0
   const canManageThread = options.canManageThread === true
+  const likeCount = Number(rawReply.likeCount) || 0
   return {
     ...rawReply,
+    likeCount,
+    likedByCurrentUser: rawReply.likedByCurrentUser === true,
     author,
     quoteAuthor: normalizeUser(rawReply.quoteAuthor) || {},
     timeText: time.formatPostTime(rawReply.createTime),

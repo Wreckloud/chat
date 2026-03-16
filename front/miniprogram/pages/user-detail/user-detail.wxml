@@ -1,41 +1,107 @@
 <view class="user-detail-page {{themeClass}}">
-  <retro-loading wx:if="{{loading}}" size="40rpx" text="加载中..." />
+  <retro-loading wx:if="{{loading && !userInfo}}" size="40rpx" text="加载中..." />
 
-  <view>
-    <view wx:if="{{userInfo}}" class="profile-card">
-      <retro-avatar
-        size="large"
-        shape="round"
-        image="{{userInfo.avatar}}">
-        {{userInfo.nickname ? userInfo.nickname.charAt(0) : '行'}}
-      </retro-avatar>
-      <view class="profile-info">
-        <view class="nickname">{{userInfo.nickname || userInfo.wolfNo}}</view>
-        <view class="wolfno">狼藉号：{{userInfo.wolfNo || '-'}}</view>
+  <view wx:elif="{{userInfo}}" class="user-detail-main">
+    <view class="profile-card">
+      <view class="profile-main">
+        <retro-avatar
+          size="large"
+          shape="square"
+          image="{{userInfo.avatar}}">
+          {{userInfo.nickname ? userInfo.nickname.charAt(0) : '行'}}
+        </retro-avatar>
+
+        <view class="profile-info">
+          <view class="nickname">{{userInfo.nickname || userInfo.wolfNo}}</view>
+          <view class="wolfno">狼藉号 {{userInfo.wolfNo || '--'}}</view>
+          <view wx:if="{{userInfo.signature}}" class="signature">{{userInfo.signature}}</view>
+          <view wx:if="{{userInfo.bio}}" class="bio">{{userInfo.bio}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{!isSelf}}" class="profile-actions">
+        <retro-button
+          size="small"
+          theme="{{isFollowing ? 'default' : 'primary'}}"
+          loading="{{followLoading}}"
+          disabled="{{followLoading}}"
+          bindtap="toggleFollow">
+          {{isFollowing ? '取消关注' : '关注'}}
+        </retro-button>
+        <retro-button
+          size="small"
+          theme="primary"
+          disabled="{{chatLoading || !isMutual}}"
+          loading="{{chatLoading}}"
+          bindtap="goChat">
+          私聊
+        </retro-button>
+      </view>
+      <view wx:if="{{!isSelf && !isMutual}}" class="mutual-hint">互相关注后可发起私聊</view>
+    </view>
+
+    <view class="core-stats-card">
+      <view class="core-stat">
+        <view class="core-value">{{activeDayCountText}}</view>
+        <view class="core-label">活跃天数</view>
+      </view>
+      <view class="core-stat">
+        <view class="core-value">{{totalLikeCountText}}</view>
+        <view class="core-label">总获赞</view>
+      </view>
+      <view class="core-stat">
+        <view class="core-value">{{followerCountText}}</view>
+        <view class="core-label">粉丝数</view>
       </view>
     </view>
 
-    <view wx:if="{{userInfo && !isSelf}}" class="actions">
-      <retro-button
-        size="small"
-        theme="{{isFollowing ? 'default' : 'primary'}}"
-        loading="{{followLoading}}"
-        disabled="{{followLoading}}"
-        bindtap="toggleFollow">
-        {{isFollowing ? '取消关注' : '关注'}}
-      </retro-button>
-      <retro-button
-        size="small"
-        theme="primary"
-        disabled="{{chatLoading}}"
-        loading="{{chatLoading}}"
-        bindtap="goChat">
-        私聊
-      </retro-button>
+    <view class="meta-card">
+      <view class="meta-row">
+        <text class="meta-label">关注</text>
+        <text class="meta-value">{{followingCountText}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">发帖</text>
+        <text class="meta-value">{{threadCountText}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">回帖</text>
+        <text class="meta-value">{{replyCountText}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">最近活跃</text>
+        <text class="meta-value">{{lastActiveText}}</text>
+      </view>
     </view>
 
-    <view wx:if="{{userInfo && !isSelf && !isMutual}}" class="hint">
-      互相关注后才能聊天
+    <view class="latest-card">
+      <view class="section-head">
+        <view class="section-title">最近帖子</view>
+        <view class="section-link" bindtap="goAllThreads">[查看全部]</view>
+      </view>
+
+      <retro-empty wx:if="{{latestThreads.length === 0}}" description="暂无帖子" />
+      <view
+        wx:for="{{latestThreads}}"
+        wx:key="threadId"
+        class="thread-item"
+        bindtap="onTapThread"
+        data-thread-id="{{item.threadId}}">
+        <view class="thread-title-row">
+          <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag">[公告]</text>
+          <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag">[置顶]</text>
+          <text wx:if="{{item.isEssence}}" class="thread-tag">[精华]</text>
+          <text class="thread-title">{{item.title}}</text>
+        </view>
+        <view class="thread-meta-row">
+          <text>{{item.boardName || ('版块#' + item.boardId)}}</text>
+          <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
+        </view>
+        <view class="thread-time-row">
+          <text>{{item.createTimeText}}</text>
+          <text>{{item.lastReplyTimeText || item.createTimeText}}</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>

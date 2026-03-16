@@ -18,4 +18,20 @@ public interface WfForumReplyMapper extends BaseMapper<WfForumReply> {
      */
     @Select("SELECT COALESCE(MAX(floor_no), 1) FROM wf_forum_reply WHERE thread_id = #{threadId}")
     Integer selectMaxFloorNo(@Param("threadId") Long threadId);
+
+    @Select("SELECT COALESCE(SUM(r.like_count), 0) " +
+            "FROM wf_forum_reply r " +
+            "INNER JOIN wf_forum_thread t ON t.id = r.thread_id " +
+            "WHERE r.author_id = #{authorId} " +
+            "AND r.status = 'NORMAL' " +
+            "AND t.status <> 'DELETED'")
+    Long selectLikeCountSumByAuthorId(@Param("authorId") Long authorId);
+
+    @Select("SELECT COUNT(1) " +
+            "FROM wf_forum_reply r " +
+            "INNER JOIN wf_forum_thread t ON t.id = r.thread_id " +
+            "WHERE r.author_id = #{authorId} " +
+            "AND r.status = 'NORMAL' " +
+            "AND t.status <> 'DELETED'")
+    Long selectVisibleCountByAuthorId(@Param("authorId") Long authorId);
 }

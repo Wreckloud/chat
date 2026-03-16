@@ -1,9 +1,7 @@
 # Miniprogram Style Conventions
 
 ## Theme Token Source
-- Global theme tokens are defined in `app.wxss` under:
-  - `.theme-retro-blue`
-  - `.theme-retro-olive`
+- Global theme tokens are defined in `app.wxss` under `.theme-retro-*` blocks.
 - Page `wxss` files should consume tokens using `var(--retro-...)`.
 
 ## Page Style Rule

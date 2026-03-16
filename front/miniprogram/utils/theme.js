@@ -8,8 +8,8 @@ const DEFAULT_THEME = 'retro_blue'
 const THEMES = {
   retro_blue: {
     name: 'retro_blue',
-    label: '雾蓝经典',
-    description: '清爽论坛蓝',
+    label: '复古雾蓝',
+    description: '论坛窗体 · 清爽蓝调',
     preview: ['#dce4ef', '#c7d2e4', '#536b87'],
     className: 'theme-retro-blue',
     nav: {
@@ -30,8 +30,8 @@ const THEMES = {
   },
   retro_olive: {
     name: 'retro_olive',
-    label: '森林深绿',
-    description: '以 #0a3e1e 为主色',
+    label: '复古深绿',
+    description: '论坛窗体 · 森林绿调',
     preview: ['#d8e6dc', '#a8c2b1', '#0a3e1e'],
     className: 'theme-retro-olive',
     nav: {
@@ -48,6 +48,72 @@ const THEMES = {
       pin: '#0f5f30',
       unread: '#5f7567',
       more: '#637a6c'
+    }
+  },
+  retro_amber: {
+    name: 'retro_amber',
+    label: '复古暖棕',
+    description: '论坛窗体 · 米金棕调',
+    preview: ['#f2e8d5', '#dcc6a2', '#7a5b2e'],
+    className: 'theme-retro-amber',
+    nav: {
+      frontColor: '#ffffff',
+      backgroundColor: '#7a5b2e'
+    },
+    tabBar: {
+      color: '#7a6a51',
+      selectedColor: '#7a5b2e',
+      backgroundColor: '#ffffff',
+      borderStyle: 'black'
+    },
+    swipeAction: {
+      pin: '#8a6328',
+      unread: '#877256',
+      more: '#8f795b'
+    }
+  },
+  retro_steel: {
+    name: 'retro_steel',
+    label: '复古钢灰',
+    description: '论坛窗体 · 冷灰蓝调',
+    preview: ['#dfe5ec', '#c4ced8', '#4f6278'],
+    className: 'theme-retro-steel',
+    nav: {
+      frontColor: '#ffffff',
+      backgroundColor: '#4f6278'
+    },
+    tabBar: {
+      color: '#6a7685',
+      selectedColor: '#4f6278',
+      backgroundColor: '#ffffff',
+      borderStyle: 'black'
+    },
+    swipeAction: {
+      pin: '#3f668f',
+      unread: '#6b7787',
+      more: '#6f8095'
+    }
+  },
+  retro_wine: {
+    name: 'retro_wine',
+    label: '复古酒红',
+    description: '论坛窗体 · 酒红棕调',
+    preview: ['#eddfe3', '#d5b3bd', '#6c3948'],
+    className: 'theme-retro-wine',
+    nav: {
+      frontColor: '#ffffff',
+      backgroundColor: '#6c3948'
+    },
+    tabBar: {
+      color: '#7f6a72',
+      selectedColor: '#6c3948',
+      backgroundColor: '#ffffff',
+      borderStyle: 'black'
+    },
+    swipeAction: {
+      pin: '#7d4156',
+      unread: '#7c6570',
+      more: '#866f79'
     }
   }
 }

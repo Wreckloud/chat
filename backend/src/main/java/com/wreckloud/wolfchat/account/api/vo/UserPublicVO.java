@@ -24,6 +24,12 @@ public class UserPublicVO {
     @Schema(description = "头像URL")
     private String avatar;
 
+    @Schema(description = "个性签名")
+    private String signature;
+
+    @Schema(description = "个人简介")
+    private String bio;
+
     @Schema(description = "状态：NORMAL-正常，DISABLED-禁用或已注销")
     private UserStatus status;
 }

@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -73,7 +74,7 @@ public class AuthService {
         user.setWolfNo(wolfNo);
         user.setStatus(UserStatus.NORMAL);
         user.setOnboardingStatus(OnboardingStatus.PENDING);
-        user.setLoginCount(0);
+        user.setActiveDayCount(0);
         int insertRows = wfUserMapper.insert(user);
         if (insertRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
@@ -330,16 +331,19 @@ public class AuthService {
 
     private void refreshLoginStats(WfUser user) {
         LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
         if (user.getFirstLoginAt() == null) {
             user.setFirstLoginAt(now);
         }
-        user.setLastLoginAt(now);
-        Integer loginCount = user.getLoginCount();
-        if (loginCount == null) {
-            user.setLoginCount(1);
-        } else {
-            user.setLoginCount(loginCount + 1);
+
+        LocalDateTime lastLoginAt = user.getLastLoginAt();
+        LocalDate lastActiveDate = lastLoginAt == null ? null : lastLoginAt.toLocalDate();
+        if (lastActiveDate == null || !lastActiveDate.equals(today)) {
+            Integer activeDayCount = user.getActiveDayCount();
+            user.setActiveDayCount(activeDayCount == null ? 1 : activeDayCount + 1);
         }
+
+        user.setLastLoginAt(now);
         int updateRows = wfUserMapper.updateById(user);
         if (updateRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);

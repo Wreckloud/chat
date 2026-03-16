@@ -4,24 +4,49 @@
 const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const { normalizeUser } = require('../../utils/user')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
+const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
+function formatCount(value) {
+  const number = Number(value)
+  return Number.isFinite(number) && number >= 0 ? String(number) : '0'
+}
+
+function mapThread(item) {
+  return {
+    ...item,
+    viewCount: Number(item.viewCount) || 0,
+    replyCount: Number(item.replyCount) || 0,
+    likeCount: Number(item.likeCount) || 0,
+    createTimeText: time.formatPostTime(item.createTime),
+    lastReplyTimeText: time.formatPostTime(item.lastReplyTime)
+  }
+}
+
 Page({
   data: {
+    targetUserId: 0,
     userInfo: null,
+    loading: false,
     isSelf: false,
     isFollowing: false,
     isMutual: false,
-    loading: false,
     followLoading: false,
     chatLoading: false,
+    activeDayCountText: '0',
+    totalLikeCountText: '0',
+    followerCountText: '0',
+    followingCountText: '0',
+    threadCountText: '0',
+    replyCountText: '0',
+    lastActiveText: '--',
+    latestThreads: [],
     themeClass: 'theme-retro-blue'
   },
 
   onLoad(options) {
-    let targetUserId = 0
     pageLifecycleHelper.handleProtectedPageLoad(auth, {
       beforeInit: () => {
         const userId = Number(options && options.userId)
@@ -29,25 +54,17 @@ Page({
           toastError('用户信息缺失')
           setTimeout(() => {
             wx.navigateBack()
-          }, 1500)
+          }, 250)
           return false
         }
-
-        const currentUser = auth.getUserInfo()
-        const currentUserId = currentUser ? currentUser.userId : null
-        const isSelf = currentUserId === userId
         this.setData({
-          userInfo: null,
-          isSelf
+          targetUserId: userId
         })
-        targetUserId = userId
         return true
       },
       afterInit: () => {
-        wx.setNavigationBarTitle({
-          title: '行者主页'
-        })
-        this.loadUserInfo(targetUserId)
+        wx.setNavigationBarTitle({ title: '行者主页' })
+        this.loadHome()
       }
     })
   },
@@ -60,44 +77,28 @@ Page({
     })
   },
 
-  async loadUserInfo(userId) {
-    if (this.data.loading) return
-    this.setData({ loading: true })
-
-    try {
-      const res = await request.get(`/users/${userId}`)
-      this.setData({
-        userInfo: normalizeUser(res.data)
-      })
-    } catch (error) {
-      toastError(error, '加载失败')
-    } finally {
-      this.setData({ loading: false })
+  async loadHome() {
+    if (!this.data.targetUserId || this.data.loading) {
+      return
     }
-
-    if (!this.data.isSelf) {
-      this.loadFollowStatus()
-    }
-  },
-
-  async loadFollowStatus() {
-    if (this.data.loading) return
-    if (!this.data.userInfo || !this.data.userInfo.userId) return
     this.setData({ loading: true })
-
     try {
-      const [followingRes, mutualRes] = await Promise.all([
-        request.get('/follow/following'),
-        request.get('/follow/mutual')
-      ])
-
-      const userId = this.data.userInfo.userId
-      const following = (followingRes.data || []).some(item => item.userId === userId)
-      const mutual = (mutualRes.data || []).some(item => item.userId === userId)
-
+      const res = await request.get(`/users/${this.data.targetUserId}/home`)
+      const home = res.data || {}
+      const userInfo = normalizeUser(home.user)
       this.setData({
-        isFollowing: following,
-        isMutual: mutual
+        userInfo,
+        isSelf: home.self === true,
+        isFollowing: home.following === true,
+        isMutual: home.mutual === true,
+        activeDayCountText: formatCount(home.activeDayCount),
+        totalLikeCountText: formatCount(home.totalLikeCount),
+        followerCountText: formatCount(home.followerCount),
+        followingCountText: formatCount(home.followingCount),
+        threadCountText: formatCount(home.threadCount),
+        replyCountText: formatCount(home.replyCount),
+        lastActiveText: time.formatPostTime(home.lastActiveAt) || '--',
+        latestThreads: Array.isArray(home.latestThreads) ? home.latestThreads.map(mapThread) : []
       })
     } catch (error) {
       toastError(error, '加载失败')
@@ -107,19 +108,15 @@ Page({
   },
 
   async toggleFollow() {
-    if (this.data.followLoading || this.data.isSelf) return
-    const userId = this.data.userInfo.userId
+    if (this.data.followLoading || this.data.isSelf || !this.data.userInfo) return
     this.setData({ followLoading: true })
-
     try {
       if (this.data.isFollowing) {
-        await request.del(`/follow/${userId}`)
-        toastSuccess('已取消关注')
+        await request.del(`/follow/${this.data.userInfo.userId}`)
       } else {
-        await request.post(`/follow/${userId}`)
-        toastSuccess('关注成功')
+        await request.post(`/follow/${this.data.userInfo.userId}`)
       }
-      await this.loadFollowStatus()
+      await this.loadHome()
     } catch (error) {
       toastError(error, '操作失败')
     } finally {
@@ -128,21 +125,34 @@ Page({
   },
 
   async goChat() {
-    if (this.data.chatLoading || this.data.isSelf) return
-    const userId = this.data.userInfo.userId
+    if (this.data.chatLoading || this.data.isSelf || !this.data.userInfo) return
     this.setData({ chatLoading: true })
-
     try {
-      const res = await request.post(`/conversations/${userId}`)
-      const conversationId = res.data
+      const res = await request.post(`/conversations/${this.data.userInfo.userId}`)
       wx.navigateTo({
-        url: `/pages/chat-detail/chat-detail?conversationId=${conversationId}`
+        url: `/pages/chat-detail/chat-detail?conversationId=${res.data}`
       })
     } catch (error) {
       toastError(error, '无法发起聊天')
     } finally {
       this.setData({ chatLoading: false })
     }
+  },
+
+  onTapThread(e) {
+    const threadId = Number(e.currentTarget.dataset.threadId)
+    if (!threadId) return
+    wx.navigateTo({
+      url: `/pages/post-detail/post-detail?threadId=${threadId}`
+    })
+  },
+
+  goAllThreads() {
+    if (!this.data.userInfo || !this.data.userInfo.userId) return
+    const nickname = encodeURIComponent(this.data.userInfo.nickname || this.data.userInfo.wolfNo || '行者')
+    wx.navigateTo({
+      url: `/pages/user-posts/user-posts?userId=${this.data.userInfo.userId}&nickname=${nickname}`
+    })
   },
 
   applyTheme() {

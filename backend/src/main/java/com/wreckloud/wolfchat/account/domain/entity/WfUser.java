@@ -54,6 +54,18 @@ public class WfUser {
     private String avatar;
 
     /**
+     * 个性签名
+     */
+    @TableField(exist = false)
+    private String signature;
+
+    /**
+     * 个人简介
+     */
+    @TableField(exist = false)
+    private String bio;
+
+    /**
      * 状态：NORMAL-正常，DISABLED-禁用或已注销
      */
     private UserStatus status;
@@ -79,9 +91,9 @@ public class WfUser {
     private LocalDateTime lastLoginAt;
 
     /**
-     * 登录次数
+     * 活跃天数（按登录日期去重统计）
      */
-    private Integer loginCount;
+    private Integer activeDayCount;
 
     private LocalDateTime createTime;
 

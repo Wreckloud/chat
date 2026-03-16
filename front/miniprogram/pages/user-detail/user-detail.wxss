@@ -1,44 +1,192 @@
-/* Layout layer */
 .user-detail-page {
   min-height: 100vh;
-  padding: 22rpx 18rpx;
+  padding: 22rpx 18rpx 30rpx;
   background: var(--retro-page-bg);
   color: var(--retro-page-text);
+  box-sizing: border-box;
 }
 
-.profile-card {
+.user-detail-main {
   display: flex;
-  align-items: center;
-  gap: 18rpx;
-  padding: 20rpx;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.profile-card,
+.core-stats-card,
+.meta-card,
+.latest-card {
   border: 1rpx solid var(--retro-panel-border);
   background: var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
+.profile-card {
+  padding: 18rpx;
+}
+
+.profile-main {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
 .profile-info {
+  min-width: 0;
   flex: 1;
 }
 
 .nickname {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 600;
+  color: var(--retro-strong-text);
 }
 
 .wolfno {
-  margin-top: 6rpx;
-  font-size: 23rpx;
+  margin-top: 4rpx;
+  font-size: 22rpx;
   color: var(--retro-muted-text);
 }
 
-.actions {
-  margin-top: 16rpx;
-  display: flex;
-  gap: 12rpx;
+.signature {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--retro-body-text);
 }
 
-.hint {
+.bio {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  line-height: 1.35;
+  color: var(--retro-muted-text);
+}
+
+.profile-actions {
   margin-top: 12rpx;
+  display: flex;
+  gap: 10rpx;
+}
+
+.mutual-hint {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.core-stats-card {
+  display: flex;
+  align-items: stretch;
+}
+
+.core-stat {
+  flex: 1;
+  min-width: 0;
+  padding: 14rpx 8rpx;
+  text-align: center;
+  border-right: 1rpx solid var(--retro-row-border);
+}
+
+.core-stat:last-child {
+  border-right: none;
+}
+
+.core-value {
+  font-size: 34rpx;
+  line-height: 1;
+  color: var(--retro-strong-text);
+}
+
+.core-label {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.meta-card {
+  padding: 0 14rpx;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.meta-row:last-child {
+  border-bottom: none;
+}
+
+.meta-label {
   font-size: 22rpx;
+  color: var(--retro-muted-text);
+}
+
+.meta-value {
+  font-size: 22rpx;
+  color: var(--retro-body-text);
+}
+
+.latest-card {
+  padding: 14rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--retro-strong-text);
+}
+
+.section-link {
+  font-size: 20rpx;
+  color: var(--retro-accent-text);
+}
+
+.thread-item {
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--retro-row-border);
+}
+
+.thread-item:last-child {
+  border-bottom: none;
+}
+
+.thread-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.thread-tag {
+  font-size: 20rpx;
+  color: var(--retro-accent-text);
+}
+
+.thread-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: var(--retro-body-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-meta-row,
+.thread-time-row {
+  margin-top: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  font-size: 20rpx;
   color: var(--retro-muted-text);
 }

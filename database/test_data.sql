@@ -13,7 +13,7 @@ SET @seed_password_hash := '$2a$10$ENlIGWJCpjy8Dz63BNO4M.cJatv7N3l1LyBUJ6kVmFRLc
 -- 1) 用户主表
 INSERT INTO `wf_user` (
     `wolf_no`, `status`, `onboarding_status`, `onboarding_completed_at`,
-    `first_login_at`, `last_login_at`, `login_count`, `create_time`, `update_time`
+    `first_login_at`, `last_login_at`, `active_day_count`, `create_time`, `update_time`
 ) VALUES
     ('1234567890', 'NORMAL', 'COMPLETED', '2026-03-09 10:00:00', '2026-03-09 10:00:00', '2026-03-10 10:00:00', 5, NOW(), NOW()),
     ('1234567891', 'NORMAL', 'PENDING', NULL, '2026-03-09 11:00:00', '2026-03-10 09:00:00', 3, NOW(), NOW()),
@@ -24,7 +24,7 @@ ON DUPLICATE KEY UPDATE
     `onboarding_completed_at` = VALUES(`onboarding_completed_at`),
     `first_login_at` = VALUES(`first_login_at`),
     `last_login_at` = VALUES(`last_login_at`),
-    `login_count` = VALUES(`login_count`),
+    `active_day_count` = VALUES(`active_day_count`),
     `update_time` = NOW();
 
 SET @uid_1 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567890' LIMIT 1);
@@ -176,18 +176,18 @@ SET @board_life := (SELECT `id` FROM `wf_forum_board` WHERE `slug` = 'life' LIMI
 
 INSERT INTO `wf_forum_thread` (
     `id`, `board_id`, `author_id`, `title`, `content`, `thread_type`, `status`, `is_essence`,
-    `view_count`, `reply_count`, `last_reply_id`, `last_reply_user_id`, `last_reply_time`,
+    `view_count`, `reply_count`, `like_count`, `last_reply_id`, `last_reply_user_id`, `last_reply_time`,
     `create_time`, `update_time`
 ) VALUES
     (980101, @board_general, @uid_1, '【公告】欢迎来到 WolfChat 社区',
      '这里是社区公告区，后续会持续发布版本动态与活动通知。', 'ANNOUNCEMENT', 'NORMAL', 1,
-     128, 2, 970102, @uid_1, '2026-03-10 10:12:00', '2026-03-10 09:20:00', NOW()),
+     128, 2, 3, 970102, @uid_1, '2026-03-10 10:12:00', '2026-03-10 09:20:00', NOW()),
     (980102, @board_dev, @uid_2, '聊天图片上传链路调通记录',
      '今天完成了消息图片上传、签名直传与消息回显，欢迎继续反馈。', 'STICKY', 'NORMAL', 0,
-     86, 1, 970103, @uid_1, '2026-03-10 10:15:00', '2026-03-10 09:45:00', NOW()),
+     86, 1, 2, 970103, @uid_1, '2026-03-10 10:15:00', '2026-03-10 09:45:00', NOW()),
     (980103, @board_life, @uid_3, '今日打卡：你在听什么歌？',
      '欢迎在这里分享今日循环播放歌单。', 'NORMAL', 'NORMAL', 0,
-     15, 0, NULL, NULL, '2026-03-10 08:40:00', '2026-03-10 08:40:00', NOW())
+     15, 0, 1, NULL, NULL, '2026-03-10 08:40:00', '2026-03-10 08:40:00', NOW())
 ON DUPLICATE KEY UPDATE
     `board_id` = VALUES(`board_id`),
     `author_id` = VALUES(`author_id`),
@@ -198,6 +198,7 @@ ON DUPLICATE KEY UPDATE
     `is_essence` = VALUES(`is_essence`),
     `view_count` = VALUES(`view_count`),
     `reply_count` = VALUES(`reply_count`),
+    `like_count` = VALUES(`like_count`),
     `last_reply_id` = VALUES(`last_reply_id`),
     `last_reply_user_id` = VALUES(`last_reply_user_id`),
     `last_reply_time` = VALUES(`last_reply_time`),
@@ -205,20 +206,43 @@ ON DUPLICATE KEY UPDATE
     `update_time` = NOW();
 
 INSERT INTO `wf_forum_reply` (
-    `id`, `thread_id`, `floor_no`, `author_id`, `content`, `quote_reply_id`, `status`, `create_time`, `update_time`
+    `id`, `thread_id`, `floor_no`, `author_id`, `content`, `quote_reply_id`, `like_count`, `status`, `create_time`, `update_time`
 ) VALUES
-    (970101, 980101, 2, @uid_2, '已读，感谢公告。', NULL, 'NORMAL', '2026-03-10 10:05:00', NOW()),
-    (970102, 980101, 3, @uid_1, '收到，后续会持续更新。', 970101, 'NORMAL', '2026-03-10 10:12:00', NOW()),
-    (970103, 980102, 2, @uid_1, '链路很稳，晚点补压测结果。', NULL, 'NORMAL', '2026-03-10 10:15:00', NOW())
+    (970101, 980101, 2, @uid_2, '已读，感谢公告。', NULL, 2, 'NORMAL', '2026-03-10 10:05:00', NOW()),
+    (970102, 980101, 3, @uid_1, '收到，后续会持续更新。', 970101, 1, 'NORMAL', '2026-03-10 10:12:00', NOW()),
+    (970103, 980102, 2, @uid_1, '链路很稳，晚点补压测结果。', NULL, 1, 'NORMAL', '2026-03-10 10:15:00', NOW())
 ON DUPLICATE KEY UPDATE
     `thread_id` = VALUES(`thread_id`),
     `floor_no` = VALUES(`floor_no`),
     `author_id` = VALUES(`author_id`),
     `content` = VALUES(`content`),
     `quote_reply_id` = VALUES(`quote_reply_id`),
+    `like_count` = VALUES(`like_count`),
     `status` = VALUES(`status`),
     `create_time` = VALUES(`create_time`),
     `update_time` = NOW();
+
+INSERT INTO `wf_forum_thread_like` (
+    `thread_id`, `user_id`, `create_time`
+) VALUES
+    (980101, @uid_1, '2026-03-10 10:18:00'),
+    (980101, @uid_2, '2026-03-10 10:19:00'),
+    (980101, @uid_3, '2026-03-10 10:20:00'),
+    (980102, @uid_1, '2026-03-10 10:22:00'),
+    (980102, @uid_2, '2026-03-10 10:23:00'),
+    (980103, @uid_1, '2026-03-10 10:24:00')
+ON DUPLICATE KEY UPDATE
+    `create_time` = VALUES(`create_time`);
+
+INSERT INTO `wf_forum_reply_like` (
+    `reply_id`, `user_id`, `create_time`
+) VALUES
+    (970101, @uid_1, '2026-03-10 10:25:00'),
+    (970101, @uid_3, '2026-03-10 10:26:00'),
+    (970102, @uid_2, '2026-03-10 10:27:00'),
+    (970103, @uid_2, '2026-03-10 10:28:00')
+ON DUPLICATE KEY UPDATE
+    `create_time` = VALUES(`create_time`);
 
 UPDATE `wf_forum_board`
 SET `thread_count` = 1,

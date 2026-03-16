@@ -40,6 +40,12 @@ public class ForumReplyVO {
     @Schema(description = "回复时间")
     private LocalDateTime createTime;
 
+    @Schema(description = "点赞数")
+    private Integer likeCount;
+
+    @Schema(description = "当前登录用户是否已点赞")
+    private Boolean likedByCurrentUser;
+
     @Schema(description = "回复者")
     private UserBriefVO author;
 }

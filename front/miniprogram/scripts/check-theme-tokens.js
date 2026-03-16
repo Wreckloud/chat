@@ -8,36 +8,10 @@ const path = require('path')
 
 const APP_WXSS_PATH = path.join(__dirname, '..', 'app.wxss')
 const PAGES_DIR = path.join(__dirname, '..', 'pages')
-const THEMES = ['theme-retro-blue', 'theme-retro-olive']
+const THEMES = ['theme-retro-blue', 'theme-retro-olive', 'theme-retro-amber', 'theme-retro-steel', 'theme-retro-wine']
 
 function readText(filePath) {
   return fs.readFileSync(filePath, 'utf8')
-}
-
-function extractClassBlock(source, className) {
-  const marker = `.${className}`
-  const start = source.indexOf(marker)
-  if (start < 0) {
-    throw new Error(`Cannot find class block: ${className}`)
-  }
-
-  const braceStart = source.indexOf('{', start)
-  if (braceStart < 0) {
-    throw new Error(`Cannot find opening brace for: ${className}`)
-  }
-
-  let depth = 0
-  // 使用括号深度切出主题 class 的完整内容，避免正则跨块误匹配
-  for (let i = braceStart; i < source.length; i++) {
-    const ch = source[i]
-    if (ch === '{') depth += 1
-    if (ch === '}') depth -= 1
-    if (depth === 0) {
-      return source.slice(braceStart + 1, i)
-    }
-  }
-
-  throw new Error(`Cannot find closing brace for: ${className}`)
 }
 
 function extractTokenNames(block) {
@@ -46,6 +20,32 @@ function extractTokenNames(block) {
     tokens.add(match[1])
   }
   return tokens
+}
+
+function extractThemeTokenMap(source, themeClasses) {
+  const tokenMap = {}
+  themeClasses.forEach(themeClass => {
+    tokenMap[themeClass] = new Set()
+  })
+
+  // 扁平匹配每个 css 块，再按 selector 是否命中主题 class 聚合 token。
+  const blockRegex = /([^{}]+)\{([^{}]*)\}/gms
+  let match = blockRegex.exec(source)
+  while (match) {
+    const selectors = match[1] || ''
+    const block = match[2] || ''
+    const tokens = extractTokenNames(block)
+    if (tokens.size > 0) {
+      themeClasses.forEach(themeClass => {
+        if (selectors.includes(`.${themeClass}`)) {
+          tokens.forEach(token => tokenMap[themeClass].add(token))
+        }
+      })
+    }
+    match = blockRegex.exec(source)
+  }
+
+  return tokenMap
 }
 
 function listPageWxssFiles() {
@@ -66,7 +66,10 @@ function extractUsedTokens(files) {
   for (const filePath of files) {
     const source = readText(filePath)
     for (const match of source.matchAll(/var\(--([a-z0-9-]+)/gi)) {
-      used.add(match[1])
+      const token = match[1]
+      if (token.startsWith('retro-')) {
+        used.add(token)
+      }
     }
   }
   return used
@@ -82,24 +85,24 @@ function formatNames(names) {
 
 function main() {
   const appWxss = readText(APP_WXSS_PATH)
-  const blueBlock = extractClassBlock(appWxss, THEMES[0])
-  const oliveBlock = extractClassBlock(appWxss, THEMES[1])
-
-  const blueTokens = extractTokenNames(blueBlock)
-  const oliveTokens = extractTokenNames(oliveBlock)
+  const themeTokenMap = extractThemeTokenMap(appWxss, THEMES)
+  const baselineTokens = themeTokenMap[THEMES[0]]
   const usedTokens = extractUsedTokens(listPageWxssFiles())
 
-  const missingInOlive = difference(blueTokens, oliveTokens)
-  const missingInBlue = difference(oliveTokens, blueTokens)
-  const missingInThemes = difference(usedTokens, new Set([...blueTokens, ...oliveTokens]))
-
   const errors = []
-  if (missingInOlive.length) {
-    errors.push(`[theme-retro-olive] missing tokens:\n${formatNames(missingInOlive)}`)
-  }
-  if (missingInBlue.length) {
-    errors.push(`[theme-retro-blue] missing tokens:\n${formatNames(missingInBlue)}`)
-  }
+  THEMES.forEach(themeClass => {
+    const tokens = themeTokenMap[themeClass]
+    const missing = difference(baselineTokens, tokens)
+    const extra = difference(tokens, baselineTokens)
+    if (missing.length) {
+      errors.push(`[${themeClass}] missing tokens:\n${formatNames(missing)}`)
+    }
+    if (extra.length) {
+      errors.push(`[${themeClass}] extra tokens:\n${formatNames(extra)}`)
+    }
+  })
+  const missingInThemes = difference(usedTokens, baselineTokens)
+
   if (missingInThemes.length) {
     errors.push(`[app.wxss] missing used tokens:\n${formatNames(missingInThemes)}`)
   }
@@ -111,7 +114,7 @@ function main() {
   }
 
   console.log(
-    `Theme token check passed. blue=${blueTokens.size}, olive=${oliveTokens.size}, used=${usedTokens.size}`
+    `Theme token check passed. themeCount=${THEMES.length}, tokenCount=${baselineTokens.size}, used=${usedTokens.size}`
   )
 }
 

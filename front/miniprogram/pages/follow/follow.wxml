@@ -13,7 +13,7 @@
         <retro-avatar
           class="user-avatar"
           size="small"
-          shape="round"
+          shape="square"
           image="{{item.avatar}}">
           {{item.nickname ? item.nickname.charAt(0) : '行'}}
         </retro-avatar>

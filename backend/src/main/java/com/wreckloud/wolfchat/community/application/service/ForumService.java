@@ -15,14 +15,18 @@ import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumModerationLog;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
+import com.wreckloud.wolfchat.community.domain.entity.WfForumReplyLike;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
+import com.wreckloud.wolfchat.community.domain.entity.WfForumThreadLike;
 import com.wreckloud.wolfchat.community.domain.enums.ForumBoardStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumReplyStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadType;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumBoardMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumModerationLogMapper;
+import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
+import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 论坛门面服务：读操作委托给查询服务，写操作在此统一编排。
@@ -54,14 +59,16 @@ public class ForumService {
     private final WfForumBoardMapper wfForumBoardMapper;
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
+    private final WfForumThreadLikeMapper wfForumThreadLikeMapper;
+    private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
     private final WfForumModerationLogMapper wfForumModerationLogMapper;
 
     public List<ForumBoardVO> listBoards() {
         return forumQueryService.listBoards();
     }
 
-    public ForumThreadPageVO listBoardThreads(Long boardId, long page, long size, String tab) {
-        return forumQueryService.listBoardThreads(boardId, page, size, tab);
+    public ForumThreadPageVO listBoardThreads(Long userId, Long boardId, long page, long size, String tab) {
+        return forumQueryService.listBoardThreads(userId, boardId, page, size, tab);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -86,11 +93,11 @@ public class ForumService {
 
         assertSingleRow(wfForumThreadMapper.insert(thread));
         updateBoardOnThreadCreate(boardId, thread.getId(), now);
-        return forumQueryService.buildThreadVO(thread.getId());
+        return forumQueryService.buildThreadVO(userId, thread.getId());
     }
 
-    public ForumThreadDetailVO getThreadDetail(Long threadId) {
-        return forumQueryService.getThreadDetail(threadId);
+    public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
+        return forumQueryService.getThreadDetail(userId, threadId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -102,8 +109,18 @@ public class ForumService {
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
     }
 
-    public ForumReplyPageVO listThreadReplies(Long threadId, long page, long size) {
-        return forumQueryService.listThreadReplies(threadId, page, size);
+    @Transactional(rollbackFor = Exception.class)
+    public void updateThreadLikeStatus(Long userId, Long threadId, boolean liked) {
+        WfForumThread thread = forumQueryService.getVisibleThreadOrThrow(threadId);
+        if (liked) {
+            likeThread(userId, thread.getId());
+            return;
+        }
+        unlikeThread(userId, thread.getId());
+    }
+
+    public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size) {
+        return forumQueryService.listThreadReplies(userId, threadId, page, size);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -127,7 +144,17 @@ public class ForumService {
         assertSingleRow(wfForumReplyMapper.insert(reply));
         updateThreadOnReply(threadId, userId, reply.getId(), now);
         updateBoardOnReply(thread.getBoardId(), threadId, now);
-        return forumQueryService.buildReplyVO(reply.getId());
+        return forumQueryService.buildReplyVO(userId, reply.getId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateReplyLikeStatus(Long userId, Long replyId, boolean liked) {
+        WfForumReply reply = forumQueryService.getVisibleReplyOrThrow(replyId);
+        if (liked) {
+            likeReply(userId, reply.getId());
+            return;
+        }
+        unlikeReply(userId, reply.getId());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -200,6 +227,8 @@ public class ForumService {
         WfForumThread thread = forumQueryService.getVisibleThreadOrThrow(threadId);
         validateThreadAuthor(userId, thread);
 
+        List<Long> replyIds = loadThreadReplyIds(threadId);
+
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, threadId)
                 .eq(WfForumThread::getAuthorId, userId)
@@ -212,6 +241,9 @@ public class ForumService {
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         wfForumReplyMapper.update(null, replyUpdateWrapper);
+
+        deleteThreadLikesByThreadId(threadId);
+        deleteReplyLikesByReplyIds(replyIds);
 
         refreshBoardStats(thread.getBoardId());
         recordModerationLog(userId, LOG_TARGET_THREAD, threadId, LOG_ACTION_DELETE_THREAD, LOG_REASON_AUTHOR_OPERATION);
@@ -229,6 +261,8 @@ public class ForumService {
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         assertSingleRow(wfForumReplyMapper.update(null, replyUpdateWrapper));
 
+        deleteReplyLikeByReplyId(replyId);
+
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, thread.getId())
                 .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
@@ -238,6 +272,118 @@ public class ForumService {
         refreshThreadLastReply(thread.getId());
         refreshBoardStats(thread.getBoardId());
         recordModerationLog(userId, LOG_TARGET_REPLY, replyId, LOG_ACTION_DELETE_REPLY, LOG_REASON_AUTHOR_OPERATION);
+    }
+
+    private void likeThread(Long userId, Long threadId) {
+        if (existsThreadLike(userId, threadId)) {
+            return;
+        }
+        WfForumThreadLike like = new WfForumThreadLike();
+        like.setThreadId(threadId);
+        like.setUserId(userId);
+        assertSingleRow(wfForumThreadLikeMapper.insert(like));
+
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, threadId)
+                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .setSql("like_count = like_count + 1");
+        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
+    }
+
+    private void unlikeThread(Long userId, Long threadId) {
+        LambdaQueryWrapper<WfForumThreadLike> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(WfForumThreadLike::getUserId, userId)
+                .eq(WfForumThreadLike::getThreadId, threadId);
+        int deletedRows = wfForumThreadLikeMapper.delete(deleteWrapper);
+        if (deletedRows == 0) {
+            return;
+        }
+
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, threadId)
+                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .setSql("like_count = IF(like_count > 0, like_count - 1, 0)");
+        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
+    }
+
+    private void likeReply(Long userId, Long replyId) {
+        if (existsReplyLike(userId, replyId)) {
+            return;
+        }
+        WfForumReplyLike like = new WfForumReplyLike();
+        like.setReplyId(replyId);
+        like.setUserId(userId);
+        assertSingleRow(wfForumReplyLikeMapper.insert(like));
+
+        LambdaUpdateWrapper<WfForumReply> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumReply::getId, replyId)
+                .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
+                .setSql("like_count = like_count + 1");
+        assertSingleRow(wfForumReplyMapper.update(null, updateWrapper), ErrorCode.FORUM_REPLY_NOT_FOUND);
+    }
+
+    private void unlikeReply(Long userId, Long replyId) {
+        LambdaQueryWrapper<WfForumReplyLike> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(WfForumReplyLike::getUserId, userId)
+                .eq(WfForumReplyLike::getReplyId, replyId);
+        int deletedRows = wfForumReplyLikeMapper.delete(deleteWrapper);
+        if (deletedRows == 0) {
+            return;
+        }
+
+        LambdaUpdateWrapper<WfForumReply> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumReply::getId, replyId)
+                .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
+                .setSql("like_count = IF(like_count > 0, like_count - 1, 0)");
+        assertSingleRow(wfForumReplyMapper.update(null, updateWrapper), ErrorCode.FORUM_REPLY_NOT_FOUND);
+    }
+
+    private boolean existsThreadLike(Long userId, Long threadId) {
+        LambdaQueryWrapper<WfForumThreadLike> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumThreadLike::getUserId, userId)
+                .eq(WfForumThreadLike::getThreadId, threadId)
+                .last("LIMIT 1");
+        return wfForumThreadLikeMapper.selectOne(queryWrapper) != null;
+    }
+
+    private boolean existsReplyLike(Long userId, Long replyId) {
+        LambdaQueryWrapper<WfForumReplyLike> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumReplyLike::getUserId, userId)
+                .eq(WfForumReplyLike::getReplyId, replyId)
+                .last("LIMIT 1");
+        return wfForumReplyLikeMapper.selectOne(queryWrapper) != null;
+    }
+
+    private List<Long> loadThreadReplyIds(Long threadId) {
+        LambdaQueryWrapper<WfForumReply> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumReply::getThreadId, threadId)
+                .select(WfForumReply::getId);
+        List<WfForumReply> replies = wfForumReplyMapper.selectList(queryWrapper);
+        if (replies == null || replies.isEmpty()) {
+            return List.of();
+        }
+        return replies.stream().map(WfForumReply::getId).collect(Collectors.toList());
+    }
+
+    private void deleteThreadLikesByThreadId(Long threadId) {
+        LambdaQueryWrapper<WfForumThreadLike> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(WfForumThreadLike::getThreadId, threadId);
+        wfForumThreadLikeMapper.delete(deleteWrapper);
+    }
+
+    private void deleteReplyLikesByReplyIds(List<Long> replyIds) {
+        if (replyIds == null || replyIds.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<WfForumReplyLike> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.in(WfForumReplyLike::getReplyId, replyIds);
+        wfForumReplyLikeMapper.delete(deleteWrapper);
+    }
+
+    private void deleteReplyLikeByReplyId(Long replyId) {
+        LambdaQueryWrapper<WfForumReplyLike> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(WfForumReplyLike::getReplyId, replyId);
+        wfForumReplyLikeMapper.delete(deleteWrapper);
     }
 
     private WfForumThread getThreadForReplyOrThrow(Long threadId) {

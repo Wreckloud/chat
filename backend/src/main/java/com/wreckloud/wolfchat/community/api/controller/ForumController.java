@@ -4,6 +4,7 @@ import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
 import com.wreckloud.wolfchat.community.api.dto.CreateThreadDTO;
+import com.wreckloud.wolfchat.community.api.dto.UpdateLikeDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadEssenceDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadLockDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadStickyDTO;
@@ -54,7 +55,8 @@ public class ForumController {
                                                        @RequestParam(defaultValue = "1") long page,
                                                        @RequestParam(defaultValue = "20") long size,
                                                        @RequestParam(required = false) String tab) {
-        ForumThreadPageVO pageVO = forumService.listBoardThreads(boardId, page, size, tab);
+        Long userId = UserContext.getRequiredUserId();
+        ForumThreadPageVO pageVO = forumService.listBoardThreads(userId, boardId, page, size, tab);
         return Result.success(pageVO);
     }
 
@@ -70,13 +72,23 @@ public class ForumController {
     @Operation(summary = "主题详情", description = "获取主题详情")
     @GetMapping("/threads/{threadId}")
     public Result<ForumThreadDetailVO> getThreadDetail(@PathVariable Long threadId) {
-        return Result.success(forumService.getThreadDetail(threadId));
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(forumService.getThreadDetail(userId, threadId));
     }
 
     @Operation(summary = "主题浏览上报", description = "增加主题浏览数")
     @PutMapping("/threads/{threadId}/view")
     public Result<Void> increaseThreadView(@PathVariable Long threadId) {
         forumService.increaseThreadView(threadId);
+        return Result.success("操作成功", null);
+    }
+
+    @Operation(summary = "点赞/取消点赞主题", description = "更新当前用户对主题的点赞状态")
+    @PutMapping("/threads/{threadId}/like")
+    public Result<Void> updateThreadLikeStatus(@PathVariable Long threadId,
+                                               @RequestBody @Validated UpdateLikeDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        forumService.updateThreadLikeStatus(userId, threadId, Boolean.TRUE.equals(dto.getLiked()));
         return Result.success("操作成功", null);
     }
 
@@ -120,7 +132,8 @@ public class ForumController {
     public Result<ForumReplyPageVO> listThreadReplies(@PathVariable Long threadId,
                                                        @RequestParam(defaultValue = "1") long page,
                                                        @RequestParam(defaultValue = "20") long size) {
-        return Result.success(forumService.listThreadReplies(threadId, page, size));
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(forumService.listThreadReplies(userId, threadId, page, size));
     }
 
     @Operation(summary = "发布回复", description = "对指定主题发布回复")
@@ -138,5 +151,14 @@ public class ForumController {
         Long userId = UserContext.getRequiredUserId();
         forumService.deleteReply(userId, replyId);
         return Result.success("删除成功", null);
+    }
+
+    @Operation(summary = "点赞/取消点赞回复", description = "更新当前用户对回复的点赞状态")
+    @PutMapping("/replies/{replyId}/like")
+    public Result<Void> updateReplyLikeStatus(@PathVariable Long replyId,
+                                              @RequestBody @Validated UpdateLikeDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        forumService.updateReplyLikeStatus(userId, replyId, Boolean.TRUE.equals(dto.getLiked()));
+        return Result.success("操作成功", null);
     }
 }

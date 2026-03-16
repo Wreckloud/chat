@@ -3,7 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { normalizeUser } = require('../../utils/user')
+const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
@@ -63,6 +63,8 @@ Page({
     canManageThread: false,
     canStickyToggle: false,
     replySubmitting: false,
+    threadLikeLoading: false,
+    replyLikeLoadingMap: {},
     loading: false,
     themeClass: 'theme-retro-blue'
   },
@@ -194,6 +196,14 @@ Page({
     this.setData(EMPTY_QUOTE_DATA)
   },
 
+  onTapUserElement(e) {
+    const userId = Number(e.currentTarget.dataset.userId)
+    if (!userId) {
+      return
+    }
+    openUserProfile({ userId })
+  },
+
   async handleReply() {
     if (this.data.replySubmitting) return
     const content = this.data.replyContent.trim()
@@ -228,6 +238,64 @@ Page({
       this.setData({
         replySubmitting: false,
         canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, false, this.data.thread)
+      })
+    }
+  },
+
+  async handleToggleThreadLike() {
+    const thread = this.data.thread
+    if (!thread || this.data.threadLikeLoading) return
+
+    const nextLiked = !thread.likedByCurrentUser
+    const nextLikeCount = Math.max((Number(thread.likeCount) || 0) + (nextLiked ? 1 : -1), 0)
+    this.setData({
+      threadLikeLoading: true,
+      'thread.likedByCurrentUser': nextLiked,
+      'thread.likeCount': nextLikeCount
+    })
+
+    try {
+      await request.put(`/forum/threads/${this.data.threadId}/like`, { liked: nextLiked })
+    } catch (error) {
+      this.setData({
+        'thread.likedByCurrentUser': thread.likedByCurrentUser,
+        'thread.likeCount': thread.likeCount
+      })
+      toastError(error, '操作失败')
+    } finally {
+      this.setData({ threadLikeLoading: false })
+    }
+  },
+
+  async handleToggleReplyLike(e) {
+    const replyId = Number(e.currentTarget.dataset.id)
+    if (!replyId) return
+
+    const index = this.data.replies.findIndex(item => Number(item.replyId) === replyId)
+    if (index < 0) return
+    if (this.data.replyLikeLoadingMap[replyId]) return
+
+    const currentReply = this.data.replies[index]
+    const nextLiked = !currentReply.likedByCurrentUser
+    const nextLikeCount = Math.max((Number(currentReply.likeCount) || 0) + (nextLiked ? 1 : -1), 0)
+
+    this.setData({
+      [`replies[${index}].likedByCurrentUser`]: nextLiked,
+      [`replies[${index}].likeCount`]: nextLikeCount,
+      [`replyLikeLoadingMap.${replyId}`]: true
+    })
+
+    try {
+      await request.put(`/forum/replies/${replyId}/like`, { liked: nextLiked })
+    } catch (error) {
+      this.setData({
+        [`replies[${index}].likedByCurrentUser`]: currentReply.likedByCurrentUser,
+        [`replies[${index}].likeCount`]: currentReply.likeCount
+      })
+      toastError(error, '操作失败')
+    } finally {
+      this.setData({
+        [`replyLikeLoadingMap.${replyId}`]: false
       })
     }
   },

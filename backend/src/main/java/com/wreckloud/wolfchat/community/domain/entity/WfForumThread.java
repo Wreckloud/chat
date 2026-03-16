@@ -69,6 +69,11 @@ public class WfForumThread {
     private Integer replyCount;
 
     /**
+     * 点赞数
+     */
+    private Integer likeCount;
+
+    /**
      * 最后一条回复ID
      */
     private Long lastReplyId;

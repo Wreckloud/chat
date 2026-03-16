@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `wf_user` (
     `onboarding_completed_at` DATETIME DEFAULT NULL COMMENT '引导完成时间',
     `first_login_at` DATETIME DEFAULT NULL COMMENT '首次登录时间',
     `last_login_at` DATETIME DEFAULT NULL COMMENT '最近登录时间',
-    `login_count` INT NOT NULL DEFAULT 0 COMMENT '登录次数',
+    `active_day_count` INT NOT NULL DEFAULT 0 COMMENT '活跃天数（按登录日期去重统计）',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -157,6 +157,7 @@ CREATE TABLE IF NOT EXISTS `wf_forum_thread` (
     `is_essence` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否精华：0-否，1-是',
     `view_count` INT NOT NULL DEFAULT 0 COMMENT '浏览数',
     `reply_count` INT NOT NULL DEFAULT 0 COMMENT '回复数',
+    `like_count` INT NOT NULL DEFAULT 0 COMMENT '点赞数',
     `last_reply_id` BIGINT DEFAULT NULL COMMENT '最后回复ID',
     `last_reply_user_id` BIGINT DEFAULT NULL COMMENT '最后回复者ID',
     `last_reply_time` DATETIME DEFAULT NULL COMMENT '最后回复时间',
@@ -176,6 +177,7 @@ CREATE TABLE IF NOT EXISTS `wf_forum_reply` (
     `author_id` BIGINT NOT NULL COMMENT '作者ID',
     `content` TEXT NOT NULL COMMENT '回复内容',
     `quote_reply_id` BIGINT DEFAULT NULL COMMENT '引用楼层ID',
+    `like_count` INT NOT NULL DEFAULT 0 COMMENT '点赞数',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/DELETED',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -184,6 +186,30 @@ CREATE TABLE IF NOT EXISTS `wf_forum_reply` (
     KEY `idx_thread_status_floor` (`thread_id`, `status`, `floor_no`),
     KEY `idx_author_create` (`author_id`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='论坛回复表';
+
+-- 主题点赞关系表
+CREATE TABLE IF NOT EXISTS `wf_forum_thread_like` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `thread_id` BIGINT NOT NULL COMMENT '主题ID',
+    `user_id` BIGINT NOT NULL COMMENT '点赞用户ID',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_thread_user` (`thread_id`, `user_id`),
+    KEY `idx_user_time` (`user_id`, `create_time`),
+    KEY `idx_thread_time` (`thread_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题点赞关系表';
+
+-- 回复点赞关系表
+CREATE TABLE IF NOT EXISTS `wf_forum_reply_like` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `reply_id` BIGINT NOT NULL COMMENT '回复ID',
+    `user_id` BIGINT NOT NULL COMMENT '点赞用户ID',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_reply_user` (`reply_id`, `user_id`),
+    KEY `idx_user_time` (`user_id`, `create_time`),
+    KEY `idx_reply_time` (`reply_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='回复点赞关系表';
 
 -- 论坛版务日志表
 CREATE TABLE IF NOT EXISTS `wf_forum_moderation_log` (

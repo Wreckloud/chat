@@ -2,10 +2,14 @@ package com.wreckloud.wolfchat.account.api.controller;
 
 import com.wreckloud.wolfchat.account.api.dto.ChangePasswordDTO;
 import com.wreckloud.wolfchat.account.api.dto.SendBindEmailLinkDTO;
+import com.wreckloud.wolfchat.account.api.dto.UpdateProfileDTO;
 import com.wreckloud.wolfchat.account.api.dto.UpdateOnboardingStatusDTO;
+import com.wreckloud.wolfchat.account.api.vo.UserHomeThreadPageVO;
+import com.wreckloud.wolfchat.account.api.vo.UserHomeVO;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
+import com.wreckloud.wolfchat.account.application.service.UserHomeService;
 import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -33,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final UserHomeService userHomeService;
     private final AuthService authService;
 
     /**
@@ -52,6 +58,38 @@ public class UserController {
     @GetMapping("/{userId}")
     public Result<UserPublicVO> getUserById(@PathVariable Long userId) {
         return Result.success(userService.getPublicUserVOById(userId));
+    }
+
+    /**
+     * 获取指定行者主页
+     */
+    @Operation(summary = "获取行者主页", description = "获取指定行者主页信息、统计与最近主题（需要登录）")
+    @GetMapping("/{userId}/home")
+    public Result<UserHomeVO> getUserHome(@PathVariable Long userId) {
+        Long currentUserId = UserContext.getRequiredUserId();
+        return Result.success(userHomeService.getUserHome(currentUserId, userId));
+    }
+
+    /**
+     * 获取指定行者发布的主题
+     */
+    @Operation(summary = "获取行者主题列表", description = "分页获取指定行者发布的主题（需要登录）")
+    @GetMapping("/{userId}/threads")
+    public Result<UserHomeThreadPageVO> listUserThreads(@PathVariable Long userId,
+                                                         @RequestParam(defaultValue = "1") long page,
+                                                         @RequestParam(defaultValue = "20") long size) {
+        return Result.success(userHomeService.listUserThreads(userId, page, size));
+    }
+
+    /**
+     * 修改当前登录行者的资料
+     */
+    @Operation(summary = "更新个人资料", description = "更新当前登录行者的资料（需要登录）")
+    @PutMapping("/profile")
+    public Result<UserVO> updateCurrentUserProfile(@RequestBody @Validated UpdateProfileDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        userService.updateCurrentUserProfile(userId, dto);
+        return Result.success("资料更新成功", userService.getCurrentUserVOById(userId));
     }
 
     /**

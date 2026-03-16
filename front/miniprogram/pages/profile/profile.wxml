@@ -1,0 +1,59 @@
+<view class="container {{themeClass}}">
+  <view class="header">
+    <view class="title">编辑资料</view>
+    <view class="sub-title">称谓、签名与简介</view>
+  </view>
+
+  <view class="preview-card">
+    <retro-avatar
+      class="preview-avatar"
+      size="large"
+      shape="square"
+      image="{{avatarPreview}}">
+      {{nickname ? nickname.charAt(0) : '行'}}
+    </retro-avatar>
+    <view class="preview-meta">
+      <view class="preview-name">{{nickname || '未命名'}}</view>
+      <view class="preview-signature">{{signature || '未设置个性签名'}}</view>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <retro-input
+      label="称谓"
+      placeholder="输入你的公开称谓"
+      required="{{true}}"
+      maxlength="{{64}}"
+      value="{{nickname}}"
+      bind:input="onNicknameInput"
+    />
+
+    <retro-input
+      label="个性签名"
+      placeholder="一句简短的话"
+      maxlength="{{255}}"
+      value="{{signature}}"
+      bind:input="onSignatureInput"
+    />
+
+    <view class="bio-wrap">
+      <view class="bio-label">个人简介</view>
+      <retro-textarea
+        value="{{bio}}"
+        placeholder="介绍一下你自己"
+        maxlength="{{1000}}"
+        bind:input="onBioInput"
+      />
+    </view>
+
+    <retro-button
+      theme="primary"
+      size="large"
+      block
+      disabled="{{!canSubmit}}"
+      loading="{{submitting}}"
+      bindtap="handleSubmit">
+      保存资料
+    </retro-button>
+  </view>
+</view>

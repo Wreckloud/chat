@@ -16,12 +16,16 @@ import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
 import com.wreckloud.wolfchat.community.api.vo.UserBriefVO;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
+import com.wreckloud.wolfchat.community.domain.entity.WfForumReplyLike;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
+import com.wreckloud.wolfchat.community.domain.entity.WfForumThreadLike;
 import com.wreckloud.wolfchat.community.domain.enums.ForumReplyStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadType;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumBoardMapper;
+import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
+import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -56,6 +60,8 @@ public class ForumQueryService {
     private final WfForumBoardMapper wfForumBoardMapper;
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
+    private final WfForumThreadLikeMapper wfForumThreadLikeMapper;
+    private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
     private final UserService userService;
     private final ForumViewAssembler forumViewAssembler;
 
@@ -75,7 +81,7 @@ public class ForumQueryService {
         return list;
     }
 
-    public ForumThreadPageVO listBoardThreads(Long boardId, long page, long size, String tab) {
+    public ForumThreadPageVO listBoardThreads(Long userId, Long boardId, long page, long size, String tab) {
         validatePageParams(page, size);
         getBoardOrThrow(boardId);
         String normalizedTab = normalizeTab(tab);
@@ -91,19 +97,20 @@ public class ForumQueryService {
 
         List<WfForumThread> records = result.getRecords();
         Map<Long, WfUser> userMap = loadThreadUserMap(records);
+        Set<Long> likedThreadIds = loadLikedThreadIds(userId, records);
         List<ForumThreadVO> list = new ArrayList<>(records.size());
         for (WfForumThread thread : records) {
             WfUser author = userMap.get(thread.getAuthorId());
             WfUser lastReplyUser = userMap.get(thread.getLastReplyUserId());
-            list.add(forumViewAssembler.toThreadVO(thread, author, lastReplyUser));
+            list.add(forumViewAssembler.toThreadVO(thread, author, lastReplyUser, likedThreadIds.contains(thread.getId())));
         }
 
         return forumViewAssembler.toThreadPageVO(list, result.getTotal(), page, size);
     }
 
-    public ForumThreadDetailVO getThreadDetail(Long threadId) {
+    public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
         WfForumThread thread = getVisibleThreadOrThrow(threadId);
-        ForumThreadVO threadVO = buildThreadVO(thread.getId());
+        ForumThreadVO threadVO = buildThreadVO(userId, thread.getId());
 
         ForumThreadDetailVO detailVO = new ForumThreadDetailVO();
         detailVO.setThread(threadVO);
@@ -111,7 +118,7 @@ public class ForumQueryService {
         return detailVO;
     }
 
-    public ForumReplyPageVO listThreadReplies(Long threadId, long page, long size) {
+    public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size) {
         validatePageParams(page, size);
         getVisibleThreadOrThrow(threadId);
 
@@ -126,19 +133,20 @@ public class ForumQueryService {
         List<WfForumReply> records = result.getRecords();
         Map<Long, WfForumReply> quoteReplyMap = loadQuoteReplyMap(threadId, records);
         Map<Long, WfUser> userMap = loadReplyUserMap(records, quoteReplyMap);
+        Set<Long> likedReplyIds = loadLikedReplyIds(userId, records);
 
         List<ForumReplyVO> list = new ArrayList<>(records.size());
         for (WfForumReply reply : records) {
             WfUser author = userMap.get(reply.getAuthorId());
             WfForumReply quoteReply = quoteReplyMap.get(reply.getQuoteReplyId());
             WfUser quoteAuthor = quoteReply == null ? null : userMap.get(quoteReply.getAuthorId());
-            list.add(forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor));
+            list.add(forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor, likedReplyIds.contains(reply.getId())));
         }
 
         return forumViewAssembler.toReplyPageVO(list, result.getTotal(), page, size);
     }
 
-    public ForumThreadVO buildThreadVO(Long threadId) {
+    public ForumThreadVO buildThreadVO(Long userId, Long threadId) {
         WfForumThread thread = getVisibleThreadOrThrow(threadId);
         Set<Long> userIds = new HashSet<>();
         if (thread.getAuthorId() != null) {
@@ -148,10 +156,16 @@ public class ForumQueryService {
             userIds.add(thread.getLastReplyUserId());
         }
         Map<Long, WfUser> userMap = loadUserMap(userIds);
-        return forumViewAssembler.toThreadVO(thread, userMap.get(thread.getAuthorId()), userMap.get(thread.getLastReplyUserId()));
+        boolean likedByCurrentUser = isThreadLikedByUser(userId, threadId);
+        return forumViewAssembler.toThreadVO(
+                thread,
+                userMap.get(thread.getAuthorId()),
+                userMap.get(thread.getLastReplyUserId()),
+                likedByCurrentUser
+        );
     }
 
-    public ForumReplyVO buildReplyVO(Long replyId) {
+    public ForumReplyVO buildReplyVO(Long userId, Long replyId) {
         WfForumReply reply = getVisibleReplyOrThrow(replyId);
         WfForumReply quoteReply = loadVisibleQuoteReply(reply.getThreadId(), reply.getQuoteReplyId());
 
@@ -165,7 +179,8 @@ public class ForumQueryService {
         Map<Long, WfUser> userMap = loadUserMap(userIds);
         WfUser author = userMap.get(reply.getAuthorId());
         WfUser quoteAuthor = quoteReply == null ? null : userMap.get(quoteReply.getAuthorId());
-        return forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor);
+        boolean likedByCurrentUser = isReplyLikedByUser(userId, replyId);
+        return forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor, likedByCurrentUser);
     }
 
     public WfForumBoard getBoardOrThrow(Long boardId) {
@@ -200,6 +215,28 @@ public class ForumQueryService {
             throw new BaseException(ErrorCode.FORUM_REPLY_NOT_FOUND);
         }
         return quoteReply;
+    }
+
+    public boolean isThreadLikedByUser(Long userId, Long threadId) {
+        if (userId == null || threadId == null) {
+            return false;
+        }
+        LambdaQueryWrapper<WfForumThreadLike> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumThreadLike::getUserId, userId)
+                .eq(WfForumThreadLike::getThreadId, threadId)
+                .last("LIMIT 1");
+        return wfForumThreadLikeMapper.selectOne(queryWrapper) != null;
+    }
+
+    public boolean isReplyLikedByUser(Long userId, Long replyId) {
+        if (userId == null || replyId == null) {
+            return false;
+        }
+        LambdaQueryWrapper<WfForumReplyLike> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumReplyLike::getUserId, userId)
+                .eq(WfForumReplyLike::getReplyId, replyId)
+                .last("LIMIT 1");
+        return wfForumReplyLikeMapper.selectOne(queryWrapper) != null;
     }
 
     private void validatePageParams(long page, long size) {
@@ -303,6 +340,42 @@ public class ForumQueryService {
             }
         }
         return loadUserMap(userIds);
+    }
+
+    private Set<Long> loadLikedThreadIds(Long userId, List<WfForumThread> threads) {
+        if (userId == null || threads == null || threads.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<Long> threadIds = threads.stream()
+                .map(WfForumThread::getId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (threadIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<Long> likedIds = wfForumThreadLikeMapper.selectLikedThreadIds(userId, threadIds);
+        if (likedIds == null || likedIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(likedIds);
+    }
+
+    private Set<Long> loadLikedReplyIds(Long userId, List<WfForumReply> replies) {
+        if (userId == null || replies == null || replies.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<Long> replyIds = replies.stream()
+                .map(WfForumReply::getId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (replyIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<Long> likedIds = wfForumReplyLikeMapper.selectLikedReplyIds(userId, replyIds);
+        if (likedIds == null || likedIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(likedIds);
     }
 
 }

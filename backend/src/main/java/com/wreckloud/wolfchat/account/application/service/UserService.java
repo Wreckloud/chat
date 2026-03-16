@@ -2,6 +2,7 @@ package com.wreckloud.wolfchat.account.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.wreckloud.wolfchat.account.api.dto.UpdateProfileDTO;
 import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.UserPublicVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
@@ -135,6 +136,31 @@ public class UserService {
     }
 
     /**
+     * 更新当前用户资料
+     */
+    public void updateCurrentUserProfile(Long userId, UpdateProfileDTO dto) {
+        if (dto == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        WfUser user = getEnabledByIdOrThrow(userId);
+
+        String nickname = normalizeRequiredText(dto.getNickname());
+        String signature = normalizeOptionalText(dto.getSignature());
+        String bio = normalizeOptionalText(dto.getBio());
+
+        LambdaUpdateWrapper<WfUserProfile> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfUserProfile::getUserId, user.getId())
+                .set(WfUserProfile::getNickname, nickname)
+                .set(WfUserProfile::getSignature, signature)
+                .set(WfUserProfile::getBio, bio);
+        int updateRows = wfUserProfileMapper.update(null, updateWrapper);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+        sessionUserService.invalidateUserCache(userId);
+    }
+
+    /**
      * 创建用户资料
      */
     public void createProfile(Long userId, String nickname) {
@@ -220,6 +246,8 @@ public class UserService {
         }
         user.setNickname(profile.getNickname());
         user.setAvatar(profile.getAvatar());
+        user.setSignature(profile.getSignature());
+        user.setBio(profile.getBio());
     }
 
     private void attachProfilesOrThrow(List<WfUser> users) {
@@ -249,7 +277,23 @@ public class UserService {
             }
             user.setNickname(profile.getNickname());
             user.setAvatar(profile.getAvatar());
+            user.setSignature(profile.getSignature());
+            user.setBio(profile.getBio());
         }
+    }
+
+    private String normalizeRequiredText(String value) {
+        if (!StringUtils.hasText(value)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        return value.trim();
+    }
+
+    private String normalizeOptionalText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     private void attachEmailAuthSummary(WfUser user) {

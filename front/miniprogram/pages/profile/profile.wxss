@@ -1,0 +1,76 @@
+.container {
+  min-height: 100vh;
+  padding: 22rpx 18rpx;
+  background: var(--retro-page-bg);
+  color: var(--retro-page-text);
+  box-sizing: border-box;
+}
+
+.header {
+  margin-bottom: 14rpx;
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--retro-strong-text);
+}
+
+.sub-title {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+}
+
+.preview-card,
+.form-card {
+  padding: 16rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
+}
+
+.preview-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.preview-avatar {
+  flex-shrink: 0;
+  border: 1rpx solid var(--retro-avatar-border);
+}
+
+.preview-meta {
+  min-width: 0;
+  flex: 1;
+  margin-left: 12rpx;
+}
+
+.preview-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--retro-strong-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-signature {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bio-wrap {
+  margin: 10rpx 0 12rpx;
+}
+
+.bio-label {
+  margin-bottom: 6rpx;
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+}

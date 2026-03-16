@@ -1,37 +1,54 @@
-<view class="container {{themeClass}}">
-  <view wx:if="{{userInfo}}" class="content">
-    <view class="user-card">
-      <view class="avatar-section">
+<view class="me-page {{themeClass}}">
+  <view wx:if="{{userInfo}}" class="me-main">
+    <view class="retro-card identity-card">
+      <view class="identity-edit-entry" catchtap="onTapProfileCard">[编辑资料]</view>
+      <view class="identity-main" bindtap="onTapUserHome">
         <retro-avatar
+          class="identity-avatar"
           size="large"
-          image="{{userInfo.avatar || ''}}"
-          shape="round">
+          shape="square"
+          image="{{userInfo.avatar || ''}}">
           {{userInfo.nickname ? userInfo.nickname.charAt(0) : '行'}}
         </retro-avatar>
+
+        <view class="identity-meta">
+          <view class="identity-name">{{userInfo.nickname || userInfo.wolfNo}}</view>
+          <view class="identity-wolf">狼藉号 {{userInfo.wolfNo || '--'}}</view>
+          <view class="identity-email">{{userInfo.email || '未绑定邮箱'}}</view>
+        </view>
       </view>
 
-      <view class="profile-list">
-        <view class="profile-row">
-          <text class="profile-label">狼藉</text>
-          <text class="profile-value">{{userInfo.wolfNo}}</text>
-        </view>
-        <view class="profile-row">
-          <text class="profile-label">称谓</text>
-          <text class="profile-value">{{userInfo.nickname || userInfo.wolfNo}}</text>
-        </view>
-        <view class="profile-row">
-          <text class="profile-label">邮箱</text>
-          <text class="profile-value">{{userInfo.email || '未绑定'}}</text>
-        </view>
-        <view class="profile-row">
-          <text class="profile-label">邮箱状态</text>
-          <text class="profile-value">{{userInfo.email ? (userInfo.emailVerified ? '已认证' : '待认证') : '未绑定'}}</text>
+      <view class="identity-tags">
+        <view class="identity-tag">{{emailStatusText}}</view>
+        <view class="identity-tag">{{onboardingStatusText}}</view>
+      </view>
+    </view>
+
+    <view class="retro-card section-card">
+      <view class="section-head">
+        <view class="section-title">常用功能</view>
+        <view class="section-sub">个人高频入口</view>
+      </view>
+
+      <view class="quick-grid">
+        <view
+          wx:for="{{quickActions}}"
+          wx:key="key"
+          class="quick-item"
+          bindtap="onTapQuickAction"
+          data-key="{{item.key}}">
+          <view class="quick-title">{{item.title}}</view>
+          <view class="quick-desc">{{item.desc}}</view>
         </view>
       </view>
     </view>
 
-    <view class="theme-card">
-      <view class="theme-title">主题色</view>
+    <view class="retro-card section-card">
+      <view class="section-head">
+        <view class="section-title">主题色</view>
+        <view class="section-sub">界面风格切换</view>
+      </view>
+
       <view class="theme-list">
         <view
           wx:for="{{themeOptions}}"
@@ -39,34 +56,51 @@
           class="theme-item {{themeName === item.name ? 'theme-item-active' : ''}}"
           bindtap="onSelectTheme"
           data-theme="{{item.name}}">
+          <view wx:if="{{themeName === item.name}}" class="theme-selected">[已选]</view>
+          <view class="theme-bars">
+            <view
+              wx:for="{{item.preview}}"
+              wx:key="*this"
+              wx:for-item="color"
+              class="theme-bar"
+              style="background-color: {{color}};"></view>
+          </view>
           <view class="theme-main">
             <view class="theme-name">{{item.label}}</view>
             <view class="theme-desc">{{item.description}}</view>
           </view>
-          <view class="theme-preview">
-            <view wx:for="{{item.preview}}" wx:key="*this" wx:for-item="color" class="theme-dot" style="background-color: {{color}};"></view>
-          </view>
-          <view class="theme-state">{{themeName === item.name ? '已选' : ''}}</view>
         </view>
       </view>
     </view>
 
-    <view class="actions">
-      <retro-button theme="default" size="large" block bindtap="goFollow">
-        关注列表
-      </retro-button>
-      <retro-button theme="default" variant="outline" size="large" block bindtap="goEmailManage">
-        邮箱管理
-      </retro-button>
-      <retro-button theme="default" variant="outline" size="large" block bindtap="goChangePassword">
-        修改密码
-      </retro-button>
-      <retro-button theme="default" variant="outline" size="large" block bindtap="handleLogout">
-        退出登录
-      </retro-button>
-      <retro-button theme="danger" variant="outline" size="large" block bindtap="handleDeactivateAccount">
-        注销账号（测试）
-      </retro-button>
+    <view class="retro-card section-card danger-card">
+      <view class="section-head">
+        <view class="section-title">账号操作</view>
+        <view class="section-sub">账号与安全</view>
+      </view>
+
+      <view class="quick-grid">
+        <view
+          wx:for="{{accountActions}}"
+          wx:key="key"
+          class="quick-item"
+          bindtap="onTapAccountAction"
+          data-key="{{item.key}}">
+          <view class="quick-title">{{item.title}}</view>
+          <view class="quick-desc">{{item.desc}}</view>
+        </view>
+      </view>
+
+      <view class="account-divider"></view>
+
+      <view class="danger-actions">
+        <retro-button theme="default" variant="outline" size="large" block bindtap="handleLogout">
+          退出登录
+        </retro-button>
+        <retro-button theme="danger" variant="outline" size="large" block bindtap="handleDeactivateAccount">
+          注销账号（测试）
+        </retro-button>
+      </view>
     </view>
   </view>
 

@@ -10,7 +10,7 @@ Component({
     },
     shape: {
       type: String,
-      value: 'round'
+      value: 'square'
     }
   },
 

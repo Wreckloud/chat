@@ -25,4 +25,14 @@ public interface WfForumThreadMapper extends BaseMapper<WfForumThread> {
             "WHERE board_id = #{boardId} AND status <> 'DELETED' " +
             "ORDER BY last_reply_time DESC, create_time DESC, id DESC LIMIT 1")
     WfForumThread selectLatestVisibleByBoardId(@Param("boardId") Long boardId);
+
+    @Select("SELECT COALESCE(SUM(view_count), 0) " +
+            "FROM wf_forum_thread " +
+            "WHERE author_id = #{authorId} AND status <> 'DELETED'")
+    Long selectViewCountSumByAuthorId(@Param("authorId") Long authorId);
+
+    @Select("SELECT COALESCE(SUM(like_count), 0) " +
+            "FROM wf_forum_thread " +
+            "WHERE author_id = #{authorId} AND status <> 'DELETED'")
+    Long selectLikeCountSumByAuthorId(@Param("authorId") Long authorId);
 }

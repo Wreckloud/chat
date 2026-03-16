@@ -24,12 +24,14 @@ public final class UserConverter {
         userVO.setEmailVerified(user.getEmailVerified());
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
+        userVO.setSignature(user.getSignature());
+        userVO.setBio(user.getBio());
         userVO.setStatus(user.getStatus());
         userVO.setOnboardingStatus(user.getOnboardingStatus());
         userVO.setOnboardingCompletedAt(user.getOnboardingCompletedAt());
         userVO.setFirstLoginAt(user.getFirstLoginAt());
         userVO.setLastLoginAt(user.getLastLoginAt());
-        userVO.setLoginCount(user.getLoginCount());
+        userVO.setActiveDayCount(user.getActiveDayCount());
         return userVO;
     }
 
@@ -42,6 +44,8 @@ public final class UserConverter {
         userVO.setWolfNo(user.getWolfNo());
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
+        userVO.setSignature(user.getSignature());
+        userVO.setBio(user.getBio());
         userVO.setStatus(user.getStatus());
         return userVO;
     }

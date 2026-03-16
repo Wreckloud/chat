@@ -1,0 +1,31 @@
+<view class="user-posts-page {{themeClass}}">
+  <view class="user-posts-main">
+    <retro-empty wx:if="{{!loading && threads.length === 0}}" description="暂无帖子" />
+    <view
+      wx:for="{{threads}}"
+      wx:key="threadId"
+      class="thread-item"
+      bindtap="onTapThread"
+      data-thread-id="{{item.threadId}}">
+      <view class="thread-title-row">
+        <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag">[公告]</text>
+        <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag">[置顶]</text>
+        <text wx:if="{{item.isEssence}}" class="thread-tag">[精华]</text>
+        <text class="thread-title">{{item.title}}</text>
+      </view>
+      <view class="thread-meta-row">
+        <text>{{item.boardName || ('版块#' + item.boardId)}}</text>
+        <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
+      </view>
+      <view class="thread-time-row">
+        <text>{{item.createTimeText}}</text>
+        <text>{{item.lastReplyTimeText || item.createTimeText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{threads.length > 0}}" class="more-row">
+      <text wx:if="{{loadingMore}}" class="more-text">加载中...</text>
+      <text wx:elif="{{!hasMore}}" class="more-text">没有更多帖子</text>
+    </view>
+  </view>
+</view>

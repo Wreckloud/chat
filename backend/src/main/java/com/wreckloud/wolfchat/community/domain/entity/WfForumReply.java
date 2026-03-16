@@ -48,6 +48,11 @@ public class WfForumReply {
     private Long quoteReplyId;
 
     /**
+     * 点赞数
+     */
+    private Integer likeCount;
+
+    /**
      * 状态：NORMAL/DELETED
      */
     private ForumReplyStatus status;

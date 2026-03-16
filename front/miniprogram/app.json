@@ -5,6 +5,7 @@
     "pages/lobby/lobby",
     "pages/community/community",
     "pages/me/me",
+    "pages/profile/profile",
     "pages/email/email",
     "pages/password/password",
     "pages/reset-password/reset-password",
@@ -12,6 +13,7 @@
     "pages/post-create/post-create",
     "pages/post-detail/post-detail",
     "pages/follow/follow",
+    "pages/user-posts/user-posts",
     "pages/user-detail/user-detail"
   ],
   "window": {

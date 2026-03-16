@@ -33,6 +33,12 @@ public class UserVO {
     @Schema(description = "头像URL")
     private String avatar;
 
+    @Schema(description = "个性签名")
+    private String signature;
+
+    @Schema(description = "个人简介")
+    private String bio;
+
     @Schema(description = "状态：NORMAL-正常，DISABLED-禁用或已注销")
     private UserStatus status;
 
@@ -48,8 +54,8 @@ public class UserVO {
     @Schema(description = "最近登录时间")
     private LocalDateTime lastLoginAt;
 
-    @Schema(description = "登录次数")
-    private Integer loginCount;
+    @Schema(description = "活跃天数（按登录日期去重统计）")
+    private Integer activeDayCount;
 }
 
 
