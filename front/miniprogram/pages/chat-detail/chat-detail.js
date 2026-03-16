@@ -248,26 +248,7 @@ Page({
   ensureSenderProfiles(messages) {
     imUserHelper.ensureSenderProfiles(this, request, normalizeUser, messages, {
       fetchMissing: true,
-      onLoaded: (normalized) => {
-        const updates = {}
-        if (Number(this.currentUserId) === Number(normalized.userId)) {
-          this.currentUser = normalized
-        }
-
-        if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalized.userId)) {
-          updates.targetUser = normalized
-          wx.setNavigationBarTitle({
-            title: normalized.nickname || normalized.wolfNo || '聊天'
-          })
-        }
-
-        if (this.data.messages.length > 0) {
-          updates.messageBlocks = this.buildMessageBlocks(this.data.messages)
-        }
-        if (Object.keys(updates).length > 0) {
-          this.setData(updates)
-        }
-      }
+      onLoaded: (normalized) => this.applyLoadedUserProfile(normalized)
     })
   },
 
@@ -278,28 +259,34 @@ Page({
       normalizeUser,
       userId,
       {
-        onLoaded: (normalized) => {
-          const updates = {}
-          if (Number(this.currentUserId) === Number(normalized.userId)) {
-            this.currentUser = normalized
-          }
-
-          if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalized.userId)) {
-            updates.targetUser = normalized
-            wx.setNavigationBarTitle({
-              title: normalized.nickname || normalized.wolfNo || '聊天'
-            })
-          }
-
-          if (this.data.messages.length > 0) {
-            updates.messageBlocks = this.buildMessageBlocks(this.data.messages)
-          }
-          if (Object.keys(updates).length > 0) {
-            this.setData(updates)
-          }
-        }
+        onLoaded: (normalized) => this.applyLoadedUserProfile(normalized)
       }
     )
+  },
+
+  applyLoadedUserProfile(normalized) {
+    if (!normalized || !normalized.userId) {
+      return
+    }
+
+    const updates = {}
+    if (Number(this.currentUserId) === Number(normalized.userId)) {
+      this.currentUser = normalized
+    }
+
+    if (this.data.targetUser && Number(this.data.targetUser.userId) === Number(normalized.userId)) {
+      updates.targetUser = normalized
+      wx.setNavigationBarTitle({
+        title: normalized.nickname || normalized.wolfNo || '聊天'
+      })
+    }
+
+    if (this.data.messages.length > 0) {
+      updates.messageBlocks = this.buildMessageBlocks(this.data.messages)
+    }
+    if (Object.keys(updates).length > 0) {
+      this.setData(updates)
+    }
   },
 
   applyTheme() {
