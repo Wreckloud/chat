@@ -14,6 +14,17 @@ const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
 const lobbyMetaHelper = require('../../utils/lobby-meta-helper')
 const imConfig = require('../../utils/im-config')
+const buildCommonImPageMethods = require('../../utils/im-page-methods')
+
+const commonImPageMethods = buildCommonImPageMethods({
+  imPageHelper,
+  imSendHelper,
+  imHelper,
+  toastError,
+  uploadImage: uploadChatImage,
+  uploadVideo: uploadChatVideo,
+  uploadFile: uploadChatFile
+})
 
 Page({
   data: {
@@ -134,33 +145,7 @@ Page({
     })
   },
 
-  onMessageInput(e) {
-    imPageHelper.onMessageInput(this, e)
-  },
-
-  onKeyboardHeightChange(e) {
-    imPageHelper.onKeyboardHeightChange(this, e)
-  },
-
-  onComposerFocus(e) {
-    imPageHelper.onComposerFocus(this, e)
-  },
-
-  onComposerBlur() {
-    imPageHelper.onComposerBlur(this)
-  },
-
-  onSendButtonTap() {
-    imPageHelper.onSendButtonTap(this, () => this.sendMessage())
-  },
-
-  onSendStatusTap() {
-    imPageHelper.onSendStatusTap(this, () => this.sendMessage())
-  },
-
-  async sendMessage() {
-    return imPageHelper.sendComposerTextMessage(this, imSendHelper, toastError)
-  },
+  ...commonImPageMethods,
 
   handleWsMessage(payload) {
     const commonHandled = imWsHelper.handleCommonPayload(this, payload, {
@@ -225,46 +210,6 @@ Page({
 
   applyTheme() {
     applyPageTheme(this)
-  },
-
-  setMorePanelVisible(visible) {
-    imPageHelper.setMorePanelVisible(this, visible)
-  },
-
-  onClickMore() {
-    imPageHelper.toggleMorePanel(this)
-  },
-
-  async onMoreActionTap(e) {
-    await imPageHelper.onDefaultMoreActionTap(this, e, imSendHelper, {
-      uploadImage: uploadChatImage,
-      uploadVideo: uploadChatVideo,
-      uploadFile: uploadChatFile
-    }, toastError)
-  },
-
-  onTapLink(e) {
-    imSendHelper.onTapLink(e)
-  },
-
-  onTapVideo(e) {
-    imSendHelper.onTapVideo(this, e, toastError)
-  },
-
-  onTapFile(e) {
-    imSendHelper.onTapFile(this, e, toastError)
-  },
-
-  scrollToBottom() {
-    imHelper.scrollToBottom(this)
-  },
-
-  onMessageListUpper() {
-    imPageHelper.onMessageListUpper(this, () => this.loadMessages())
-  },
-
-  previewImage(e) {
-    imPageHelper.previewImage(this, e)
   },
 
   async sendWsMessageWithAck(payload, options = {}) {

@@ -38,6 +38,7 @@
 34. 社区分页视图组装已收敛：`ForumQueryService` 抽取主题/回复分页 VO 组装方法，减少重复模板代码与后续漏改风险。
 35. 聊天页样式已去重：抽取 `styles/im-chat-common.wxss` 统一消息区/输入区/媒体样式，`chat-detail` 与 `lobby` 仅保留头部差异样式。
 36. 聊天页结构模板已去重：新增 `templates/im-chat-body.wxml` 统一消息流与输入区结构，`chat-detail` 与 `lobby` 仅保留场景头部与文案差异。
+37. 聊天页事件绑定已收敛：新增 `utils/im-page-methods.js` 统一输入区、媒体动作与消息列表交互方法，`chat-detail` 与 `lobby` 仅保留业务差异逻辑。
 
 ## 仍需收口（按建议顺序）
 
