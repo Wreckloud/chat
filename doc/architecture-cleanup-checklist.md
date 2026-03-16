@@ -37,6 +37,7 @@
 33. 在线状态批量查询已优化：`UserPresenceService` 对会话在线态与最近活跃态改为 Redis pipeline 批量 `score` 查询，减少循环请求往返。
 34. 社区分页视图组装已收敛：`ForumQueryService` 抽取主题/回复分页 VO 组装方法，减少重复模板代码与后续漏改风险。
 35. 聊天页样式已去重：抽取 `styles/im-chat-common.wxss` 统一消息区/输入区/媒体样式，`chat-detail` 与 `lobby` 仅保留头部差异样式。
+36. 聊天页结构模板已去重：新增 `templates/im-chat-body.wxml` 统一消息流与输入区结构，`chat-detail` 与 `lobby` 仅保留场景头部与文案差异。
 
 ## 仍需收口（按建议顺序）
 
