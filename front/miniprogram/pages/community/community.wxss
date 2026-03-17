@@ -1,7 +1,7 @@
 /* Layout layer */
 .community-page {
   min-height: 100vh;
-  padding: 22rpx 18rpx;
+  padding: 0;
   background: var(--retro-page-bg);
   color: var(--retro-page-text);
 }
@@ -10,9 +10,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16rpx 18rpx;
-  margin-bottom: 14rpx;
-  border: 1rpx solid var(--retro-toolbar-border);
+  padding: 18rpx 22rpx;
+  border-top: 1rpx solid var(--retro-toolbar-top-border);
+  border-bottom: 1rpx solid var(--retro-toolbar-border);
   background: var(--retro-toolbar-bg);
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
@@ -25,7 +25,9 @@
 
 .board-strip {
   white-space: nowrap;
-  margin-bottom: 12rpx;
+  margin: 0;
+  padding: 12rpx 12rpx 0;
+  box-sizing: border-box;
 }
 
 .board-chip {
@@ -61,7 +63,7 @@
   display: flex;
   align-items: center;
   gap: 10rpx;
-  margin-bottom: 12rpx;
+  margin: 10rpx 12rpx 12rpx;
 }
 
 .tab-item {
@@ -83,6 +85,7 @@
 .thread-board {
   display: flex;
   flex-direction: column;
+  margin: 0 12rpx 20rpx;
   border: 1rpx solid var(--retro-panel-border);
   background: var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
@@ -136,8 +139,7 @@
   white-space: nowrap;
 }
 
-.thread-meta-line,
-.thread-last-line {
+.thread-meta-line {
   margin-top: 8rpx;
   display: flex;
   align-items: center;
@@ -147,16 +149,14 @@
   color: var(--retro-muted-text);
 }
 
-.thread-author,
-.thread-last-user {
+.thread-author {
   max-width: 360rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.thread-author-line,
-.thread-last-user-line {
+.thread-author-line {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -166,19 +166,13 @@
 .thread-title-badge {
   flex-shrink: 0;
   max-width: 130rpx;
-  padding: 0 6rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.72);
+  margin-left: 6rpx;
   font-size: 18rpx;
   line-height: 1.2;
   color: var(--retro-accent-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.thread-last-time {
-  flex-shrink: 0;
 }
 
 .thread-stat {

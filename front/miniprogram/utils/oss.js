@@ -357,8 +357,50 @@ async function uploadChatFile(tempFile) {
   }
 }
 
+async function uploadForumThreadImage(tempFile) {
+  const meta = await resolveImageUploadMeta(tempFile)
+  const policy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', meta)
+  await uploadFileToOss(policy, meta.filePath, '图片')
+  return {
+    mediaKey: policy.objectKey,
+    mediaWidth: meta.width,
+    mediaHeight: meta.height,
+    mediaSize: meta.size,
+    mediaMimeType: meta.mimeType
+  }
+}
+
+async function uploadForumThreadVideo(tempFile) {
+  const meta = await resolveVideoUploadMeta(tempFile)
+  const policy = await applyUploadPolicy('/media/forum/thread/video/upload-policy', meta)
+  await uploadFileToOss(policy, meta.filePath, '视频')
+  return {
+    mediaKey: policy.objectKey,
+    mediaWidth: meta.width || null,
+    mediaHeight: meta.height || null,
+    mediaSize: meta.size,
+    mediaMimeType: meta.mimeType
+  }
+}
+
+async function uploadForumReplyImage(tempFile) {
+  const meta = await resolveImageUploadMeta(tempFile)
+  const policy = await applyUploadPolicy('/media/forum/reply/image/upload-policy', meta)
+  await uploadFileToOss(policy, meta.filePath, '图片')
+  return {
+    mediaKey: policy.objectKey,
+    mediaWidth: meta.width,
+    mediaHeight: meta.height,
+    mediaSize: meta.size,
+    mediaMimeType: meta.mimeType
+  }
+}
+
 module.exports = {
   uploadChatImage,
   uploadChatVideo,
-  uploadChatFile
+  uploadChatFile,
+  uploadForumThreadImage,
+  uploadForumThreadVideo,
+  uploadForumReplyImage
 }

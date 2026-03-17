@@ -15,11 +15,17 @@ function mapThread(rawThread, normalizeUser, time) {
   const viewCount = Number(rawThread.viewCount) || 0
   const replyCount = Number(rawThread.replyCount) || 0
   const likeCount = Number(rawThread.likeCount) || 0
+  const imageUrls = Array.isArray(rawThread.imageUrls)
+    ? rawThread.imageUrls.filter(item => typeof item === 'string' && item.trim())
+    : []
+  const videoUrl = typeof rawThread.videoUrl === 'string' ? rawThread.videoUrl : ''
   return {
     ...rawThread,
     viewCount,
     replyCount,
     likeCount,
+    imageUrls,
+    videoUrl,
     likedByCurrentUser: rawThread.likedByCurrentUser === true,
     author: attachDisplayTitle(
       normalizeUser(rawThread.author) || {},
@@ -66,6 +72,7 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
   return {
     ...rawReply,
     likeCount,
+    imageUrl: typeof rawReply.imageUrl === 'string' ? rawReply.imageUrl : '',
     likedByCurrentUser: rawReply.likedByCurrentUser === true,
     author,
     quoteAuthor: attachDisplayTitle(

@@ -30,7 +30,7 @@
 
     <view class="field-row column">
       <view class="field-label">正文</view>
-      <view class="content-hint">最多 5000 字</view>
+      <view class="content-hint">最多 5000 字，可仅发媒体</view>
     </view>
     <retro-textarea
       placeholder="写下你的主题内容..."
@@ -39,11 +39,61 @@
       bind:input="onContentInput"
     />
 
+    <view class="field-row column media-head-row">
+      <view class="field-label">媒体</view>
+      <view class="content-hint">9 图或 1 视频（二选一）</view>
+    </view>
+    <view class="media-toolbar">
+      <retro-button
+        size="small"
+        theme="default"
+        disabled="{{loading || !!mediaVideo || mediaImages.length >= 9}}"
+        bindtap="chooseThreadImages">
+        选图片
+      </retro-button>
+      <retro-button
+        size="small"
+        theme="default"
+        disabled="{{loading || !!mediaVideo || mediaImages.length > 0}}"
+        bindtap="chooseThreadVideo">
+        选视频
+      </retro-button>
+      <retro-button
+        wx:if="{{mediaVideo}}"
+        size="small"
+        theme="default"
+        disabled="{{loading}}"
+        bindtap="clearThreadVideo">
+        清除视频
+      </retro-button>
+    </view>
+
+    <view wx:if="{{mediaImages.length > 0}}" class="media-image-grid">
+      <view wx:for="{{mediaImages}}" wx:key="path" class="media-image-item">
+        <image
+          class="media-image"
+          src="{{item.path}}"
+          mode="aspectFill"
+          data-url="{{item.path}}"
+          bindtap="previewThreadImage" />
+        <view class="media-remove" data-index="{{index}}" bindtap="removeThreadImage">×</view>
+      </view>
+    </view>
+
+    <view wx:if="{{mediaVideo}}" class="media-video-card" bindtap="previewThreadVideo">
+      <view class="media-video-main">
+        <text class="media-video-title">已选择视频</text>
+        <text class="media-video-meta">点此预览，发布后可在帖子中播放</text>
+      </view>
+      <text class="media-video-size">视频</text>
+    </view>
+
     <retro-button
       class="submit-btn"
       theme="primary"
       size="large"
       block
+      disabled="{{!canSubmit}}"
       loading="{{loading}}"
       bindtap="handleSubmit">
       发布

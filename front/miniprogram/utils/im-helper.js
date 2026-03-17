@@ -295,11 +295,15 @@ function handleKeyboardHeightChange(page, event, closeMorePanel) {
   const nextHeight = resolveKeyboardHeight(event)
   if (nextHeight > 0) {
     page.lastKeyboardOpenedAt = Date.now()
+    page.lastKeyboardHeightPx = nextHeight
   }
   if (nextHeight > 0 && page.data.morePanelVisible && typeof closeMorePanel === 'function') {
     closeMorePanel()
   }
   const nextBottom = page.data.dockHeightPx + nextHeight
+  if (nextHeight === prevHeight && nextBottom === page.data.messageListBottomPx) {
+    return
+  }
   page.setData({
     keyboardHeightPx: nextHeight,
     messageListBottomPx: nextBottom
@@ -314,17 +318,23 @@ function handleComposerFocus(page, event, closeMorePanel) {
   if (!page || !page.data) {
     return
   }
-  page.setData({ composerFocused: true })
-  const focusHeight = resolveKeyboardHeight(event)
+  if (!page.data.composerFocused) {
+    page.setData({ composerFocused: true })
+  }
+  const focusHeight = resolveKeyboardHeight(event) || Number(page.lastKeyboardHeightPx || 0)
   if (focusHeight > 0) {
     page.lastKeyboardOpenedAt = Date.now()
     const nextBottom = page.data.dockHeightPx + focusHeight
-    page.setData({
-      keyboardHeightPx: focusHeight,
-      messageListBottomPx: nextBottom
-    }, () => {
+    if (focusHeight !== page.data.keyboardHeightPx || nextBottom !== page.data.messageListBottomPx) {
+      page.setData({
+        keyboardHeightPx: focusHeight,
+        messageListBottomPx: nextBottom
+      }, () => {
+        scrollToBottom(page)
+      })
+    } else {
       scrollToBottom(page)
-    })
+    }
   }
 
   if (!page.data.morePanelVisible || typeof closeMorePanel !== 'function') {
@@ -386,7 +396,7 @@ function shouldKeepComposerAfterSend(page) {
   if (lastKeyboardOpenedAt <= 0) {
     return false
   }
-  return Date.now() - lastKeyboardOpenedAt <= 450
+  return Date.now() - lastKeyboardOpenedAt <= 1200
 }
 
 function refocusComposerInput(page) {

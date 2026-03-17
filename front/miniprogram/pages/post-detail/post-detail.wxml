@@ -5,7 +5,9 @@
   <view wx:else class="post-detail-main">
     <scroll-view
       class="post-detail-scroll"
+      style="bottom: {{replyListBottomPx}}px;"
       scroll-y
+      scroll-into-view="{{replyScrollIntoView}}"
       lower-threshold="80"
       bindscrolltolower="onReachBottom"
       enable-back-to-top>
@@ -32,13 +34,13 @@
             </retro-avatar>
             <view class="thread-info">
               <view class="thread-name-line">
+                <text class="thread-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
                 <text
                   wx:if="{{thread.author.displayTitleName}}"
                   class="user-title-badge"
                   style="{{thread.author.displayTitleColor ? 'color:' + thread.author.displayTitleColor + ';' : ''}}">
                   [{{thread.author.displayTitleName}}]
                 </text>
-                <text class="thread-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
               </view>
               <view class="thread-time">{{thread.createTimeText}}</view>
             </view>
@@ -58,18 +60,25 @@
         </view>
 
         <view class="thread-content">{{content}}</view>
-        <view class="thread-last-line">
-          <view class="thread-last-user-line">
-            <text class="thread-last-prefix">最后回复：</text>
-            <text
-              wx:if="{{thread.lastReplyUser.displayTitleName}}"
-              class="user-title-badge"
-              style="{{thread.lastReplyUser.displayTitleColor ? 'color:' + thread.lastReplyUser.displayTitleColor + ';' : ''}}">
-              [{{thread.lastReplyUser.displayTitleName}}]
-            </text>
-            <text class="thread-last-user">{{thread.lastReplyUser.displayName || thread.lastReplyUser.nickname || thread.lastReplyUser.wolfNo || '--'}}</text>
-          </view>
-          <text>{{thread.lastReplyTimeText || thread.createTimeText}}</text>
+
+        <view wx:if="{{thread.imageUrls && thread.imageUrls.length > 0}}" class="thread-media-grid">
+          <image
+            wx:for="{{thread.imageUrls}}"
+            wx:key="*this"
+            class="thread-media-image"
+            src="{{item}}"
+            mode="aspectFill"
+            data-url="{{item}}"
+            bindtap="previewThreadImage" />
+        </view>
+
+        <view
+          wx:if="{{thread.videoUrl}}"
+          class="thread-video-card"
+          data-url="{{thread.videoUrl}}"
+          bindtap="previewThreadVideo">
+          <view class="thread-video-title">帖子视频</view>
+          <view class="thread-video-sub">点此全屏播放</view>
         </view>
       </view>
 
@@ -92,13 +101,13 @@
               </retro-avatar>
               <view class="reply-info">
                 <view class="reply-author-line">
+                  <text class="reply-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
                   <text
                     wx:if="{{item.author.displayTitleName}}"
                     class="user-title-badge"
                     style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
                     [{{item.author.displayTitleName}}]
                   </text>
-                  <text class="reply-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
                 </view>
                 <view class="reply-time">{{item.timeText}}</view>
               </view>
@@ -108,16 +117,24 @@
 
           <view wx:if="{{item.quoteReplyId}}" class="reply-quote">
             引用 #{{item.quoteFloorNo}}
+            {{item.quoteAuthor.displayName || item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}
             <text
               wx:if="{{item.quoteAuthor.displayTitleName}}"
               class="user-title-badge"
               style="{{item.quoteAuthor.displayTitleColor ? 'color:' + item.quoteAuthor.displayTitleColor + ';' : ''}}">
               [{{item.quoteAuthor.displayTitleName}}]
             </text>
-            {{item.quoteAuthor.displayName || item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}：
+            ：
           </view>
           <view wx:if="{{item.quoteReplyId}}" class="reply-quote-content">{{item.quoteContent}}</view>
           <view class="reply-content">{{item.content}}</view>
+          <image
+            wx:if="{{item.imageUrl}}"
+            class="reply-image"
+            src="{{item.imageUrl}}"
+            mode="widthFix"
+            data-url="{{item.imageUrl}}"
+            bindtap="previewReplyImage" />
 
           <view class="reply-actions">
             <text class="reply-like-btn" bindtap="handleToggleReplyLike" data-id="{{item.replyId}}">
@@ -140,28 +157,56 @@
           <text wx:else class="reply-more-text">没有更多回复</text>
         </view>
       </view>
+      <view id="reply-bottom-anchor" class="reply-bottom-anchor"></view>
     </scroll-view>
 
-    <view class="reply-dock">
+    <view id="reply-dock" class="reply-dock" style="bottom: {{keyboardHeightPx}}px;">
       <view wx:if="{{quoteHint}}" class="quote-hint" bindtap="clearQuote">
         {{quoteHint}}（点此取消）
       </view>
 
       <view class="reply-input">
-        <retro-input
+        <input
           class="reply-field"
           placeholder="写下回复..."
           value="{{replyContent}}"
           maxlength="2000"
-          bind:input="onReplyInput"
+          adjust-position="{{false}}"
+          hold-keyboard="{{true}}"
+          confirm-hold="{{true}}"
+          bindkeyboardheightchange="onReplyKeyboardHeightChange"
+          bindfocus="onReplyFocus"
+          bindblur="onReplyBlur"
+          bindinput="onReplyInput"
+          confirm-type="send"
+          bindconfirm="handleReply"
         />
-        <retro-button
-          theme="primary"
-          size="small"
-          disabled="{{!canReplySubmit}}"
-          bindtap="handleReply">
-          {{replySubmitting ? '提交中' : '回帖'}}
-        </retro-button>
+        <view class="reply-action-bar">
+          <retro-button
+            theme="default"
+            size="small"
+            disabled="{{replySubmitting}}"
+            bindtap="chooseReplyImage">
+            图片
+          </retro-button>
+          <retro-button
+            theme="primary"
+            size="small"
+            disabled="{{!canReplySubmit}}"
+            bindtap="handleReply">
+            {{replySubmitting ? '提交中' : '回帖'}}
+          </retro-button>
+        </view>
+      </view>
+
+      <view wx:if="{{replyImage}}" class="reply-media-box">
+        <image
+          class="reply-media-image"
+          src="{{replyImage.path}}"
+          mode="aspectFill"
+          data-url="{{replyImage.path}}"
+          bindtap="previewReplyImage" />
+        <view class="reply-media-remove" bindtap="clearReplyImage">×</view>
       </view>
     </view>
   </view>

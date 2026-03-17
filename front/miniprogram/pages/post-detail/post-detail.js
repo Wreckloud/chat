@@ -3,11 +3,13 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const { uploadForumReplyImage } = require('../../utils/oss')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError, toastSuccess } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
+const imHelper = require('../../utils/im-helper')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 const EMPTY_QUOTE_DATA = {
@@ -39,6 +41,26 @@ function confirmAction(options) {
   })
 }
 
+function normalizeImageTempFile(file) {
+  if (!file || !file.tempFilePath) {
+    return null
+  }
+  return {
+    path: file.tempFilePath,
+    size: Number(file.size) || 0,
+    width: Number(file.width) || 0,
+    height: Number(file.height) || 0
+  }
+}
+
+function resolveKeyboardHeight(event) {
+  const height = Number(event && event.detail ? event.detail.height : 0)
+  if (!Number.isFinite(height) || height <= 0) {
+    return 0
+  }
+  return Math.floor(height)
+}
+
 function resolveThreadPermission(thread, currentUserId) {
   const canManageThread = !!currentUserId && currentUserId === thread.author?.userId
   return {
@@ -62,6 +84,12 @@ Page({
     quoteReplyId: null,
     quoteHint: '',
     canReplySubmit: false,
+    replyImage: null,
+    replyFocused: false,
+    keyboardHeightPx: 0,
+    replyDockHeightPx: 88,
+    replyListBottomPx: 88,
+    replyScrollIntoView: '',
     canManageThread: false,
     canStickyToggle: false,
     replySubmitting: false,
@@ -96,8 +124,20 @@ Page({
     pageLifecycleHelper.handleProtectedPageShow(auth, {
       afterShow: () => {
         this.applyTheme()
+        this.measureReplyDockHeight()
       }
     })
+  },
+
+  onReady() {
+    this.measureReplyDockHeight()
+  },
+
+  onUnload() {
+    if (this.replyScrollResetTimer) {
+      clearTimeout(this.replyScrollResetTimer)
+      this.replyScrollResetTimer = null
+    }
   },
 
   async loadPage() {
@@ -155,6 +195,10 @@ Page({
         replies: mergedReplies,
         replyHasMore: hasMore,
         replyPage: hasMore ? page + 1 : page
+      }, () => {
+        if (reset) {
+          this.scrollReplyListToBottom()
+        }
       })
     } catch (error) {
       if (notifyError) {
@@ -179,7 +223,7 @@ Page({
     const replyContent = e.detail.value || ''
     this.setData({
       replyContent,
-      canReplySubmit: this.resolveCanReplySubmit(replyContent, this.data.replySubmitting, this.data.thread)
+      canReplySubmit: this.resolveCanReplySubmit(replyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)
     })
   },
 
@@ -191,11 +235,15 @@ Page({
     this.setData({
       quoteReplyId: reply.replyId,
       quoteHint: buildQuoteHint(reply)
+    }, () => {
+      this.measureReplyDockHeight()
     })
   },
 
   clearQuote() {
-    this.setData(EMPTY_QUOTE_DATA)
+    this.setData(EMPTY_QUOTE_DATA, () => {
+      this.measureReplyDockHeight()
+    })
   },
 
   onTapUserElement(e) {
@@ -206,10 +254,129 @@ Page({
     openUserProfile({ userId })
   },
 
+  previewThreadImage(e) {
+    const current = e.currentTarget.dataset.url
+    if (!current) {
+      return
+    }
+    const urls = Array.isArray(this.data.thread && this.data.thread.imageUrls)
+      ? this.data.thread.imageUrls.filter(Boolean)
+      : []
+    wx.previewImage({
+      current,
+      urls: urls.length > 0 ? urls : [current]
+    })
+  },
+
+  previewThreadVideo(e) {
+    const url = e.currentTarget.dataset.url
+    if (!url) {
+      return
+    }
+    wx.previewMedia({
+      current: 0,
+      sources: [{
+        url,
+        type: 'video'
+      }]
+    })
+  },
+
+  previewReplyImage(e) {
+    const current = e.currentTarget.dataset.url
+    if (!current) {
+      return
+    }
+    wx.previewImage({
+      current,
+      urls: [current]
+    })
+  },
+
+  onReplyKeyboardHeightChange(e) {
+    const nextHeight = resolveKeyboardHeight(e)
+    const nextBottom = this.data.replyDockHeightPx + nextHeight
+    this.setData({
+      keyboardHeightPx: nextHeight,
+      replyListBottomPx: nextBottom
+    }, () => {
+      if (nextHeight > 0) {
+        this.scrollReplyListToBottom()
+      }
+    })
+  },
+
+  onReplyFocus(e) {
+    const focusHeight = resolveKeyboardHeight(e)
+    const nextBottom = this.data.replyDockHeightPx + focusHeight
+    this.setData({
+      replyFocused: true,
+      keyboardHeightPx: focusHeight,
+      replyListBottomPx: nextBottom
+    }, () => {
+      this.scrollReplyListToBottom()
+    })
+  },
+
+  onReplyBlur() {
+    this.setData({ replyFocused: false })
+    setTimeout(() => {
+      if (!this.data.replyFocused) {
+        this.setData({
+          keyboardHeightPx: 0,
+          replyListBottomPx: this.data.replyDockHeightPx
+        })
+      }
+    }, 120)
+  },
+
+  async chooseReplyImage() {
+    if (this.data.replySubmitting) {
+      return
+    }
+    try {
+      const chooseRes = await imHelper.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['album']
+      })
+      const tempFile = Array.isArray(chooseRes.tempFiles) ? chooseRes.tempFiles[0] : null
+      const normalized = normalizeImageTempFile(tempFile)
+      if (!normalized) {
+        return
+      }
+      this.setData({
+        replyImage: normalized
+      }, () => {
+        this.measureReplyDockHeight()
+        this.syncReplySubmitState()
+      })
+    } catch (error) {
+      if (imHelper.isUserCancelError(error)) {
+        return
+      }
+      toastError(error, '选择图片失败')
+    }
+  },
+
+  clearReplyImage() {
+    if (!this.data.replyImage) {
+      return
+    }
+    this.setData({
+      replyImage: null
+    }, () => {
+      this.measureReplyDockHeight()
+      this.syncReplySubmitState()
+    })
+  },
+
   async handleReply() {
     if (this.data.replySubmitting) return
     const content = this.data.replyContent.trim()
-    if (!content) {
+    const replyImage = this.data.replyImage
+    const hasImage = !!(replyImage && replyImage.path)
+    if (!content && !hasImage) {
       return
     }
     if (this.data.thread && this.data.thread.status === 'LOCKED') {
@@ -226,10 +393,22 @@ Page({
       canReplySubmit: false
     })
     try {
+      if (hasImage) {
+        const media = await uploadForumReplyImage({
+          tempFilePath: replyImage.path,
+          size: replyImage.size,
+          width: replyImage.width,
+          height: replyImage.height
+        })
+        payload.imageKey = media.mediaKey
+      }
       await request.post(`/forum/threads/${this.data.threadId}/replies`, payload)
       this.setData({
         replyContent: '',
+        replyImage: null,
         ...EMPTY_QUOTE_DATA
+      }, () => {
+        this.measureReplyDockHeight()
       })
       await Promise.all([
         this.loadThreadDetail(),
@@ -239,7 +418,7 @@ Page({
     } finally {
       this.setData({
         replySubmitting: false,
-        canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, false, this.data.thread)
+        canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, this.data.replyImage, false, this.data.thread)
       })
     }
   },
@@ -413,21 +592,63 @@ Page({
     this.loadMoreReplies()
   },
 
+  scrollReplyListToBottom() {
+    if (this.replyScrollResetTimer) {
+      clearTimeout(this.replyScrollResetTimer)
+      this.replyScrollResetTimer = null
+    }
+    if (this.data.replyScrollIntoView) {
+      this.setData({ replyScrollIntoView: '' }, () => {
+        this.scrollReplyListToBottom()
+      })
+      return
+    }
+    this.setData({ replyScrollIntoView: 'reply-bottom-anchor' })
+    this.replyScrollResetTimer = setTimeout(() => {
+      this.replyScrollResetTimer = null
+      if (this.data.replyScrollIntoView) {
+        this.setData({ replyScrollIntoView: '' })
+      }
+    }, 120)
+  },
+
+  measureReplyDockHeight() {
+    wx.nextTick(() => {
+      const query = wx.createSelectorQuery().in(this)
+      query.select('#reply-dock').boundingClientRect(rect => {
+        if (!rect || !rect.height) {
+          return
+        }
+        const nextDockHeight = Math.ceil(rect.height)
+        const nextBottom = nextDockHeight + this.data.keyboardHeightPx
+        if (nextDockHeight === this.data.replyDockHeightPx && nextBottom === this.data.replyListBottomPx) {
+          return
+        }
+        this.setData({
+          replyDockHeightPx: nextDockHeight,
+          replyListBottomPx: nextBottom
+        })
+      }).exec()
+    })
+  },
+
   applyTheme() {
     applyPageTheme(this)
   },
 
   syncReplySubmitState() {
     this.setData({
-      canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, this.data.replySubmitting, this.data.thread)
+      canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)
     })
   },
 
-  resolveCanReplySubmit(replyContent, replySubmitting, thread) {
+  resolveCanReplySubmit(replyContent, replyImage, replySubmitting, thread) {
     if (replySubmitting) {
       return false
     }
-    if (!replyContent || !String(replyContent).trim()) {
+    const hasContent = !!(replyContent && String(replyContent).trim())
+    const hasImage = !!(replyImage && replyImage.path)
+    if (!hasContent && !hasImage) {
       return false
     }
     if (thread && thread.status === 'LOCKED') {

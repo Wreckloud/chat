@@ -45,27 +45,15 @@
       </view>
       <view class="thread-meta-line">
         <view class="thread-author-line">
+          <text class="thread-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</text>
           <text
             wx:if="{{item.author.displayTitleName}}"
             class="thread-title-badge"
             style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
             [{{item.author.displayTitleName}}]
           </text>
-          <text class="thread-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</text>
         </view>
         <text class="thread-stat">回复 {{item.replyCount}} / 浏览 {{item.viewCount}}</text>
-      </view>
-      <view class="thread-last-line">
-        <view class="thread-last-user-line">
-          <text
-            wx:if="{{item.lastReplyUser.displayTitleName}}"
-            class="thread-title-badge"
-            style="{{item.lastReplyUser.displayTitleColor ? 'color:' + item.lastReplyUser.displayTitleColor + ';' : ''}}">
-            [{{item.lastReplyUser.displayTitleName}}]
-          </text>
-          <text class="thread-last-user">{{item.lastReplyUser.displayName || item.lastReplyUser.nickname || item.lastReplyUser.wolfNo || '--'}}</text>
-        </view>
-        <text class="thread-last-time">{{item.lastReplyTimeText || item.createTimeText}}</text>
       </view>
     </view>
 
