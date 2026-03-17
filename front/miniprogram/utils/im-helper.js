@@ -6,6 +6,9 @@ const VIDEO_MAX_HEIGHT_RPX = 520
 const VIDEO_MIN_WIDTH_RPX = 220
 const VIDEO_MIN_HEIGHT_RPX = 180
 const FILE_NAME_MAX_LENGTH = 120
+const BLUR_RESET_DELAY_MS = 90
+const REFOCUS_DELAY_MS = 24
+const ECHO_MATCH_TOLERANCE_MS = 2 * 60 * 1000
 
 function normalizeSharedLink(value) {
   const raw = String(value || '').trim()
@@ -155,6 +158,60 @@ function createClientMsgId(prefix) {
   return `${idPrefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+function buildEchoMatcher(page, payload) {
+  const msgType = String(payload && payload.msgType ? payload.msgType : '').toUpperCase()
+  const conversationId = payload && payload.conversationId != null
+    ? Number(payload.conversationId)
+    : 0
+  return {
+    senderId: Number(page && page.currentUserId ? page.currentUserId : 0),
+    conversationId: Number.isFinite(conversationId) && conversationId > 0 ? conversationId : 0,
+    msgType,
+    content: String(payload && payload.content ? payload.content : '').trim(),
+    sentAt: Date.now()
+  }
+}
+
+function isEchoMessageMatched(pendingRequest, message) {
+  if (!pendingRequest || !pendingRequest.echoMatcher || !message) {
+    return false
+  }
+  const matcher = pendingRequest.echoMatcher
+  const senderId = Number(message.senderId)
+  if (!senderId || senderId !== matcher.senderId) {
+    return false
+  }
+
+  const incomingType = String(message.msgType || '').toUpperCase()
+  if (matcher.msgType && matcher.msgType !== incomingType) {
+    return false
+  }
+
+  if (matcher.conversationId > 0) {
+    const incomingConversationId = Number(message.conversationId)
+    if (!incomingConversationId || incomingConversationId !== matcher.conversationId) {
+      return false
+    }
+  }
+
+  if (matcher.msgType === 'TEXT' || matcher.msgType === 'FILE') {
+    const incomingContent = String(message.content || '').trim()
+    if (matcher.content !== incomingContent) {
+      return false
+    }
+  }
+
+  const messageTime = time.parseDateTime(message.createTime)
+  if (messageTime) {
+    const diff = Math.abs(messageTime.getTime() - matcher.sentAt)
+    if (diff > ECHO_MATCH_TOLERANCE_MS) {
+      return false
+    }
+  }
+
+  return true
+}
+
 function clearPendingTimer(page) {
   if (!page || !page.pendingTimer) {
     return
@@ -206,6 +263,14 @@ function rejectPendingRequest(page, error, clientMsgId) {
   return true
 }
 
+function resolvePendingByEchoMessage(page, message) {
+  const pending = page ? page.pendingRequest : null
+  if (!pending || !isEchoMessageMatched(pending, message)) {
+    return false
+  }
+  return resolvePendingRequest(page, '')
+}
+
 function startPendingTimer(page, clientMsgId, timeoutMs) {
   clearPendingTimer(page)
   page.pendingTimer = setTimeout(() => {
@@ -231,7 +296,8 @@ async function sendWsMessageWithAck(page, ws, payload, options = {}) {
       clientMsgId,
       resolve,
       reject,
-      clearInputOnSuccess: Boolean(options.clearInputOnSuccess)
+      clearInputOnSuccess: Boolean(options.clearInputOnSuccess),
+      echoMatcher: buildEchoMatcher(page, messagePayload)
     }
     startPendingTimer(page, clientMsgId, page.SEND_TIMEOUT_MS)
     ws.send(messagePayload)
@@ -273,25 +339,42 @@ function clearRefocusComposerTimer(page) {
   page.refocusComposerTimer = null
 }
 
+function updateKeyboardLayout(page, keyboardHeight, options = {}) {
+  if (!page || !page.data) {
+    return false
+  }
+  const prevHeight = Number(page.data.keyboardHeightPx) || 0
+  const nextHeight = Number.isFinite(keyboardHeight) && keyboardHeight > 0
+    ? Math.floor(keyboardHeight)
+    : 0
+  const dockHeight = Number(page.data.dockHeightPx) || 0
+  const nextBottom = dockHeight + nextHeight
+  if (nextHeight === prevHeight && nextBottom === page.data.messageListBottomPx) {
+    return false
+  }
+
+  page.setData({
+    keyboardHeightPx: nextHeight,
+    messageListBottomPx: nextBottom
+  }, () => {
+    if (options.scrollOnKeyboardOpen && prevHeight === 0 && nextHeight > 0) {
+      scrollToBottom(page)
+    }
+  })
+  return true
+}
+
 function resetKeyboardHeight(page) {
   if (!page || !page.data) {
     return
   }
-  if (page.data.keyboardHeightPx === 0
-    && page.data.messageListBottomPx === page.data.dockHeightPx) {
-    return
-  }
-  page.setData({
-    keyboardHeightPx: 0,
-    messageListBottomPx: page.data.dockHeightPx
-  })
+  updateKeyboardLayout(page, 0)
 }
 
 function handleKeyboardHeightChange(page, event, closeMorePanel) {
   if (!page || !page.data) {
     return
   }
-  const prevHeight = page.data.keyboardHeightPx
   const nextHeight = resolveKeyboardHeight(event)
   if (nextHeight > 0) {
     page.lastKeyboardOpenedAt = Date.now()
@@ -300,17 +383,14 @@ function handleKeyboardHeightChange(page, event, closeMorePanel) {
   if (nextHeight > 0 && page.data.morePanelVisible && typeof closeMorePanel === 'function') {
     closeMorePanel()
   }
-  const nextBottom = page.data.dockHeightPx + nextHeight
-  if (nextHeight === prevHeight && nextBottom === page.data.messageListBottomPx) {
+
+  // 发送按钮点击会触发短暂 blur，忽略这一帧的 0 高度避免输入栏下坠。
+  if (nextHeight === 0 && page.keepComposerOpenUntilSendFinish) {
     return
   }
-  page.setData({
-    keyboardHeightPx: nextHeight,
-    messageListBottomPx: nextBottom
-  }, () => {
-    if (prevHeight === 0 && nextHeight > 0) {
-      scrollToBottom(page)
-    }
+
+  updateKeyboardLayout(page, nextHeight, {
+    scrollOnKeyboardOpen: true
   })
 }
 
@@ -324,15 +404,8 @@ function handleComposerFocus(page, event, closeMorePanel) {
   const focusHeight = resolveKeyboardHeight(event) || Number(page.lastKeyboardHeightPx || 0)
   if (focusHeight > 0) {
     page.lastKeyboardOpenedAt = Date.now()
-    const nextBottom = page.data.dockHeightPx + focusHeight
-    if (focusHeight !== page.data.keyboardHeightPx || nextBottom !== page.data.messageListBottomPx) {
-      page.setData({
-        keyboardHeightPx: focusHeight,
-        messageListBottomPx: nextBottom
-      }, () => {
-        scrollToBottom(page)
-      })
-    } else {
+    const changed = updateKeyboardLayout(page, focusHeight)
+    if (!changed) {
       scrollToBottom(page)
     }
   }
@@ -347,6 +420,10 @@ function handleComposerBlur(page) {
   if (!page) {
     return
   }
+  if (page.keepComposerOpenUntilSendFinish) {
+    refocusComposerInput(page)
+    return
+  }
   page.setData({ composerFocused: false })
   setTimeout(() => {
     if (page.pageUnloaded || !page.data || page.data.composerFocused) {
@@ -355,7 +432,7 @@ function handleComposerBlur(page) {
     if (page.data.keyboardHeightPx > 0) {
       resetKeyboardHeight(page)
     }
-  }, 120)
+  }, BLUR_RESET_DELAY_MS)
 }
 
 function measureDockHeight(page) {
@@ -415,7 +492,7 @@ function refocusComposerInput(page) {
         return
       }
       page.setData({ composerFocused: true })
-    }, 30)
+    }, REFOCUS_DELAY_MS)
   })
 }
 
@@ -573,6 +650,7 @@ module.exports = {
   clearPendingTimer,
   resolvePendingRequest,
   rejectPendingRequest,
+  resolvePendingByEchoMessage,
   sendWsMessageWithAck,
   scrollToBottom,
   clearScrollToBottomTimer,

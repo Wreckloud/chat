@@ -163,6 +163,7 @@ Page({
     }
 
     if (commonHandled.payloadType === 'LOBBY_MESSAGE') {
+      imHelper.resolvePendingByEchoMessage(this, payload.data)
       this.appendMessage(payload.data)
       this.scheduleLobbyMetaRefresh()
     }

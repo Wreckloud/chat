@@ -170,6 +170,7 @@
           class="reply-field"
           placeholder="写下回复..."
           value="{{replyContent}}"
+          focus="{{replyFocused}}"
           maxlength="2000"
           adjust-position="{{false}}"
           hold-keyboard="{{true}}"
@@ -193,7 +194,7 @@
             theme="primary"
             size="small"
             disabled="{{!canReplySubmit}}"
-            bindtap="handleReply">
+            bindtap="onReplySubmitTap">
             {{replySubmitting ? '提交中' : '回帖'}}
           </retro-button>
         </view>

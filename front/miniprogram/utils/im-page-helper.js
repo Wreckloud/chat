@@ -54,6 +54,7 @@ function cleanupPage(page, ws, options = {}) {
     return
   }
   page.pageUnloaded = true
+  page.keepComposerOpenUntilSendFinish = false
   imHelper.resetKeyboardHeight(page)
   imHelper.clearScrollToBottomTimer(page)
   imHelper.clearRefocusComposerTimer(page)
@@ -173,9 +174,16 @@ function onMessageInput(page, event) {
     return
   }
 
+  const nextCanSendText = String(value || '').trim().length > 0
+  if (page.data.inputMessage === value
+    && (!Object.prototype.hasOwnProperty.call(page.data, 'canSendText')
+      || page.data.canSendText === nextCanSendText)) {
+    return
+  }
+
   const nextData = { inputMessage: value }
   if (Object.prototype.hasOwnProperty.call(page.data, 'canSendText')) {
-    nextData.canSendText = String(value || '').trim().length > 0
+    nextData.canSendText = nextCanSendText
   }
   page.setData(nextData)
 }
@@ -244,6 +252,9 @@ async function onDefaultMoreActionTap(page, event, imSendHelper, uploaders) {
 
 function onSendButtonTap(page, sendFn) {
   page.keepComposerOpenAfterSend = imHelper.shouldKeepComposerAfterSend(page)
+  if (page.keepComposerOpenAfterSend) {
+    imHelper.refocusComposerInput(page)
+  }
   if (typeof sendFn === 'function') {
     sendFn()
   }
@@ -263,7 +274,11 @@ async function sendComposerText(page, sendTextFn) {
 
   const keepComposerOpen = page.keepComposerOpenAfterSend || imHelper.shouldKeepComposerAfterSend(page)
   page.keepComposerOpenAfterSend = false
+  page.keepComposerOpenUntilSendFinish = keepComposerOpen
   page.setData({ sending: true })
+  if (keepComposerOpen) {
+    imHelper.refocusComposerInput(page)
+  }
   try {
     await sendTextFn(content)
   } catch (error) {
@@ -271,6 +286,7 @@ async function sendComposerText(page, sendTextFn) {
       return
     }
   } finally {
+    page.keepComposerOpenUntilSendFinish = false
     page.setData({ sending: false })
     if (keepComposerOpen) {
       imHelper.refocusComposerInput(page)

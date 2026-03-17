@@ -134,9 +134,14 @@ Page({
   },
 
   onUnload() {
+    this.pageUnloaded = true
     if (this.replyScrollResetTimer) {
       clearTimeout(this.replyScrollResetTimer)
       this.replyScrollResetTimer = null
+    }
+    if (this.replyRefocusTimer) {
+      clearTimeout(this.replyRefocusTimer)
+      this.replyRefocusTimer = null
     }
   },
 
@@ -221,9 +226,18 @@ Page({
 
   onReplyInput(e) {
     const replyContent = e.detail.value || ''
+    const canReplySubmit = this.resolveCanReplySubmit(
+      replyContent,
+      this.data.replyImage,
+      this.data.replySubmitting,
+      this.data.thread
+    )
+    if (replyContent === this.data.replyContent && canReplySubmit === this.data.canReplySubmit) {
+      return
+    }
     this.setData({
       replyContent,
-      canReplySubmit: this.resolveCanReplySubmit(replyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)
+      canReplySubmit
     })
   },
 
@@ -295,7 +309,16 @@ Page({
 
   onReplyKeyboardHeightChange(e) {
     const nextHeight = resolveKeyboardHeight(e)
+    if (nextHeight > 0) {
+      this.lastReplyKeyboardHeightPx = nextHeight
+    }
+    if (nextHeight === 0 && this.keepReplyFocusAfterSend) {
+      return
+    }
     const nextBottom = this.data.replyDockHeightPx + nextHeight
+    if (nextHeight === this.data.keyboardHeightPx && nextBottom === this.data.replyListBottomPx) {
+      return
+    }
     this.setData({
       keyboardHeightPx: nextHeight,
       replyListBottomPx: nextBottom
@@ -307,27 +330,47 @@ Page({
   },
 
   onReplyFocus(e) {
-    const focusHeight = resolveKeyboardHeight(e)
+    const focusHeight = resolveKeyboardHeight(e) || Number(this.lastReplyKeyboardHeightPx || 0)
+    if (focusHeight > 0) {
+      this.lastReplyKeyboardHeightPx = focusHeight
+    }
     const nextBottom = this.data.replyDockHeightPx + focusHeight
-    this.setData({
-      replyFocused: true,
-      keyboardHeightPx: focusHeight,
-      replyListBottomPx: nextBottom
-    }, () => {
-      this.scrollReplyListToBottom()
-    })
+    const updates = {}
+    if (!this.data.replyFocused) {
+      updates.replyFocused = true
+    }
+    if (focusHeight !== this.data.keyboardHeightPx || nextBottom !== this.data.replyListBottomPx) {
+      updates.keyboardHeightPx = focusHeight
+      updates.replyListBottomPx = nextBottom
+    }
+    if (Object.keys(updates).length > 0) {
+      this.setData(updates, () => {
+        this.scrollReplyListToBottom()
+      })
+      return
+    }
+    this.scrollReplyListToBottom()
   },
 
   onReplyBlur() {
+    if (this.keepReplyFocusAfterSend) {
+      this.refocusReplyInput()
+      return
+    }
     this.setData({ replyFocused: false })
     setTimeout(() => {
-      if (!this.data.replyFocused) {
+      if (!this.data.replyFocused && !this.keepReplyFocusAfterSend) {
         this.setData({
           keyboardHeightPx: 0,
           replyListBottomPx: this.data.replyDockHeightPx
         })
       }
-    }, 120)
+    }, 90)
+  },
+
+  onReplySubmitTap() {
+    this.keepReplyFocusAfterSend = this.data.replyFocused || this.data.keyboardHeightPx > 0
+    this.handleReply()
   },
 
   async chooseReplyImage() {
@@ -377,11 +420,16 @@ Page({
     const replyImage = this.data.replyImage
     const hasImage = !!(replyImage && replyImage.path)
     if (!content && !hasImage) {
+      this.keepReplyFocusAfterSend = false
       return
     }
     if (this.data.thread && this.data.thread.status === 'LOCKED') {
+      this.keepReplyFocusAfterSend = false
       return
     }
+
+    const keepFocused = this.keepReplyFocusAfterSend || this.data.replyFocused || this.data.keyboardHeightPx > 0
+    this.keepReplyFocusAfterSend = keepFocused
 
     const payload = { content }
     if (this.data.quoteReplyId) {
@@ -416,10 +464,14 @@ Page({
       ])
     } catch (error) {
     } finally {
+      this.keepReplyFocusAfterSend = false
       this.setData({
         replySubmitting: false,
         canReplySubmit: this.resolveCanReplySubmit(this.data.replyContent, this.data.replyImage, false, this.data.thread)
       })
+      if (keepFocused) {
+        this.refocusReplyInput()
+      }
     }
   },
 
@@ -590,6 +642,25 @@ Page({
 
   onReachBottom() {
     this.loadMoreReplies()
+  },
+
+  refocusReplyInput() {
+    if (this.pageUnloaded) {
+      return
+    }
+    if (this.replyRefocusTimer) {
+      clearTimeout(this.replyRefocusTimer)
+      this.replyRefocusTimer = null
+    }
+    this.setData({ replyFocused: false }, () => {
+      this.replyRefocusTimer = setTimeout(() => {
+        this.replyRefocusTimer = null
+        if (this.pageUnloaded) {
+          return
+        }
+        this.setData({ replyFocused: true })
+      }, 24)
+    })
   },
 
   scrollReplyListToBottom() {

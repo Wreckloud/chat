@@ -185,6 +185,7 @@ Page({
     }
 
     if (commonHandled.payloadType === 'MESSAGE') {
+      imHelper.resolvePendingByEchoMessage(this, payload.data)
       this.appendMessage(payload.data)
       if (payload.data && Number(payload.data.senderId) !== Number(this.currentUserId)) {
         this.markConversationRead()
