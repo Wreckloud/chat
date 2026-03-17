@@ -10,6 +10,8 @@ const TAB_BASE_TEXT = {
   2: '我的'
 }
 const lastTabTextMap = {}
+let chatBadgeLoadingPromise = null
+let noticeBadgeLoadingPromise = null
 
 function normalizeCount(value) {
   const count = Number(value)
@@ -59,24 +61,32 @@ async function refreshChatUnreadBadge() {
   if (!auth.isLoggedIn()) {
     return setBadge(CHAT_TAB_INDEX, 0)
   }
-  try {
-    const res = await request.get('/conversations/unread-count')
-    return setBadge(CHAT_TAB_INDEX, res.data)
-  } catch (error) {
-    return setBadge(CHAT_TAB_INDEX, 0)
+  if (chatBadgeLoadingPromise) {
+    return chatBadgeLoadingPromise
   }
+  chatBadgeLoadingPromise = request.get('/conversations/unread-count')
+    .then(res => setBadge(CHAT_TAB_INDEX, res.data))
+    .catch(() => setBadge(CHAT_TAB_INDEX, 0))
+    .finally(() => {
+      chatBadgeLoadingPromise = null
+    })
+  return chatBadgeLoadingPromise
 }
 
 async function refreshNoticeUnreadBadge() {
   if (!auth.isLoggedIn()) {
     return setBadge(ME_TAB_INDEX, 0)
   }
-  try {
-    const res = await request.get('/notices/unread-count')
-    return setBadge(ME_TAB_INDEX, res.data)
-  } catch (error) {
-    return setBadge(ME_TAB_INDEX, 0)
+  if (noticeBadgeLoadingPromise) {
+    return noticeBadgeLoadingPromise
   }
+  noticeBadgeLoadingPromise = request.get('/notices/unread-count')
+    .then(res => setBadge(ME_TAB_INDEX, res.data))
+    .catch(() => setBadge(ME_TAB_INDEX, 0))
+    .finally(() => {
+      noticeBadgeLoadingPromise = null
+    })
+  return noticeBadgeLoadingPromise
 }
 
 function setChatBadge(count) {
