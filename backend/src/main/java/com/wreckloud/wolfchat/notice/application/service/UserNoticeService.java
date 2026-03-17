@@ -87,15 +87,15 @@ public class UserNoticeService {
         if (notice == null || !userId.equals(notice.getUserId())) {
             throw new BaseException(ErrorCode.NOTICE_NOT_FOUND);
         }
-        if (Boolean.TRUE.equals(notice.getRead())) {
+        if (Boolean.TRUE.equals(notice.getReadFlag())) {
             return;
         }
 
         LambdaUpdateWrapper<WfUserNotice> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfUserNotice::getId, noticeId)
                 .eq(WfUserNotice::getUserId, userId)
-                .eq(WfUserNotice::getRead, false)
-                .set(WfUserNotice::getRead, true)
+                .eq(WfUserNotice::getReadFlag, false)
+                .set(WfUserNotice::getReadFlag, true)
                 .set(WfUserNotice::getReadTime, LocalDateTime.now());
         int updateRows = wfUserNoticeMapper.update(null, updateWrapper);
         if (updateRows != 1) {
@@ -107,8 +107,8 @@ public class UserNoticeService {
     public void markAllRead(Long userId) {
         LambdaUpdateWrapper<WfUserNotice> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfUserNotice::getUserId, userId)
-                .eq(WfUserNotice::getRead, false)
-                .set(WfUserNotice::getRead, true)
+                .eq(WfUserNotice::getReadFlag, false)
+                .set(WfUserNotice::getReadFlag, true)
                 .set(WfUserNotice::getReadTime, LocalDateTime.now());
         wfUserNoticeMapper.update(null, updateWrapper);
     }
@@ -166,7 +166,7 @@ public class UserNoticeService {
             notice.setContent(content);
             notice.setBizType(noticeType.getBizType());
             notice.setBizId(bizId);
-            notice.setRead(false);
+            notice.setReadFlag(false);
             int insertRows = wfUserNoticeMapper.insert(notice);
             if (insertRows != 1) {
                 throw new BaseException(ErrorCode.DATABASE_ERROR);
@@ -196,7 +196,7 @@ public class UserNoticeService {
 
         LambdaUpdateWrapper<WfUserNotice> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfUserNotice::getId, recentNotice.getId())
-                .eq(WfUserNotice::getRead, false)
+                .eq(WfUserNotice::getReadFlag, false)
                 .set(WfUserNotice::getContent, content)
                 .set(WfUserNotice::getCreateTime, now)
                 .set(WfUserNotice::getReadTime, null);
@@ -208,7 +208,7 @@ public class UserNoticeService {
         LambdaQueryWrapper<WfUserNotice> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfUserNotice::getUserId, userId)
                 .eq(WfUserNotice::getNoticeType, noticeType)
-                .eq(WfUserNotice::getRead, false);
+                .eq(WfUserNotice::getReadFlag, false);
         if (bizId == null) {
             queryWrapper.isNull(WfUserNotice::getBizId);
         } else {
@@ -238,7 +238,7 @@ public class UserNoticeService {
         String actionUrl = buildActionUrl(notice);
         vo.setActionUrl(actionUrl);
         vo.setNavigable(StringUtils.hasText(actionUrl));
-        vo.setRead(Boolean.TRUE.equals(notice.getRead()));
+        vo.setRead(Boolean.TRUE.equals(notice.getReadFlag()));
         vo.setReadTime(notice.getReadTime());
         vo.setCreateTime(notice.getCreateTime());
         return vo;

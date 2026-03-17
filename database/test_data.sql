@@ -354,3 +354,19 @@ ON DUPLICATE KEY UPDATE
     `read_time` = VALUES(`read_time`),
     `create_time` = VALUES(`create_time`),
     `update_time` = NOW();
+
+-- 13) 封禁记录样例（历史封禁，不影响当前登录联调）
+INSERT INTO `wf_user_ban_record` (
+    `id`, `user_id`, `operator_user_id`, `reason`, `start_time`, `end_time`, `status`, `lifted_at`, `create_time`, `update_time`
+) VALUES
+    (930001, @uid_3, @uid_1, '测试样例：历史封禁记录', '2026-03-09 08:00:00', '2026-03-09 12:00:00', 'LIFTED', '2026-03-09 10:30:00', '2026-03-09 08:00:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `user_id` = VALUES(`user_id`),
+    `operator_user_id` = VALUES(`operator_user_id`),
+    `reason` = VALUES(`reason`),
+    `start_time` = VALUES(`start_time`),
+    `end_time` = VALUES(`end_time`),
+    `status` = VALUES(`status`),
+    `lifted_at` = VALUES(`lifted_at`),
+    `create_time` = VALUES(`create_time`),
+    `update_time` = NOW();

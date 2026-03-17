@@ -31,7 +31,7 @@ public class WfUserNotice {
     private Long bizId;
 
     @TableField("is_read")
-    private Boolean read;
+    private Boolean readFlag;
 
     private LocalDateTime readTime;
 
