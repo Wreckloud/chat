@@ -15,19 +15,20 @@ function notifyWsError(toastError, errorMessage, fallbackMessage) {
 }
 
 function handleWsError(page, payload, toastError) {
+  const pageData = page && page.data ? page.data : {}
   const errorMessage = payload && payload.message ? payload.message : '发送失败'
   const clientMsgId = payload && payload.clientMsgId ? String(payload.clientMsgId) : ''
 
   // 仅 clientMsgId 对应的 ERROR 参与发送链路兜底。
   if (clientMsgId) {
     const resolved = imHelper.rejectPendingRequest(page, new Error(errorMessage), clientMsgId)
-    if (!resolved && !page.data.sending) {
+    if (!resolved && !pageData.sending) {
       notifyWsError(toastError, errorMessage, '请求异常')
     }
     return true
   }
 
-  if (!page.data.sending) {
+  if (!pageData.sending) {
     notifyWsError(toastError, errorMessage, '请求异常')
     return true
   }

@@ -247,7 +247,7 @@ async function onDefaultMoreActionTap(page, event, imSendHelper, uploaders) {
     image: () => imSendHelper.chooseImageFromAlbum(page, deps),
     video: () => imSendHelper.chooseVideoFromAlbum(page, deps),
     file: () => imSendHelper.chooseFileForShare(page, deps),
-    link: () => imSendHelper.shareLinkAsText(page, deps)
+    link: () => imSendHelper.shareLinkAsText(page)
   })
 }
 

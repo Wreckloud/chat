@@ -98,6 +98,7 @@ async function chooseImageFromAlbum(page, deps) {
     return
   }
 
+  let didBeginSending = false
   try {
     const chooseRes = await imHelper.chooseMedia({
       count: 9,
@@ -112,6 +113,7 @@ async function chooseImageFromAlbum(page, deps) {
     if (!beginSending(page)) {
       return
     }
+    didBeginSending = true
     const batchResult = await sendUploadedMediaBatch(page, tempFiles, {
       upload: deps.uploadImage,
       buildPayload: (media) => buildBaseSendPayload(page, 'IMAGE', {
@@ -134,7 +136,9 @@ async function chooseImageFromAlbum(page, deps) {
     }
     showBatchFailureToast(1, 1)
   } finally {
-    endSending(page)
+    if (didBeginSending) {
+      endSending(page)
+    }
   }
 }
 
@@ -143,6 +147,7 @@ async function chooseVideoFromAlbum(page, deps) {
     return
   }
 
+  let didBeginSending = false
   try {
     const chooseRes = await imHelper.chooseMedia({
       count: 1,
@@ -157,6 +162,7 @@ async function chooseVideoFromAlbum(page, deps) {
     if (!beginSending(page)) {
       return
     }
+    didBeginSending = true
     const batchResult = await sendUploadedMediaBatch(page, [tempFile], {
       upload: deps.uploadVideo,
       buildPayload: (media) => buildBaseSendPayload(page, 'VIDEO', {
@@ -179,7 +185,9 @@ async function chooseVideoFromAlbum(page, deps) {
     }
     showBatchFailureToast(1, 1)
   } finally {
-    endSending(page)
+    if (didBeginSending) {
+      endSending(page)
+    }
   }
 }
 
@@ -188,6 +196,7 @@ async function chooseFileForShare(page, deps) {
     return
   }
 
+  let didBeginSending = false
   try {
     const chooseRes = await imHelper.chooseMessageFile({
       count: 9,
@@ -203,6 +212,7 @@ async function chooseFileForShare(page, deps) {
     if (!beginSending(page)) {
       return
     }
+    didBeginSending = true
     const batchResult = await sendUploadedMediaBatch(page, selectedFiles, {
       upload: deps.uploadFile,
       buildPayload: (media) => buildBaseSendPayload(page, 'FILE', {
@@ -224,7 +234,9 @@ async function chooseFileForShare(page, deps) {
     }
     showBatchFailureToast(1, 1)
   } finally {
-    endSending(page)
+    if (didBeginSending) {
+      endSending(page)
+    }
   }
 }
 
@@ -249,6 +261,7 @@ async function shareLinkAsText(page) {
   if (!beginSending(page)) {
     return
   }
+  let didBeginSending = true
   try {
     await sendTextMessage(page, link)
   } catch (error) {
@@ -257,7 +270,9 @@ async function shareLinkAsText(page) {
     }
     showBatchFailureToast(1, 1)
   } finally {
-    endSending(page)
+    if (didBeginSending) {
+      endSending(page)
+    }
   }
 }
 

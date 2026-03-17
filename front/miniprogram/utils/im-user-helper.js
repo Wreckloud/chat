@@ -1,6 +1,28 @@
+function normalizeComparableValue(value) {
+  if (value == null) {
+    return ''
+  }
+  return String(value).trim()
+}
+
+function isSameUserProfile(left, right) {
+  const leftUserId = Number(left && left.userId)
+  const rightUserId = Number(right && right.userId)
+  if (!Number.isFinite(leftUserId) || !Number.isFinite(rightUserId) || leftUserId <= 0 || rightUserId <= 0) {
+    return false
+  }
+
+  return leftUserId === rightUserId
+    && normalizeComparableValue(left && left.wolfNo) === normalizeComparableValue(right && right.wolfNo)
+    && normalizeComparableValue(left && left.nickname) === normalizeComparableValue(right && right.nickname)
+    && normalizeComparableValue(left && left.avatar) === normalizeComparableValue(right && right.avatar)
+    && normalizeComparableValue(left && left.equippedTitleName) === normalizeComparableValue(right && right.equippedTitleName)
+    && normalizeComparableValue(left && left.equippedTitleColor) === normalizeComparableValue(right && right.equippedTitleColor)
+}
+
 function cacheUserProfile(page, normalizeUser, user) {
   if (!page || !user || !user.userId) {
-    return
+    return false
   }
   if (!page.userProfileMap) {
     page.userProfileMap = {}
@@ -8,7 +30,7 @@ function cacheUserProfile(page, normalizeUser, user) {
 
   const userId = Number(user.userId)
   if (!Number.isFinite(userId) || userId <= 0) {
-    return
+    return false
   }
 
   const existing = page.userProfileMap[userId] || {}
@@ -23,7 +45,12 @@ function cacheUserProfile(page, normalizeUser, user) {
     equippedTitleName: hasTitleName ? user.equippedTitleName : existing.equippedTitleName,
     equippedTitleColor: hasTitleColor ? user.equippedTitleColor : existing.equippedTitleColor
   }
-  page.userProfileMap[userId] = normalizeUser(merged)
+  const normalized = normalizeUser(merged) || {}
+  if (isSameUserProfile(existing, normalized)) {
+    return false
+  }
+  page.userProfileMap[userId] = normalized
+  return true
 }
 
 function initCurrentUserContext(page, auth, normalizeUser, options = {}) {
@@ -132,10 +159,17 @@ function loadCurrentUserProfile(page, request, normalizeUser, onLoaded) {
       if (!user.userId) {
         return
       }
-      page.currentUserId = Number(user.userId)
-      page.currentUser = user
-      if (typeof onLoaded === 'function') {
-        onLoaded(user)
+      const previousCurrentUser = page.currentUser || {}
+      const currentUserId = Number(user.userId)
+      const cacheUpdated = cacheUserProfile(page, normalizeUser, user)
+      const nextCurrentUser = page.userProfileMap && page.userProfileMap[currentUserId]
+        ? page.userProfileMap[currentUserId]
+        : user
+      page.currentUserId = currentUserId
+      page.currentUser = nextCurrentUser
+
+      if (typeof onLoaded === 'function' && (!isSameUserProfile(previousCurrentUser, nextCurrentUser) || cacheUpdated)) {
+        onLoaded(nextCurrentUser)
       }
     })
     .catch(() => {})
@@ -175,11 +209,14 @@ function ensureUserProfileById(page, request, normalizeUser, userId, options = {
         return
       }
 
-      cacheUserProfile(page, normalizeUser, normalized)
-      if (typeof options.onLoaded === 'function') {
-        options.onLoaded(normalized, numericUserId)
+      const cacheUpdated = cacheUserProfile(page, normalizeUser, normalized)
+      const nextProfile = page.userProfileMap && page.userProfileMap[numericUserId]
+        ? page.userProfileMap[numericUserId]
+        : normalized
+      if (cacheUpdated && typeof options.onLoaded === 'function') {
+        options.onLoaded(nextProfile, numericUserId)
       }
-      return normalized
+      return nextProfile
     })
     .catch(() => {})
     .finally(() => {
