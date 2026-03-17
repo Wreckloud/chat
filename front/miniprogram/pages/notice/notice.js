@@ -12,13 +12,35 @@ const NOTICE_FILTER_KEY_ALL = 'ALL'
 const NOTICE_FILTER_KEY_INTERACTION = 'INTERACTION'
 const NOTICE_FILTER_KEY_FOLLOW = 'FOLLOW'
 const NOTICE_FILTER_KEY_ACHIEVEMENT = 'ACHIEVEMENT'
-const NOTICE_FILTER_OPTIONS = [
-  { key: NOTICE_FILTER_KEY_ALL, label: '全部' },
-  { key: NOTICE_FILTER_KEY_INTERACTION, label: '互动' },
-  { key: NOTICE_FILTER_KEY_FOLLOW, label: '关注' },
-  { key: NOTICE_FILTER_KEY_ACHIEVEMENT, label: '成就' }
-]
 const INTERACTION_NOTICE_TYPES = new Set(['THREAD_LIKED', 'THREAD_REPLIED', 'REPLY_LIKED'])
+
+function normalizeUnreadCount(value) {
+  const count = Number(value)
+  if (!Number.isFinite(count) || count <= 0) {
+    return 0
+  }
+  return Math.floor(count)
+}
+
+function buildFilterLabel(baseLabel, count) {
+  if (count <= 0) {
+    return baseLabel
+  }
+  return `${baseLabel} ${count}`
+}
+
+function buildFilterOptions(summary) {
+  const totalUnread = normalizeUnreadCount(summary && summary.totalUnread)
+  const interactionUnread = normalizeUnreadCount(summary && summary.interactionUnread)
+  const followUnread = normalizeUnreadCount(summary && summary.followUnread)
+  const achievementUnread = normalizeUnreadCount(summary && summary.achievementUnread)
+  return [
+    { key: NOTICE_FILTER_KEY_ALL, label: buildFilterLabel('全部', totalUnread), count: totalUnread },
+    { key: NOTICE_FILTER_KEY_INTERACTION, label: buildFilterLabel('互动', interactionUnread), count: interactionUnread },
+    { key: NOTICE_FILTER_KEY_FOLLOW, label: buildFilterLabel('关注', followUnread), count: followUnread },
+    { key: NOTICE_FILTER_KEY_ACHIEVEMENT, label: buildFilterLabel('成就', achievementUnread), count: achievementUnread }
+  ]
+}
 
 Page({
   data: {
@@ -29,7 +51,7 @@ Page({
     size: DEFAULT_SIZE,
     hasMore: true,
     activeFilterKey: NOTICE_FILTER_KEY_ALL,
-    filterOptions: NOTICE_FILTER_OPTIONS,
+    filterOptions: buildFilterOptions(null),
     themeClass: 'theme-retro-blue'
   },
 
@@ -73,6 +95,7 @@ Page({
         hasMore
       })
       refreshNoticeUnreadBadge()
+      this.loadUnreadSummary()
     } catch (error) {
       toastError(error, '加载失败')
     } finally {
@@ -122,6 +145,7 @@ Page({
           filteredList: this.buildFilteredList(list, this.data.activeFilterKey)
         })
         refreshNoticeUnreadBadge()
+        this.loadUnreadSummary()
       } catch (error) {
         toastError(error, '操作失败')
         return
@@ -148,8 +172,22 @@ Page({
         filteredList: this.buildFilteredList(list, this.data.activeFilterKey)
       })
       refreshNoticeUnreadBadge()
+      this.loadUnreadSummary()
     } catch (error) {
       toastError(error, '操作失败')
+    }
+  },
+
+  async loadUnreadSummary() {
+    try {
+      const res = await request.get('/notices/unread-summary')
+      this.setData({
+        filterOptions: buildFilterOptions(res && res.data)
+      })
+    } catch (error) {
+      this.setData({
+        filterOptions: buildFilterOptions(null)
+      })
     }
   },
 

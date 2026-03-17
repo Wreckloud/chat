@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.notice.api.vo.UserNoticePageVO;
+import com.wreckloud.wolfchat.notice.api.vo.UserNoticeUnreadSummaryVO;
 import com.wreckloud.wolfchat.notice.api.vo.UserNoticeVO;
 import com.wreckloud.wolfchat.notice.domain.entity.WfUserNotice;
 import com.wreckloud.wolfchat.notice.domain.enums.NoticeType;
@@ -66,6 +67,18 @@ public class UserNoticeService {
             return 0L;
         }
         return count;
+    }
+
+    public UserNoticeUnreadSummaryVO countUnreadSummary(Long userId) {
+        UserNoticeUnreadSummaryVO summaryVO = wfUserNoticeMapper.selectUnreadSummaryByUserId(userId);
+        if (summaryVO == null) {
+            summaryVO = new UserNoticeUnreadSummaryVO();
+        }
+        summaryVO.setTotalUnread(normalizeNonNegative(summaryVO.getTotalUnread()));
+        summaryVO.setAchievementUnread(normalizeNonNegative(summaryVO.getAchievementUnread()));
+        summaryVO.setFollowUnread(normalizeNonNegative(summaryVO.getFollowUnread()));
+        summaryVO.setInteractionUnread(normalizeNonNegative(summaryVO.getInteractionUnread()));
+        return summaryVO;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -272,5 +285,12 @@ public class UserNoticeService {
             return DEFAULT_SIZE;
         }
         return Math.min(size, MAX_SIZE);
+    }
+
+    private long normalizeNonNegative(Long value) {
+        if (value == null || value < 0L) {
+            return 0L;
+        }
+        return value;
     }
 }

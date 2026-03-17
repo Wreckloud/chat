@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.notice.api.controller;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.notice.api.vo.UserNoticePageVO;
+import com.wreckloud.wolfchat.notice.api.vo.UserNoticeUnreadSummaryVO;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +40,13 @@ public class NoticeController {
     public Result<Long> countUnread() {
         Long userId = UserContext.getRequiredUserId();
         return Result.success(userNoticeService.countUnread(userId));
+    }
+
+    @Operation(summary = "未读通知分类统计", description = "获取当前用户通知分类未读数量")
+    @GetMapping("/unread-summary")
+    public Result<UserNoticeUnreadSummaryVO> countUnreadSummary() {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(userNoticeService.countUnreadSummary(userId));
     }
 
     @Operation(summary = "标记通知已读", description = "将指定通知标记为已读")
