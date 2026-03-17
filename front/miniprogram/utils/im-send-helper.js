@@ -132,6 +132,7 @@ async function chooseImageFromAlbum(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
+    showBatchFailureToast(1, 1)
   } finally {
     endSending(page)
   }
@@ -176,6 +177,7 @@ async function chooseVideoFromAlbum(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
+    showBatchFailureToast(1, 1)
   } finally {
     endSending(page)
   }
@@ -220,6 +222,7 @@ async function chooseFileForShare(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
+    showBatchFailureToast(1, 1)
   } finally {
     endSending(page)
   }
