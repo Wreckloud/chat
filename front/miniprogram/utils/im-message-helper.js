@@ -95,7 +95,19 @@ function appendMessage(page, message, options = {}) {
     messageIdSet.add(messageId)
   }
   const updates = { messages }
-  if (typeof options.buildMessageBlocks === 'function') {
+  if (typeof options.appendMessageBlock === 'function') {
+    const previousMessage = list.length > 0 ? list[list.length - 1] : null
+    const currentBlocks = Array.isArray(page.data.messageBlocks) ? page.data.messageBlocks : []
+    const nextBlocks = options.appendMessageBlock({
+      messageBlocks: currentBlocks,
+      message,
+      previousMessage,
+      messageIndex: messages.length - 1
+    })
+    if (Array.isArray(nextBlocks)) {
+      updates.messageBlocks = nextBlocks
+    }
+  } else if (typeof options.buildMessageBlocks === 'function') {
     updates.messageBlocks = options.buildMessageBlocks(messages)
   }
   page.setData(updates)

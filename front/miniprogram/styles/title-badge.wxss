@@ -1,0 +1,30 @@
+.retro-title-badge {
+  flex-shrink: 0;
+  margin-left: 6rpx;
+  line-height: 1.2;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.retro-title-badge-sm {
+  max-width: 130rpx;
+  font-size: 18rpx;
+}
+
+.retro-title-badge-md {
+  max-width: 180rpx;
+  font-size: 19rpx;
+}
+
+.retro-title-badge-lg {
+  max-width: 180rpx;
+  font-size: 20rpx;
+}
+
+.retro-title-badge-xl {
+  max-width: 180rpx;
+  font-size: 21rpx;
+  line-height: 1.3;
+}

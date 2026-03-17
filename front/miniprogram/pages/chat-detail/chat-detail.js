@@ -197,7 +197,7 @@ Page({
     imMessageHelper.appendMessage(this, message, {
       isValidMessage: (current) => Boolean(current) && Number(current.conversationId) === Number(this.data.conversationId),
       isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
-      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
+      appendMessageBlock: (payload) => this.appendMessageBlock(payload),
       afterAppend: (current) => {
         this.ensureUserProfileById(current.senderId)
         this.scrollToBottom()
@@ -221,6 +221,17 @@ Page({
       messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
       cacheUserProfile: (user) => this.cacheUserProfile(user),
       resolveSenderProfile: (senderId, isSelf) => this.resolveSenderProfile(senderId, isSelf)
+    })
+  },
+
+  appendMessageBlock({ messageBlocks, message, previousMessage, messageIndex }) {
+    return imHelper.appendMessageBlock(messageBlocks, message, {
+      currentUserId: this.currentUserId,
+      messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
+      cacheUserProfile: (user) => this.cacheUserProfile(user),
+      resolveSenderProfile: (senderId, isSelf) => this.resolveSenderProfile(senderId, isSelf),
+      previousMessage,
+      messageIndex
     })
   },
 

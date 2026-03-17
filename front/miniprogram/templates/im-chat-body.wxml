@@ -42,7 +42,7 @@
                 </view>
                 <text
                   wx:if="{{blockItem.senderTitleName}}"
-                  class="im-title-badge"
+                  class="im-title-badge retro-title-badge retro-title-badge-md"
                   style="{{blockItem.senderTitleColor ? 'color:' + blockItem.senderTitleColor + ';' : ''}}">
                   [{{blockItem.senderTitleName}}]
                 </text>

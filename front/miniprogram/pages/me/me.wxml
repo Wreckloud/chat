@@ -16,7 +16,7 @@
             <text class="identity-name">{{userInfo.nickname || userInfo.wolfNo}}</text>
             <text
               wx:if="{{userInfo.equippedTitleName}}"
-              class="identity-title-badge"
+              class="identity-title-badge retro-title-badge retro-title-badge-lg"
               style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
               [{{userInfo.equippedTitleName}}]
             </text>

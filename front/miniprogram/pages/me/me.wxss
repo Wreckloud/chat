@@ -48,18 +48,6 @@
   gap: 6rpx;
 }
 
-.identity-title-badge {
-  flex-shrink: 0;
-  max-width: 180rpx;
-  margin-left: 6rpx;
-  font-size: 20rpx;
-  line-height: 1.2;
-  color: var(--retro-accent-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .identity-name {
   min-width: 0;
   flex: 1;

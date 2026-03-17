@@ -64,7 +64,7 @@
                   <text class="session-name">{{item.displayName || item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
                   <text
                     wx:if="{{item.displayTitleName}}"
-                    class="session-title-badge"
+                    class="session-title-badge retro-title-badge retro-title-badge-md"
                     style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
                     [{{item.displayTitleName}}]
                   </text>

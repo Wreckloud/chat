@@ -1,3 +1,5 @@
+@import "./styles/title-badge.wxss";
+
 page {
   background-color: #dce4ef;
   color: #1f2d3d;

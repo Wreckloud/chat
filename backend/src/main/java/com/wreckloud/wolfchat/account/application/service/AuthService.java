@@ -93,7 +93,7 @@ public class AuthService {
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
         userAchievementService.grantRegisterAchievement(user.getId());
 
-        log.info("行者注册成功: wolfNo={}, nickname={}, email={}, userId={}", wolfNo, nickname, normalizedEmail, user.getId());
+        log.info("行者注册成功: userId={}", user.getId());
         return buildLoginVO(userService.getByIdOrThrow(user.getId()));
     }
 
@@ -132,7 +132,7 @@ public class AuthService {
             userAuthService.touchLoginAt(auth.getId());
             recordLoginSafely(user.getId(), loginMethod, LoginResult.SUCCESS, null, normalizedAccount, request);
 
-            log.info("行者登录成功: method={}, account={}, userId={}", loginMethod.getValue(), normalizedAccount, user.getId());
+            log.info("行者登录成功: method={}, userId={}", loginMethod.getValue(), user.getId());
             return buildLoginVO(user);
         } catch (BaseException e) {
             recordLoginSafely(user == null ? null : user.getId(), loginMethod, LoginResult.FAIL, e.getCode(), normalizedAccount, request);
@@ -190,7 +190,7 @@ public class AuthService {
 
         userAuthService.updateAllPasswordCredentialByUserId(emailAuth.getUserId(), encodeLoginKey(normalizedNewLoginKey));
 
-        log.info("链接重置密码成功: email={}, userId={}", resetTarget.getEmail(), emailAuth.getUserId());
+        log.info("链接重置密码成功: userId={}", emailAuth.getUserId());
     }
 
     /**
@@ -245,7 +245,7 @@ public class AuthService {
         WfUserAuth wolfAuth = userAuthService.getWolfNoPasswordAuthByUserIdOrThrow(userId);
         userAuthService.bindEmailPasswordAuth(userId, normalizedEmail, wolfAuth.getCredentialHash());
 
-        log.info("邮箱认证成功: userId={}, email={}", userId, normalizedEmail);
+        log.info("邮箱认证成功: userId={}", userId);
     }
 
     /**

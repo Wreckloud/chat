@@ -22,7 +22,7 @@
             <text class="user-name">{{item.displayName || item.nickname || item.wolfNo}}</text>
             <text
               wx:if="{{item.displayTitleName}}"
-              class="user-title-badge"
+              class="user-title-badge retro-title-badge retro-title-badge-sm"
               style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
               [{{item.displayTitleName}}]
             </text>

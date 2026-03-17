@@ -125,7 +125,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
 
         sessionManager.addSession(userId, session);
-        log.info("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
+        log.debug("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
         sendAuthOk(session);
         replayUndeliveredMessages(session, userId);
     }

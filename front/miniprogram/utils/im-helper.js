@@ -549,16 +549,129 @@ function openDocument(filePath, fileName) {
   })
 }
 
+function buildSenderProfileFromMessage(message) {
+  const senderProfile = {
+    userId: message.senderId,
+    wolfNo: message.senderWolfNo,
+    nickname: message.senderNickname,
+    avatar: message.senderAvatar
+  }
+  if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleName')) {
+    senderProfile.equippedTitleName = message.senderEquippedTitleName
+  }
+  if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleColor')) {
+    senderProfile.equippedTitleColor = message.senderEquippedTitleColor
+  }
+  return senderProfile
+}
+
+function getLastDividerLabel(blocks) {
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return ''
+  }
+  for (let index = blocks.length - 1; index >= 0; index--) {
+    const block = blocks[index]
+    if (block && block.type === 'divider') {
+      return String(block.timeText || '')
+    }
+  }
+  return ''
+}
+
+function createMessageRow(message, indexToken) {
+  return {
+    key: `m_${message.messageId || indexToken}`,
+    messageId: message.messageId,
+    msgType: message.msgType || 'TEXT',
+    content: message.content || '',
+    linkUrl: extractStandaloneLink(message.content || ''),
+    mediaUrl: message.mediaUrl || '',
+    mediaPosterUrl: message.mediaPosterUrl || '',
+    mediaWidth: message.mediaWidth || 0,
+    mediaHeight: message.mediaHeight || 0,
+    mediaSize: Number(message.mediaSize) || 0,
+    mediaMimeType: message.mediaMimeType || '',
+    videoRenderStyle: buildVideoRenderStyle(message.mediaWidth, message.mediaHeight),
+    fileLabel: buildFileLabel(message.content || '', message.mediaSize)
+  }
+}
+
+function createClusterBlock(message, indexToken, sender, isSelf) {
+  const senderName = sender.nickname || sender.wolfNo || '未知用户'
+  const senderTitleName = String(sender.equippedTitleName || '').trim()
+  const senderTitleColor = String(sender.equippedTitleColor || '').trim()
+  return {
+    type: 'cluster',
+    key: `g_${message.messageId || indexToken}`,
+    senderId: message.senderId,
+    isSelf,
+    senderName,
+    senderInitial: senderName ? senderName.charAt(0) : '行',
+    senderAvatar: sender.avatar || '',
+    senderTitleName,
+    senderTitleColor,
+    headerTimeText: time.formatMessageMetaTime(message.createTime),
+    rows: [createMessageRow(message, indexToken)]
+  }
+}
+
+function appendMessageBlock(messageBlocks, message, context = {}) {
+  if (!message) {
+    return Array.isArray(messageBlocks) ? messageBlocks.slice() : []
+  }
+
+  const indexToken = Number.isFinite(context.messageIndex) ? context.messageIndex : Date.now()
+  const blocks = Array.isArray(messageBlocks) ? messageBlocks.slice() : []
+  const cacheUserProfile = typeof context.cacheUserProfile === 'function'
+    ? context.cacheUserProfile
+    : () => {}
+  const resolveSenderProfile = typeof context.resolveSenderProfile === 'function'
+    ? context.resolveSenderProfile
+    : () => ({})
+  const currentUserId = Number(context.currentUserId)
+  const gapMs = Number(context.messageMergeGapMs) || DEFAULT_MESSAGE_MERGE_GAP_MS
+
+  cacheUserProfile(buildSenderProfileFromMessage(message))
+
+  const currentDateLabel = time.formatMessageDividerDate(message.createTime)
+  const previousDividerLabel = getLastDividerLabel(blocks)
+  if (!previousDividerLabel || previousDividerLabel !== currentDateLabel) {
+    blocks.push({
+      type: 'divider',
+      key: `d_${message.messageId || indexToken}`,
+      timeText: currentDateLabel
+    })
+  }
+
+  const isSelf = Number(message.senderId) === currentUserId
+  const sender = resolveSenderProfile(message.senderId, isSelf)
+  const lastBlock = blocks.length > 0 ? blocks[blocks.length - 1] : null
+  const canMergeLastCluster = lastBlock
+    && lastBlock.type === 'cluster'
+    && Number(lastBlock.senderId) === Number(message.senderId)
+    && !isMessageMergeGapExceeded(context.previousMessage, message, gapMs)
+
+  if (canMergeLastCluster) {
+    const mergedCluster = {
+      ...lastBlock,
+      rows: [...(lastBlock.rows || []), createMessageRow(message, indexToken)]
+    }
+    blocks[blocks.length - 1] = mergedCluster
+    return blocks
+  }
+
+  blocks.push(createClusterBlock(message, indexToken, sender, isSelf))
+  return blocks
+}
+
 function buildMessageBlocks(messages, context) {
   if (!Array.isArray(messages) || messages.length === 0) {
     return []
   }
-
   const blocks = []
-  let prevDateLabel = ''
+  let previousDateLabel = ''
   let currentCluster = null
   let previousMessage = null
-
   const cacheUserProfile = typeof context.cacheUserProfile === 'function'
     ? context.cacheUserProfile
     : () => {}
@@ -570,23 +683,10 @@ function buildMessageBlocks(messages, context) {
 
   for (let index = 0; index < messages.length; index++) {
     const message = messages[index]
-    const senderProfile = {
-      userId: message.senderId,
-      wolfNo: message.senderWolfNo,
-      nickname: message.senderNickname,
-      avatar: message.senderAvatar
-    }
-    if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleName')) {
-      senderProfile.equippedTitleName = message.senderEquippedTitleName
-    }
-    if (Object.prototype.hasOwnProperty.call(message, 'senderEquippedTitleColor')) {
-      senderProfile.equippedTitleColor = message.senderEquippedTitleColor
-    }
-    cacheUserProfile(senderProfile)
+    cacheUserProfile(buildSenderProfileFromMessage(message))
 
     const currentDateLabel = time.formatMessageDividerDate(message.createTime)
-    const showDivider = !prevDateLabel || currentDateLabel !== prevDateLabel
-    if (showDivider) {
+    if (!previousDateLabel || previousDateLabel !== currentDateLabel) {
       blocks.push({
         type: 'divider',
         key: `d_${message.messageId || index}`,
@@ -597,48 +697,16 @@ function buildMessageBlocks(messages, context) {
 
     const isSelf = Number(message.senderId) === currentUserId
     const sender = resolveSenderProfile(message.senderId, isSelf)
-    const senderName = sender.nickname || sender.wolfNo || '未知用户'
-    const senderInitial = senderName ? senderName.charAt(0) : '行'
-    const senderAvatar = sender.avatar || ''
-    const senderTitleName = String(sender.equippedTitleName || '').trim()
-    const senderTitleColor = String(sender.equippedTitleColor || '').trim()
     const senderChanged = !currentCluster || Number(currentCluster.senderId) !== Number(message.senderId)
     const splitByGap = isMessageMergeGapExceeded(previousMessage, message, gapMs)
-
     if (!currentCluster || senderChanged || splitByGap) {
-      currentCluster = {
-        type: 'cluster',
-        key: `g_${message.messageId || index}`,
-        senderId: message.senderId,
-        isSelf,
-        senderName,
-        senderInitial,
-        senderAvatar,
-        senderTitleName,
-        senderTitleColor,
-        headerTimeText: time.formatMessageMetaTime(message.createTime),
-        rows: []
-      }
+      currentCluster = createClusterBlock(message, index, sender, isSelf)
       blocks.push(currentCluster)
+    } else {
+      currentCluster.rows.push(createMessageRow(message, index))
     }
 
-    currentCluster.rows.push({
-      key: `m_${message.messageId || index}`,
-      messageId: message.messageId,
-      msgType: message.msgType || 'TEXT',
-      content: message.content || '',
-      linkUrl: extractStandaloneLink(message.content || ''),
-      mediaUrl: message.mediaUrl || '',
-      mediaPosterUrl: message.mediaPosterUrl || '',
-      mediaWidth: message.mediaWidth || 0,
-      mediaHeight: message.mediaHeight || 0,
-      mediaSize: Number(message.mediaSize) || 0,
-      mediaMimeType: message.mediaMimeType || '',
-      videoRenderStyle: buildVideoRenderStyle(message.mediaWidth, message.mediaHeight),
-      fileLabel: buildFileLabel(message.content || '', message.mediaSize)
-    })
-
-    prevDateLabel = currentDateLabel
+    previousDateLabel = currentDateLabel
     previousMessage = message
   }
 
@@ -670,5 +738,6 @@ module.exports = {
   normalizeSharedLink,
   isUserCancelError,
   normalizeFileNameForMessage,
+  appendMessageBlock,
   buildMessageBlocks
 }

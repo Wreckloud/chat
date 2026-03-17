@@ -48,7 +48,7 @@
           <text class="thread-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</text>
           <text
             wx:if="{{item.author.displayTitleName}}"
-            class="thread-title-badge"
+            class="thread-title-badge retro-title-badge retro-title-badge-sm"
             style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
             [{{item.author.displayTitleName}}]
           </text>

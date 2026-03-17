@@ -288,18 +288,6 @@
   color: var(--retro-muted-text);
 }
 
-.user-title-badge {
-  flex-shrink: 0;
-  max-width: 130rpx;
-  margin-left: 6rpx;
-  font-size: 18rpx;
-  line-height: 1.2;
-  color: var(--retro-accent-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .reply-quote-content {
   margin-top: 2rpx;
   font-size: 20rpx;

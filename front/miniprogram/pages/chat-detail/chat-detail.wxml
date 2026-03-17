@@ -15,7 +15,7 @@
           <text class="im-header-name">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
           <text
             wx:if="{{targetUser.displayTitleName}}"
-            class="im-header-title-badge"
+            class="im-header-title-badge retro-title-badge retro-title-badge-md"
             style="{{targetUser.displayTitleColor ? 'color:' + targetUser.displayTitleColor + ';' : ''}}">
             [{{targetUser.displayTitleName}}]
           </text>

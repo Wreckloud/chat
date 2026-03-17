@@ -37,7 +37,7 @@
                 <text class="thread-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
                 <text
                   wx:if="{{thread.author.displayTitleName}}"
-                  class="user-title-badge"
+                  class="user-title-badge retro-title-badge retro-title-badge-sm"
                   style="{{thread.author.displayTitleColor ? 'color:' + thread.author.displayTitleColor + ';' : ''}}">
                   [{{thread.author.displayTitleName}}]
                 </text>
@@ -104,7 +104,7 @@
                   <text class="reply-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
                   <text
                     wx:if="{{item.author.displayTitleName}}"
-                    class="user-title-badge"
+                    class="user-title-badge retro-title-badge retro-title-badge-sm"
                     style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
                     [{{item.author.displayTitleName}}]
                   </text>
@@ -120,7 +120,7 @@
             {{item.quoteAuthor.displayName || item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}
             <text
               wx:if="{{item.quoteAuthor.displayTitleName}}"
-              class="user-title-badge"
+              class="user-title-badge retro-title-badge retro-title-badge-sm"
               style="{{item.quoteAuthor.displayTitleColor ? 'color:' + item.quoteAuthor.displayTitleColor + ';' : ''}}">
               [{{item.quoteAuthor.displayTitleName}}]
             </text>

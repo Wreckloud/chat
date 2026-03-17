@@ -98,11 +98,19 @@ Page({
         const latestActiveAt = meta.latestActiveAt || ''
         const recentUsers = Array.isArray(meta.recentUsers) ? meta.recentUsers : []
         recentUsers.forEach(item => this.cacheUserProfile(item))
+        const lobbyActiveText = this.buildLobbyActiveText(latestActiveAt)
+        const recentUsersText = this.buildRecentUsersText(recentUsers)
+
+        if (onlineCount === this.data.lobbyOnlineCount
+          && lobbyActiveText === this.data.lobbyActiveText
+          && recentUsersText === this.data.recentUsersText) {
+          return
+        }
 
         this.setData({
           lobbyOnlineCount: onlineCount,
-          lobbyActiveText: this.buildLobbyActiveText(latestActiveAt),
-          recentUsersText: this.buildRecentUsersText(recentUsers)
+          lobbyActiveText,
+          recentUsersText
         })
       })
   },
@@ -173,6 +181,7 @@ Page({
     imMessageHelper.appendMessage(this, message, {
       isValidMessage: (current) => Boolean(current && current.messageId),
       isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
+      appendMessageBlock: (payload) => this.appendMessageBlock(payload),
       beforeAppend: (current) => {
         const senderProfile = {
           userId: current.senderId,
@@ -188,7 +197,6 @@ Page({
         }
         this.cacheUserProfile(senderProfile)
       },
-      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
       afterAppend: () => this.scrollToBottom()
     })
   },
@@ -203,6 +211,17 @@ Page({
       messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
       cacheUserProfile: (user) => this.cacheUserProfile(user),
       resolveSenderProfile: (senderId, isSelf) => this.resolveSenderProfile(senderId, isSelf)
+    })
+  },
+
+  appendMessageBlock({ messageBlocks, message, previousMessage, messageIndex }) {
+    return imHelper.appendMessageBlock(messageBlocks, message, {
+      currentUserId: this.currentUserId,
+      messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
+      cacheUserProfile: (user) => this.cacheUserProfile(user),
+      resolveSenderProfile: (senderId, isSelf) => this.resolveSenderProfile(senderId, isSelf),
+      previousMessage,
+      messageIndex
     })
   },
 

@@ -43,15 +43,7 @@
 }
 
 .im-header-title-badge {
-  flex-shrink: 0;
   max-width: 140rpx;
-  margin-left: 6rpx;
-  font-size: 19rpx;
-  line-height: 1.2;
-  color: var(--retro-accent-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .im-header-name {

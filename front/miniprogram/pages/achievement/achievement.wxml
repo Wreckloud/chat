@@ -15,7 +15,7 @@
     <view wx:if="{{userInfo && userInfo.equippedTitleName}}" class="equipped-main">
       <text class="equipped-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
       <text
-        class="equipped-title-badge"
+        class="equipped-title-badge retro-title-badge retro-title-badge-xl"
         style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
         [{{userInfo.equippedTitleName}}]
       </text>
@@ -39,7 +39,7 @@
             <text class="achievement-name">{{item.name}}</text>
             <text
               wx:if="{{item.titleName}}"
-              class="achievement-title-badge"
+              class="achievement-title-badge retro-title-badge retro-title-badge-md"
               style="{{item.titleColor ? 'color:' + item.titleColor + ';' : ''}}">
               [{{item.titleName}}]
             </text>
