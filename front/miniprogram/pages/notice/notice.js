@@ -13,6 +13,7 @@ const NOTICE_FILTER_KEY_INTERACTION = 'INTERACTION'
 const NOTICE_FILTER_KEY_FOLLOW = 'FOLLOW'
 const NOTICE_FILTER_KEY_ACHIEVEMENT = 'ACHIEVEMENT'
 const INTERACTION_NOTICE_TYPES = new Set(['THREAD_LIKED', 'THREAD_REPLIED', 'REPLY_LIKED'])
+const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 function normalizeUnreadCount(value) {
   const count = Number(value)
@@ -42,10 +43,25 @@ function buildFilterOptions(summary) {
   ]
 }
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatDateLabel(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+function getDayDiff(date, now) {
+  const targetStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  return Math.floor((nowStart - targetStart) / ONE_DAY_MS)
+}
+
 Page({
   data: {
     list: [],
     filteredList: [],
+    groupedList: [],
     loading: false,
     page: DEFAULT_PAGE,
     size: DEFAULT_SIZE,
@@ -88,9 +104,11 @@ Page({
       const current = Number(pageData.page) || nextPage
       const hasMore = mergedList.length < total
       const filteredList = this.buildFilteredList(mergedList, this.data.activeFilterKey)
+      const groupedList = this.buildGroupedList(filteredList)
       this.setData({
         list: mergedList,
         filteredList,
+        groupedList,
         page: current + 1,
         hasMore
       })
@@ -140,9 +158,11 @@ Page({
             read: true
           }
         })
+        const filteredList = this.buildFilteredList(list, this.data.activeFilterKey)
         this.setData({
           list,
-          filteredList: this.buildFilteredList(list, this.data.activeFilterKey)
+          filteredList,
+          groupedList: this.buildGroupedList(filteredList)
         })
         refreshNoticeUnreadBadge()
         this.loadUnreadSummary()
@@ -167,9 +187,11 @@ Page({
         ...item,
         read: true
       }))
+      const filteredList = this.buildFilteredList(list, this.data.activeFilterKey)
       this.setData({
         list,
-        filteredList: this.buildFilteredList(list, this.data.activeFilterKey)
+        filteredList,
+        groupedList: this.buildGroupedList(filteredList)
       })
       refreshNoticeUnreadBadge()
       this.loadUnreadSummary()
@@ -196,9 +218,11 @@ Page({
     if (!filterKey || filterKey === this.data.activeFilterKey) {
       return
     }
+    const filteredList = this.buildFilteredList(this.data.list, filterKey)
     this.setData({
       activeFilterKey: filterKey,
-      filteredList: this.buildFilteredList(this.data.list, filterKey)
+      filteredList,
+      groupedList: this.buildGroupedList(filteredList)
     })
   },
 
@@ -224,6 +248,59 @@ Page({
       return INTERACTION_NOTICE_TYPES.has(item.noticeType)
     }
     return true
+  },
+
+  buildGroupedList(filteredList) {
+    const source = Array.isArray(filteredList) ? filteredList : []
+    if (source.length === 0) {
+      return []
+    }
+
+    const groups = []
+    const groupMap = Object.create(null)
+    source.forEach(item => {
+      const groupMeta = this.resolveGroupMeta(item.createTime)
+      if (!groupMap[groupMeta.key]) {
+        groupMap[groupMeta.key] = {
+          groupKey: groupMeta.key,
+          groupTitle: groupMeta.title,
+          items: []
+        }
+        groups.push(groupMap[groupMeta.key])
+      }
+      groupMap[groupMeta.key].items.push(item)
+    })
+    return groups
+  },
+
+  resolveGroupMeta(createTime) {
+    const parsedTime = time.parseDateTime(createTime)
+    if (!parsedTime) {
+      return {
+        key: 'OLDER',
+        title: '更早'
+      }
+    }
+
+    const now = new Date()
+    const dayDiff = getDayDiff(parsedTime, now)
+    if (dayDiff === 0) {
+      return {
+        key: 'TODAY',
+        title: '今天'
+      }
+    }
+    if (dayDiff === 1) {
+      return {
+        key: 'YESTERDAY',
+        title: '昨天'
+      }
+    }
+    const dateLabel = formatDateLabel(parsedTime)
+    return {
+      key: `DATE_${dateLabel}`,
+      title: dateLabel
+    }
   },
 
   navigateByNotice(notice) {
