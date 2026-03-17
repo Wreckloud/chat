@@ -21,29 +21,50 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "聊天-媒体", description = "聊天媒体上传相关接口")
 @RestController
-@RequestMapping("/media/chat")
+@RequestMapping("/media")
 @RequiredArgsConstructor
 public class ChatMediaController {
     private final ChatMediaService chatMediaService;
 
     @Operation(summary = "申请图片上传策略", description = "申请聊天图片直传 OSS 的表单策略")
-    @PostMapping("/image/upload-policy")
+    @PostMapping("/chat/image/upload-policy")
     public Result<OssPostPolicy> applyImageUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
         Long userId = UserContext.getRequiredUserId();
         return Result.success(chatMediaService.createImageUploadPolicy(userId, dto));
     }
 
     @Operation(summary = "申请视频上传策略", description = "申请聊天视频直传 OSS 的表单策略")
-    @PostMapping("/video/upload-policy")
+    @PostMapping("/chat/video/upload-policy")
     public Result<OssPostPolicy> applyVideoUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
         Long userId = UserContext.getRequiredUserId();
         return Result.success(chatMediaService.createVideoUploadPolicy(userId, dto));
     }
 
     @Operation(summary = "申请文件上传策略", description = "申请聊天文件直传 OSS 的表单策略")
-    @PostMapping("/file/upload-policy")
+    @PostMapping("/chat/file/upload-policy")
     public Result<OssPostPolicy> applyFileUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
         Long userId = UserContext.getRequiredUserId();
         return Result.success(chatMediaService.createFileUploadPolicy(userId, dto));
+    }
+
+    @Operation(summary = "申请论坛主题图片上传策略", description = "申请论坛主题图片直传 OSS 的表单策略")
+    @PostMapping("/forum/thread/image/upload-policy")
+    public Result<OssPostPolicy> applyForumThreadImageUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(chatMediaService.createForumThreadImageUploadPolicy(userId, dto));
+    }
+
+    @Operation(summary = "申请论坛主题视频上传策略", description = "申请论坛主题视频直传 OSS 的表单策略")
+    @PostMapping("/forum/thread/video/upload-policy")
+    public Result<OssPostPolicy> applyForumThreadVideoUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(chatMediaService.createForumThreadVideoUploadPolicy(userId, dto));
+    }
+
+    @Operation(summary = "申请论坛回复图片上传策略", description = "申请论坛回复图片直传 OSS 的表单策略")
+    @PostMapping("/forum/reply/image/upload-policy")
+    public Result<OssPostPolicy> applyForumReplyImageUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(chatMediaService.createForumReplyImageUploadPolicy(userId, dto));
     }
 }

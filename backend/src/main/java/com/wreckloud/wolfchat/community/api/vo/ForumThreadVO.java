@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * @Description 论坛主题信息 VO
@@ -44,6 +45,12 @@ public class ForumThreadVO {
 
     @Schema(description = "当前登录用户是否已点赞")
     private Boolean likedByCurrentUser;
+
+    @Schema(description = "首帖图片 URL 列表")
+    private List<String> imageUrls;
+
+    @Schema(description = "首帖视频 URL")
+    private String videoUrl;
 
     @Schema(description = "最近回复时间")
     private LocalDateTime lastReplyTime;

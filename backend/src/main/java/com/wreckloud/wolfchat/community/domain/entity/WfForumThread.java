@@ -44,6 +44,16 @@ public class WfForumThread {
     private String content;
 
     /**
+     * 首帖图片对象 Key 列表（英文逗号分隔）
+     */
+    private String imageKeys;
+
+    /**
+     * 首帖视频对象 Key
+     */
+    private String videoKey;
+
+    /**
      * 主题类型：NORMAL/STICKY/ANNOUNCEMENT
      */
     private ForumThreadType threadType;

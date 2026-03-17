@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
 import com.wreckloud.wolfchat.community.application.assembler.ForumViewAssembler;
 import com.wreckloud.wolfchat.community.api.vo.ForumBoardVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +66,7 @@ public class ForumQueryService {
     private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
     private final UserService userService;
     private final ForumViewAssembler forumViewAssembler;
+    private final OssStorageService ossStorageService;
 
     public List<ForumBoardVO> listBoards() {
         LambdaQueryWrapper<WfForumBoard> queryWrapper = new LambdaQueryWrapper<>();
@@ -102,7 +105,14 @@ public class ForumQueryService {
         for (WfForumThread thread : records) {
             WfUser author = userMap.get(thread.getAuthorId());
             WfUser lastReplyUser = userMap.get(thread.getLastReplyUserId());
-            list.add(forumViewAssembler.toThreadVO(thread, author, lastReplyUser, likedThreadIds.contains(thread.getId())));
+            list.add(forumViewAssembler.toThreadVO(
+                    thread,
+                    author,
+                    lastReplyUser,
+                    likedThreadIds.contains(thread.getId()),
+                    resolveImageUrls(thread.getImageKeys()),
+                    resolveMediaUrl(thread.getVideoKey())
+            ));
         }
 
         return forumViewAssembler.toThreadPageVO(list, result.getTotal(), page, size);
@@ -140,7 +150,14 @@ public class ForumQueryService {
             WfUser author = userMap.get(reply.getAuthorId());
             WfForumReply quoteReply = quoteReplyMap.get(reply.getQuoteReplyId());
             WfUser quoteAuthor = quoteReply == null ? null : userMap.get(quoteReply.getAuthorId());
-            list.add(forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor, likedReplyIds.contains(reply.getId())));
+            list.add(forumViewAssembler.toReplyVO(
+                    reply,
+                    author,
+                    quoteReply,
+                    quoteAuthor,
+                    likedReplyIds.contains(reply.getId()),
+                    resolveMediaUrl(reply.getImageKey())
+            ));
         }
 
         return forumViewAssembler.toReplyPageVO(list, result.getTotal(), page, size);
@@ -161,7 +178,9 @@ public class ForumQueryService {
                 thread,
                 userMap.get(thread.getAuthorId()),
                 userMap.get(thread.getLastReplyUserId()),
-                likedByCurrentUser
+                likedByCurrentUser,
+                resolveImageUrls(thread.getImageKeys()),
+                resolveMediaUrl(thread.getVideoKey())
         );
     }
 
@@ -180,7 +199,14 @@ public class ForumQueryService {
         WfUser author = userMap.get(reply.getAuthorId());
         WfUser quoteAuthor = quoteReply == null ? null : userMap.get(quoteReply.getAuthorId());
         boolean likedByCurrentUser = isReplyLikedByUser(userId, replyId);
-        return forumViewAssembler.toReplyVO(reply, author, quoteReply, quoteAuthor, likedByCurrentUser);
+        return forumViewAssembler.toReplyVO(
+                reply,
+                author,
+                quoteReply,
+                quoteAuthor,
+                likedByCurrentUser,
+                resolveMediaUrl(reply.getImageKey())
+        );
     }
 
     public WfForumBoard getBoardOrThrow(Long boardId) {
@@ -376,6 +402,25 @@ public class ForumQueryService {
             return Collections.emptySet();
         }
         return new HashSet<>(likedIds);
+    }
+
+    private List<String> resolveImageUrls(String imageKeys) {
+        if (!StringUtils.hasText(imageKeys)) {
+            return List.of();
+        }
+        return Arrays.stream(imageKeys.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .map(this::resolveMediaUrl)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+    }
+
+    private String resolveMediaUrl(String mediaKey) {
+        if (!StringUtils.hasText(mediaKey)) {
+            return null;
+        }
+        return ossStorageService.buildSignedReadUrl(mediaKey.trim());
     }
 
 }

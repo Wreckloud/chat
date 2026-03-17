@@ -25,6 +25,9 @@ public class ForumReplyVO {
     @Schema(description = "回复内容")
     private String content;
 
+    @Schema(description = "回复图片 URL")
+    private String imageUrl;
+
     @Schema(description = "引用回复ID")
     private Long quoteReplyId;
 

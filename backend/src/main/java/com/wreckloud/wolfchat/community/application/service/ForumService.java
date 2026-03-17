@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.community.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
+import com.wreckloud.wolfchat.chat.media.application.service.ChatMediaService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
@@ -35,6 +36,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,6 +48,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ForumService {
+    private static final int THREAD_IMAGE_MAX_COUNT = 9;
     private static final String LOG_TARGET_THREAD = "THREAD";
     private static final String LOG_TARGET_REPLY = "REPLY";
     private static final String LOG_ACTION_LOCK_THREAD = "LOCK_THREAD";
@@ -64,6 +68,7 @@ public class ForumService {
     private final WfForumThreadLikeMapper wfForumThreadLikeMapper;
     private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
     private final WfForumModerationLogMapper wfForumModerationLogMapper;
+    private final ChatMediaService chatMediaService;
     private final UserAchievementService userAchievementService;
     private final UserNoticeService userNoticeService;
 
@@ -82,12 +87,19 @@ public class ForumService {
             throw new BaseException(ErrorCode.FORUM_BOARD_CLOSED);
         }
 
+        String content = normalizeOptionalContent(dto.getContent());
+        List<String> imageKeys = normalizeImageKeys(dto.getImageKeys(), THREAD_IMAGE_MAX_COUNT);
+        String videoKey = normalizeOptionalKey(dto.getVideoKey());
+        validateThreadPayload(userId, content, imageKeys, videoKey);
+
         LocalDateTime now = LocalDateTime.now();
         WfForumThread thread = new WfForumThread();
         thread.setBoardId(boardId);
         thread.setAuthorId(userId);
         thread.setTitle(dto.getTitle().trim());
-        thread.setContent(dto.getContent().trim());
+        thread.setContent(content);
+        thread.setImageKeys(joinImageKeys(imageKeys));
+        thread.setVideoKey(videoKey);
         thread.setThreadType(ForumThreadType.NORMAL);
         thread.setStatus(ForumThreadStatus.NORMAL);
         thread.setIsEssence(false);
@@ -138,6 +150,10 @@ public class ForumService {
             forumQueryService.getQuoteReplyOrThrow(threadId, dto.getQuoteReplyId());
         }
 
+        String content = normalizeOptionalContent(dto.getContent());
+        String imageKey = normalizeOptionalKey(dto.getImageKey());
+        validateReplyPayload(userId, content, imageKey);
+
         int floorNo = getNextFloorNo(threadId);
         LocalDateTime now = LocalDateTime.now();
 
@@ -145,7 +161,8 @@ public class ForumService {
         reply.setThreadId(threadId);
         reply.setFloorNo(floorNo);
         reply.setAuthorId(userId);
-        reply.setContent(dto.getContent().trim());
+        reply.setContent(content);
+        reply.setImageKey(imageKey);
         reply.setQuoteReplyId(dto.getQuoteReplyId());
         reply.setStatus(ForumReplyStatus.NORMAL);
 
@@ -548,5 +565,83 @@ public class ForumService {
         }
         int count = ((Number) value).intValue();
         return Math.max(count, 0);
+    }
+
+    private String normalizeOptionalContent(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.trim();
+    }
+
+    private String normalizeOptionalKey(String text) {
+        if (text == null) {
+            return null;
+        }
+        String normalized = text.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private List<String> normalizeImageKeys(List<String> imageKeys, int maxCount) {
+        if (imageKeys == null || imageKeys.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> uniqueSet = new LinkedHashSet<>();
+        for (String item : imageKeys) {
+            if (item == null) {
+                continue;
+            }
+            String normalized = item.trim();
+            if (normalized.isEmpty()) {
+                continue;
+            }
+            uniqueSet.add(normalized);
+        }
+        if (uniqueSet.isEmpty()) {
+            return List.of();
+        }
+        if (uniqueSet.size() > maxCount) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "图片数量不能超过" + maxCount + "张");
+        }
+        return new ArrayList<>(uniqueSet);
+    }
+
+    private void validateThreadPayload(Long userId, String content, List<String> imageKeys, String videoKey) {
+        boolean hasContent = content != null && !content.isEmpty();
+        boolean hasImages = imageKeys != null && !imageKeys.isEmpty();
+        boolean hasVideo = videoKey != null && !videoKey.isEmpty();
+
+        if (!hasContent && !hasImages && !hasVideo) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "主题内容不能为空");
+        }
+        if (hasImages && hasVideo) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "图片和视频不能同时提交");
+        }
+        if (hasImages) {
+            for (String imageKey : imageKeys) {
+                chatMediaService.validateForumThreadImageKey(userId, imageKey);
+            }
+        }
+        if (hasVideo) {
+            chatMediaService.validateForumThreadVideoKey(userId, videoKey);
+        }
+    }
+
+    private void validateReplyPayload(Long userId, String content, String imageKey) {
+        boolean hasContent = content != null && !content.isEmpty();
+        boolean hasImage = imageKey != null && !imageKey.isEmpty();
+        if (!hasContent && !hasImage) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "回复内容不能为空");
+        }
+        if (hasImage) {
+            chatMediaService.validateForumReplyImageKey(userId, imageKey);
+        }
+    }
+
+    private String joinImageKeys(List<String> imageKeys) {
+        if (imageKeys == null || imageKeys.isEmpty()) {
+            return null;
+        }
+        return String.join(",", imageKeys);
     }
 }

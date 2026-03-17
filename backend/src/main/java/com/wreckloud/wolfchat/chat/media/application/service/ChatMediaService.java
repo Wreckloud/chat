@@ -29,6 +29,13 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class ChatMediaService {
+    private static final String CATEGORY_CHAT_IMAGE = "image";
+    private static final String CATEGORY_CHAT_VIDEO = "video";
+    private static final String CATEGORY_CHAT_FILE = "file";
+    private static final String CATEGORY_FORUM_THREAD_IMAGE = "forum/thread/image";
+    private static final String CATEGORY_FORUM_THREAD_VIDEO = "forum/thread/video";
+    private static final String CATEGORY_FORUM_REPLY_IMAGE = "forum/reply/image";
+
     private static final Map<String, String> IMAGE_MIME_MAPPING = Map.of(
             "jpg", "image/jpeg",
             "jpeg", "image/jpeg",
@@ -60,7 +67,7 @@ public class ChatMediaService {
         return createMappedUploadPolicy(
                 userId,
                 dto,
-                "image",
+                CATEGORY_CHAT_IMAGE,
                 IMAGE_MIME_MAPPING,
                 "暂不支持该图片格式",
                 ossStorageConfig.getMaxImageSizeBytes(),
@@ -77,7 +84,7 @@ public class ChatMediaService {
         return createMappedUploadPolicy(
                 userId,
                 dto,
-                "video",
+                CATEGORY_CHAT_VIDEO,
                 VIDEO_MIME_MAPPING,
                 "暂不支持该视频格式",
                 ossStorageConfig.getMaxVideoSizeBytes(),
@@ -98,8 +105,80 @@ public class ChatMediaService {
         validateMediaSize(dto.getSize(), maxSizeBytes, "文件大小超过上传限制");
 
         String wolfNo = getWolfNoByUserId(userId);
-        String objectKey = buildObjectKey("file", wolfNo, extension);
+        String objectKey = buildObjectKey(CATEGORY_CHAT_FILE, wolfNo, extension);
         return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+    }
+
+    /**
+     * 创建论坛主题图片上传策略
+     */
+    public OssPostPolicy createForumThreadImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+        return createMappedUploadPolicy(
+                userId,
+                dto,
+                CATEGORY_FORUM_THREAD_IMAGE,
+                IMAGE_MIME_MAPPING,
+                "暂不支持该图片格式",
+                ossStorageConfig.getMaxImageSizeBytes(),
+                "图片上传大小上限未配置",
+                "图片大小超过上传限制",
+                this::validateImageMimeIfPresent
+        );
+    }
+
+    /**
+     * 创建论坛主题视频上传策略
+     */
+    public OssPostPolicy createForumThreadVideoUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+        return createMappedUploadPolicy(
+                userId,
+                dto,
+                CATEGORY_FORUM_THREAD_VIDEO,
+                VIDEO_MIME_MAPPING,
+                "暂不支持该视频格式",
+                ossStorageConfig.getMaxVideoSizeBytes(),
+                "视频上传大小上限未配置",
+                "视频大小超过上传限制",
+                this::validateVideoMimeIfPresentIgnoreExtension
+        );
+    }
+
+    /**
+     * 创建论坛回复图片上传策略
+     */
+    public OssPostPolicy createForumReplyImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+        return createMappedUploadPolicy(
+                userId,
+                dto,
+                CATEGORY_FORUM_REPLY_IMAGE,
+                IMAGE_MIME_MAPPING,
+                "暂不支持该图片格式",
+                ossStorageConfig.getMaxImageSizeBytes(),
+                "图片上传大小上限未配置",
+                "图片大小超过上传限制",
+                this::validateImageMimeIfPresent
+        );
+    }
+
+    /**
+     * 校验论坛主题图片对象 Key 是否属于当前用户且格式正确
+     */
+    public void validateForumThreadImageKey(Long userId, String mediaKey) {
+        validateMappedMediaKeyByUser(userId, mediaKey, CATEGORY_FORUM_THREAD_IMAGE, IMAGE_MIME_MAPPING, "主题图片对象无效");
+    }
+
+    /**
+     * 校验论坛主题视频对象 Key 是否属于当前用户且格式正确
+     */
+    public void validateForumThreadVideoKey(Long userId, String mediaKey) {
+        validateMappedMediaKeyByUser(userId, mediaKey, CATEGORY_FORUM_THREAD_VIDEO, VIDEO_MIME_MAPPING, "主题视频对象无效");
+    }
+
+    /**
+     * 校验论坛回复图片对象 Key 是否属于当前用户且格式正确
+     */
+    public void validateForumReplyImageKey(Long userId, String mediaKey) {
+        validateMappedMediaKeyByUser(userId, mediaKey, CATEGORY_FORUM_REPLY_IMAGE, IMAGE_MIME_MAPPING, "回复图片对象无效");
     }
 
     /**
@@ -360,6 +439,22 @@ public class ChatMediaService {
                 Pattern.quote(wolfNo)
         );
         return Pattern.compile(pattern);
+    }
+
+    private void validateMappedMediaKeyByUser(Long userId,
+                                              String mediaKey,
+                                              String category,
+                                              Map<String, String> mimeMapping,
+                                              String invalidMessage) {
+        if (!StringUtils.hasText(mediaKey)) {
+            throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, invalidMessage);
+        }
+        String wolfNo = getWolfNoByUserId(userId);
+        Pattern pattern = buildMappedKeyPattern(category, wolfNo, mimeMapping);
+        String normalizedMediaKey = mediaKey.trim();
+        if (!pattern.matcher(normalizedMediaKey).matches()) {
+            throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, invalidMessage);
+        }
     }
 
     private String getWolfNoByUserId(Long userId) {

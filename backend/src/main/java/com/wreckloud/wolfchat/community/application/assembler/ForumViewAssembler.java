@@ -52,7 +52,12 @@ public class ForumViewAssembler {
         return pageVO;
     }
 
-    public ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser, boolean likedByCurrentUser) {
+    public ForumThreadVO toThreadVO(WfForumThread thread,
+                                    WfUser author,
+                                    WfUser lastReplyUser,
+                                    boolean likedByCurrentUser,
+                                    List<String> imageUrls,
+                                    String videoUrl) {
         ForumThreadVO vo = new ForumThreadVO();
         vo.setThreadId(thread.getId());
         vo.setBoardId(thread.getBoardId());
@@ -64,6 +69,8 @@ public class ForumViewAssembler {
         vo.setReplyCount(normalizeCount(thread.getReplyCount()));
         vo.setLikeCount(normalizeCount(thread.getLikeCount()));
         vo.setLikedByCurrentUser(likedByCurrentUser);
+        vo.setImageUrls(imageUrls);
+        vo.setVideoUrl(videoUrl);
         vo.setLastReplyTime(thread.getLastReplyTime());
         vo.setCreateTime(thread.getCreateTime());
         vo.setAuthor(toUserBriefVO(author));
@@ -72,15 +79,21 @@ public class ForumViewAssembler {
     }
 
     public ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser) {
-        return toThreadVO(thread, author, lastReplyUser, false);
+        return toThreadVO(thread, author, lastReplyUser, false, List.of(), null);
     }
 
-    public ForumReplyVO toReplyVO(WfForumReply reply, WfUser author, WfForumReply quoteReply, WfUser quoteAuthor, boolean likedByCurrentUser) {
+    public ForumReplyVO toReplyVO(WfForumReply reply,
+                                  WfUser author,
+                                  WfForumReply quoteReply,
+                                  WfUser quoteAuthor,
+                                  boolean likedByCurrentUser,
+                                  String imageUrl) {
         ForumReplyVO vo = new ForumReplyVO();
         vo.setReplyId(reply.getId());
         vo.setThreadId(reply.getThreadId());
         vo.setFloorNo(reply.getFloorNo());
         vo.setContent(reply.getContent());
+        vo.setImageUrl(imageUrl);
         vo.setCreateTime(reply.getCreateTime());
         vo.setLikeCount(normalizeCount(reply.getLikeCount()));
         vo.setLikedByCurrentUser(likedByCurrentUser);
@@ -95,7 +108,7 @@ public class ForumViewAssembler {
     }
 
     public ForumReplyVO toReplyVO(WfForumReply reply, WfUser author, WfForumReply quoteReply, WfUser quoteAuthor) {
-        return toReplyVO(reply, author, quoteReply, quoteAuthor, false);
+        return toReplyVO(reply, author, quoteReply, quoteAuthor, false, null);
     }
 
     private UserBriefVO toUserBriefVO(WfUser user) {

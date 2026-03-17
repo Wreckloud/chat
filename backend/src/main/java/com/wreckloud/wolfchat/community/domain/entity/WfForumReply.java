@@ -43,6 +43,11 @@ public class WfForumReply {
     private String content;
 
     /**
+     * 回复图片对象 Key
+     */
+    private String imageKey;
+
+    /**
      * 引用楼层ID
      */
     private Long quoteReplyId;
