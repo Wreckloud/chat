@@ -1,3 +1,61 @@
+function resolveMessageId(message) {
+  const raw = message ? message.messageId : null
+  if (raw == null) {
+    return null
+  }
+  const id = String(raw).trim()
+  if (!id || id === '0') {
+    return null
+  }
+  return id
+}
+
+function buildMessageIdSet(messages) {
+  const idSet = new Set()
+  const safeList = Array.isArray(messages) ? messages : []
+  for (let index = 0; index < safeList.length; index++) {
+    const messageId = resolveMessageId(safeList[index])
+    if (messageId != null) {
+      idSet.add(messageId)
+    }
+  }
+  return idSet
+}
+
+function ensureMessageIdSet(page, messages) {
+  if (!page) {
+    return new Set()
+  }
+  if (!(page.messageIdSet instanceof Set)) {
+    page.messageIdSet = buildMessageIdSet(messages)
+  }
+  return page.messageIdSet
+}
+
+function mergeUniqueMessages(messages) {
+  const safeList = Array.isArray(messages) ? messages : []
+  if (safeList.length <= 1) {
+    return safeList.slice()
+  }
+
+  const merged = []
+  const idSet = new Set()
+  for (let index = 0; index < safeList.length; index++) {
+    const item = safeList[index]
+    const messageId = resolveMessageId(item)
+    if (messageId == null) {
+      merged.push(item)
+      continue
+    }
+    if (idSet.has(messageId)) {
+      continue
+    }
+    idSet.add(messageId)
+    merged.push(item)
+  }
+  return merged
+}
+
 function appendMessage(page, message, options = {}) {
   const isValidMessage = typeof options.isValidMessage === 'function'
     ? options.isValidMessage(message)
@@ -7,13 +65,23 @@ function appendMessage(page, message, options = {}) {
   }
 
   const list = Array.isArray(page.data.messages) ? page.data.messages : []
-  // 以 messageId 去重，避免 ACK 与推送并发导致重复渲染。
-  const isDuplicate = list.some(item => {
-    if (typeof options.isDuplicate === 'function') {
-      return options.isDuplicate(item, message)
-    }
-    return Number(item.messageId) === Number(message.messageId)
-  })
+  const messageIdSet = ensureMessageIdSet(page, list)
+  const messageId = resolveMessageId(message)
+
+  // 先走 O(1) messageId 判重，避免长会话时每次 append 线性扫描。
+  let isDuplicate = messageId != null && messageIdSet.has(messageId)
+  if (!isDuplicate) {
+    // 自定义判重或无 messageId 场景再回退到遍历判重。
+    isDuplicate = list.some(item => {
+      if (typeof options.isDuplicate === 'function') {
+        return options.isDuplicate(item, message)
+      }
+      if (messageId != null) {
+        return resolveMessageId(item) === messageId
+      }
+      return Number(item.messageId) === Number(message.messageId)
+    })
+  }
   if (isDuplicate) {
     return false
   }
@@ -23,6 +91,9 @@ function appendMessage(page, message, options = {}) {
   }
 
   const messages = [...list, message]
+  if (messageId != null) {
+    messageIdSet.add(messageId)
+  }
   const updates = { messages }
   if (typeof options.buildMessageBlocks === 'function') {
     updates.messageBlocks = options.buildMessageBlocks(messages)
@@ -57,7 +128,9 @@ function loadPagedMessages(page, request, options = {}) {
       // 历史接口按倒序分页，前端统一 reverse 后再拼接，保证时间线从旧到新。
       const ordered = safeRecords.slice().reverse()
       const previous = Array.isArray(page.data.messages) ? page.data.messages : []
-      const messages = pageNo === 1 ? ordered : [...ordered, ...previous]
+      const merged = pageNo === 1 ? ordered : [...ordered, ...previous]
+      const messages = mergeUniqueMessages(merged)
+      page.messageIdSet = buildMessageIdSet(messages)
 
       page.setData({
         messages,
