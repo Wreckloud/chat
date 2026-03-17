@@ -10,25 +10,19 @@ import com.wreckloud.wolfchat.admin.api.vo.AdminReplyRowVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminThreadRowVO;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
-import com.wreckloud.wolfchat.community.domain.entity.WfForumModerationLog;
+import com.wreckloud.wolfchat.community.application.service.ForumContentMaintenanceService;
+import com.wreckloud.wolfchat.community.application.service.ForumModerationLogService;
+import com.wreckloud.wolfchat.community.domain.constant.ForumModerationLogConstants;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
-import com.wreckloud.wolfchat.community.domain.entity.WfForumReplyLike;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
-import com.wreckloud.wolfchat.community.domain.entity.WfForumThreadLike;
 import com.wreckloud.wolfchat.community.domain.enums.ForumReplyStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadType;
-import com.wreckloud.wolfchat.community.infra.mapper.WfForumBoardMapper;
-import com.wreckloud.wolfchat.community.infra.mapper.WfForumModerationLogMapper;
-import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
-import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -47,24 +41,10 @@ public class AdminContentManageService {
     private static final long MIN_PAGE_SIZE = 1L;
     private static final long MAX_PAGE_SIZE = 100L;
 
-    private static final String LOG_TARGET_THREAD = "THREAD";
-    private static final String LOG_TARGET_REPLY = "REPLY";
-    private static final String LOG_ACTION_LOCK_THREAD = "LOCK_THREAD";
-    private static final String LOG_ACTION_UNLOCK_THREAD = "UNLOCK_THREAD";
-    private static final String LOG_ACTION_STICKY_THREAD = "STICKY_THREAD";
-    private static final String LOG_ACTION_UNSTICKY_THREAD = "UNSTICKY_THREAD";
-    private static final String LOG_ACTION_ESSENCE_THREAD = "ESSENCE_THREAD";
-    private static final String LOG_ACTION_UNESSENCE_THREAD = "UNESSENCE_THREAD";
-    private static final String LOG_ACTION_DELETE_THREAD = "DELETE_THREAD";
-    private static final String LOG_ACTION_DELETE_REPLY = "DELETE_REPLY";
-    private static final String LOG_REASON_ADMIN_OPERATION = "ADMIN_OPERATION";
-
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
-    private final WfForumThreadLikeMapper wfForumThreadLikeMapper;
-    private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
-    private final WfForumBoardMapper wfForumBoardMapper;
-    private final WfForumModerationLogMapper wfForumModerationLogMapper;
+    private final ForumContentMaintenanceService forumContentMaintenanceService;
+    private final ForumModerationLogService forumModerationLogService;
     private final UserService userService;
 
     public AdminPageVO<AdminThreadRowVO> listThreadPage(long page, long size) {
@@ -149,8 +129,14 @@ public class AdminContentManageService {
                 .set(WfForumThread::getStatus, targetStatus);
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
 
-        String action = locked ? LOG_ACTION_LOCK_THREAD : LOG_ACTION_UNLOCK_THREAD;
-        recordModerationLog(operatorUserId, LOG_TARGET_THREAD, threadId, action);
+        String action = locked ? ForumModerationLogConstants.ACTION_LOCK_THREAD : ForumModerationLogConstants.ACTION_UNLOCK_THREAD;
+        forumModerationLogService.record(
+                operatorUserId,
+                ForumModerationLogConstants.TARGET_THREAD,
+                threadId,
+                action,
+                ForumModerationLogConstants.REASON_ADMIN_OPERATION
+        );
     }
 
     public void updateThreadStickyStatus(Long operatorUserId, Long threadId, boolean sticky) {
@@ -170,8 +156,14 @@ public class AdminContentManageService {
                 .set(WfForumThread::getThreadType, targetType);
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
 
-        String action = sticky ? LOG_ACTION_STICKY_THREAD : LOG_ACTION_UNSTICKY_THREAD;
-        recordModerationLog(operatorUserId, LOG_TARGET_THREAD, threadId, action);
+        String action = sticky ? ForumModerationLogConstants.ACTION_STICKY_THREAD : ForumModerationLogConstants.ACTION_UNSTICKY_THREAD;
+        forumModerationLogService.record(
+                operatorUserId,
+                ForumModerationLogConstants.TARGET_THREAD,
+                threadId,
+                action,
+                ForumModerationLogConstants.REASON_ADMIN_OPERATION
+        );
     }
 
     public void updateThreadEssenceStatus(Long operatorUserId, Long threadId, boolean essence) {
@@ -186,13 +178,19 @@ public class AdminContentManageService {
                 .set(WfForumThread::getIsEssence, essence);
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
 
-        String action = essence ? LOG_ACTION_ESSENCE_THREAD : LOG_ACTION_UNESSENCE_THREAD;
-        recordModerationLog(operatorUserId, LOG_TARGET_THREAD, threadId, action);
+        String action = essence ? ForumModerationLogConstants.ACTION_ESSENCE_THREAD : ForumModerationLogConstants.ACTION_UNESSENCE_THREAD;
+        forumModerationLogService.record(
+                operatorUserId,
+                ForumModerationLogConstants.TARGET_THREAD,
+                threadId,
+                action,
+                ForumModerationLogConstants.REASON_ADMIN_OPERATION
+        );
     }
 
     public void deleteThread(Long operatorUserId, Long threadId) {
         WfForumThread thread = getVisibleThreadOrThrow(threadId);
-        List<Long> replyIds = loadThreadReplyIds(threadId);
+        List<Long> replyIds = forumContentMaintenanceService.loadThreadReplyIds(threadId);
 
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, threadId)
@@ -206,10 +204,16 @@ public class AdminContentManageService {
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         wfForumReplyMapper.update(null, replyUpdateWrapper);
 
-        deleteThreadLikesByThreadId(threadId);
-        deleteReplyLikesByReplyIds(replyIds);
-        refreshBoardStats(thread.getBoardId());
-        recordModerationLog(operatorUserId, LOG_TARGET_THREAD, threadId, LOG_ACTION_DELETE_THREAD);
+        forumContentMaintenanceService.deleteThreadLikesByThreadId(threadId);
+        forumContentMaintenanceService.deleteReplyLikesByReplyIds(replyIds);
+        forumContentMaintenanceService.refreshBoardStatsIfExists(thread.getBoardId());
+        forumModerationLogService.record(
+                operatorUserId,
+                ForumModerationLogConstants.TARGET_THREAD,
+                threadId,
+                ForumModerationLogConstants.ACTION_DELETE_THREAD,
+                ForumModerationLogConstants.REASON_ADMIN_OPERATION
+        );
     }
 
     public void deleteReply(Long operatorUserId, Long replyId) {
@@ -222,7 +226,7 @@ public class AdminContentManageService {
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         assertSingleRow(wfForumReplyMapper.update(null, replyUpdateWrapper), ErrorCode.FORUM_REPLY_NOT_FOUND);
 
-        deleteReplyLikeByReplyId(replyId);
+        forumContentMaintenanceService.deleteReplyLikeByReplyId(replyId);
 
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, thread.getId())
@@ -230,9 +234,15 @@ public class AdminContentManageService {
                 .setSql("reply_count = IF(reply_count > 0, reply_count - 1, 0)");
         assertSingleRow(wfForumThreadMapper.update(null, threadUpdateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
 
-        refreshThreadLastReply(thread.getId());
-        refreshBoardStats(thread.getBoardId());
-        recordModerationLog(operatorUserId, LOG_TARGET_REPLY, replyId, LOG_ACTION_DELETE_REPLY);
+        forumContentMaintenanceService.refreshThreadLastReply(thread.getId());
+        forumContentMaintenanceService.refreshBoardStatsIfExists(thread.getBoardId());
+        forumModerationLogService.record(
+                operatorUserId,
+                ForumModerationLogConstants.TARGET_REPLY,
+                replyId,
+                ForumModerationLogConstants.ACTION_DELETE_REPLY,
+                ForumModerationLogConstants.REASON_ADMIN_OPERATION
+        );
     }
 
     private WfForumThread getVisibleThreadOrThrow(Long threadId) {
@@ -249,116 +259,6 @@ public class AdminContentManageService {
             throw new BaseException(ErrorCode.FORUM_REPLY_NOT_FOUND);
         }
         return reply;
-    }
-
-    private List<Long> loadThreadReplyIds(Long threadId) {
-        LambdaQueryWrapper<WfForumReply> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfForumReply::getThreadId, threadId)
-                .select(WfForumReply::getId);
-        List<WfForumReply> replies = wfForumReplyMapper.selectList(queryWrapper);
-        if (replies == null || replies.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return replies.stream().map(WfForumReply::getId).collect(Collectors.toList());
-    }
-
-    private void deleteThreadLikesByThreadId(Long threadId) {
-        LambdaQueryWrapper<WfForumThreadLike> deleteWrapper = new LambdaQueryWrapper<>();
-        deleteWrapper.eq(WfForumThreadLike::getThreadId, threadId);
-        wfForumThreadLikeMapper.delete(deleteWrapper);
-    }
-
-    private void deleteReplyLikesByReplyIds(List<Long> replyIds) {
-        if (replyIds == null || replyIds.isEmpty()) {
-            return;
-        }
-        LambdaQueryWrapper<WfForumReplyLike> deleteWrapper = new LambdaQueryWrapper<>();
-        deleteWrapper.in(WfForumReplyLike::getReplyId, replyIds);
-        wfForumReplyLikeMapper.delete(deleteWrapper);
-    }
-
-    private void deleteReplyLikeByReplyId(Long replyId) {
-        LambdaQueryWrapper<WfForumReplyLike> deleteWrapper = new LambdaQueryWrapper<>();
-        deleteWrapper.eq(WfForumReplyLike::getReplyId, replyId);
-        wfForumReplyLikeMapper.delete(deleteWrapper);
-    }
-
-    private void refreshThreadLastReply(Long threadId) {
-        WfForumThread thread = wfForumThreadMapper.selectById(threadId);
-        if (thread == null || ForumThreadStatus.DELETED.equals(thread.getStatus())) {
-            throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
-        }
-
-        LambdaQueryWrapper<WfForumReply> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfForumReply::getThreadId, threadId)
-                .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
-                .orderByDesc(WfForumReply::getFloorNo)
-                .last("LIMIT 1");
-        WfForumReply lastReply = wfForumReplyMapper.selectOne(queryWrapper);
-
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, threadId);
-        if (lastReply == null) {
-            updateWrapper.set(WfForumThread::getLastReplyId, null)
-                    .set(WfForumThread::getLastReplyUserId, thread.getAuthorId())
-                    .set(WfForumThread::getLastReplyTime, thread.getCreateTime());
-        } else {
-            updateWrapper.set(WfForumThread::getLastReplyId, lastReply.getId())
-                    .set(WfForumThread::getLastReplyUserId, lastReply.getAuthorId())
-                    .set(WfForumThread::getLastReplyTime, lastReply.getCreateTime());
-        }
-        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper));
-    }
-
-    private void refreshBoardStats(Long boardId) {
-        WfForumBoard board = wfForumBoardMapper.selectById(boardId);
-        if (board == null) {
-            return;
-        }
-
-        Map<String, Object> boardStats = wfForumThreadMapper.selectBoardStats(boardId);
-        int threadCount = parseStatsCount(boardStats, "threadCount");
-        int replyCount = parseStatsCount(boardStats, "replyCount");
-        WfForumThread lastThread = wfForumThreadMapper.selectLatestVisibleByBoardId(boardId);
-
-        LambdaUpdateWrapper<WfForumBoard> boardUpdateWrapper = new LambdaUpdateWrapper<>();
-        boardUpdateWrapper.eq(WfForumBoard::getId, boardId)
-                .set(WfForumBoard::getThreadCount, threadCount)
-                .set(WfForumBoard::getReplyCount, replyCount);
-        if (lastThread == null) {
-            boardUpdateWrapper.set(WfForumBoard::getLastThreadId, null)
-                    .set(WfForumBoard::getLastReplyTime, null);
-        } else {
-            boardUpdateWrapper.set(WfForumBoard::getLastThreadId, lastThread.getId())
-                    .set(WfForumBoard::getLastReplyTime, lastThread.getLastReplyTime());
-        }
-        assertSingleRow(wfForumBoardMapper.update(null, boardUpdateWrapper));
-    }
-
-    private int parseStatsCount(Map<String, Object> boardStats, String key) {
-        if (boardStats == null) {
-            return 0;
-        }
-        Object value = boardStats.get(key);
-        if (!(value instanceof Number)) {
-            return 0;
-        }
-        int count = ((Number) value).intValue();
-        return Math.max(count, 0);
-    }
-
-    private void recordModerationLog(Long operatorUserId, String targetType, Long targetId, String action) {
-        if (operatorUserId == null) {
-            throw new BaseException(ErrorCode.PARAM_ERROR);
-        }
-
-        WfForumModerationLog log = new WfForumModerationLog();
-        log.setOperatorUserId(operatorUserId);
-        log.setTargetType(targetType);
-        log.setTargetId(targetId);
-        log.setAction(action);
-        log.setReason(LOG_REASON_ADMIN_OPERATION);
-        assertSingleRow(wfForumModerationLogMapper.insert(log));
     }
 
     private Map<Long, WfUser> loadUserMapByIds(Set<Long> userIds) {
@@ -397,4 +297,3 @@ public class AdminContentManageService {
         }
     }
 }
-
