@@ -7,6 +7,13 @@ function getPayloadType(payload) {
   return String(payload.type).toUpperCase()
 }
 
+function notifyWsError(toastError, errorMessage, fallbackMessage) {
+  if (typeof toastError !== 'function') {
+    return
+  }
+  toastError(errorMessage, fallbackMessage)
+}
+
 function handleWsError(page, payload, toastError) {
   const errorMessage = payload && payload.message ? payload.message : '发送失败'
   const clientMsgId = payload && payload.clientMsgId ? String(payload.clientMsgId) : ''
@@ -15,13 +22,13 @@ function handleWsError(page, payload, toastError) {
   if (clientMsgId) {
     const resolved = imHelper.rejectPendingRequest(page, new Error(errorMessage), clientMsgId)
     if (!resolved && !page.data.sending) {
-      toastError(errorMessage, '请求异常')
+      notifyWsError(toastError, errorMessage, '请求异常')
     }
     return true
   }
 
   if (!page.data.sending) {
-    toastError(errorMessage, '请求异常')
+    notifyWsError(toastError, errorMessage, '请求异常')
     return true
   }
 

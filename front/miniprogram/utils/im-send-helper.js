@@ -20,6 +20,72 @@ function buildBaseSendPayload(page, msgType, extra = {}) {
   return payload
 }
 
+function beginSending(page) {
+  if (!page || !page.data || page.data.sending) {
+    return false
+  }
+  page.setData({ sending: true })
+  return true
+}
+
+function endSending(page) {
+  if (!page || page.pageUnloaded || !page.data || !page.data.sending) {
+    return
+  }
+  page.setData({ sending: false })
+}
+
+function showBatchFailureToast(failCount, totalCount) {
+  if (!Number.isFinite(failCount) || failCount <= 0) {
+    return
+  }
+  if (!Number.isFinite(totalCount) || totalCount <= 1) {
+    wx.showToast({
+      title: '发送失败',
+      icon: 'none'
+    })
+    return
+  }
+  wx.showToast({
+    title: `发送失败 ${failCount}/${totalCount}`,
+    icon: 'none'
+  })
+}
+
+async function sendUploadedMediaBatch(page, files, options) {
+  const upload = options && typeof options.upload === 'function' ? options.upload : null
+  const buildPayload = options && typeof options.buildPayload === 'function' ? options.buildPayload : null
+  if (!upload || !buildPayload) {
+    return { successCount: 0, failCount: 0, totalCount: 0 }
+  }
+
+  const safeFiles = Array.isArray(files) ? files.filter(Boolean) : []
+  if (safeFiles.length === 0) {
+    return { successCount: 0, failCount: 0, totalCount: 0 }
+  }
+
+  let successCount = 0
+  let failCount = 0
+  for (let index = 0; index < safeFiles.length; index++) {
+    const file = safeFiles[index]
+    try {
+      const media = await upload(file)
+      await page.sendWsMessageWithAck(buildPayload(media))
+      successCount += 1
+    } catch (error) {
+      if (page.pageUnloaded) {
+        break
+      }
+      failCount += 1
+    }
+  }
+  return {
+    successCount,
+    failCount,
+    totalCount: safeFiles.length
+  }
+}
+
 async function sendTextMessage(page, content, options = {}) {
   return page.sendWsMessageWithAck(
     buildBaseSendPayload(page, 'TEXT', { content }),
@@ -28,7 +94,7 @@ async function sendTextMessage(page, content, options = {}) {
 }
 
 async function chooseImageFromAlbum(page, deps) {
-  if (page.data.sending) {
+  if (!page || !page.data || page.data.sending) {
     return
   }
 
@@ -43,24 +109,21 @@ async function chooseImageFromAlbum(page, deps) {
       return
     }
 
-    page.setData({ sending: true })
-    for (let index = 0; index < tempFiles.length; index++) {
-      try {
-        const media = await deps.uploadImage(tempFiles[index])
-        await page.sendWsMessageWithAck(
-          buildBaseSendPayload(page, 'IMAGE', {
-            mediaKey: media.mediaKey,
-            mediaWidth: media.mediaWidth,
-            mediaHeight: media.mediaHeight,
-            mediaSize: media.mediaSize,
-            mediaMimeType: media.mediaMimeType
-          })
-        )
-      } catch (error) {
-        if (page.pageUnloaded) {
-          return
-        }
-      }
+    if (!beginSending(page)) {
+      return
+    }
+    const batchResult = await sendUploadedMediaBatch(page, tempFiles, {
+      upload: deps.uploadImage,
+      buildPayload: (media) => buildBaseSendPayload(page, 'IMAGE', {
+        mediaKey: media.mediaKey,
+        mediaWidth: media.mediaWidth,
+        mediaHeight: media.mediaHeight,
+        mediaSize: media.mediaSize,
+        mediaMimeType: media.mediaMimeType
+      })
+    })
+    if (!page.pageUnloaded) {
+      showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
     }
   } catch (error) {
     if (page.pageUnloaded) {
@@ -70,12 +133,12 @@ async function chooseImageFromAlbum(page, deps) {
       return
     }
   } finally {
-    page.setData({ sending: false })
+    endSending(page)
   }
 }
 
 async function chooseVideoFromAlbum(page, deps) {
-  if (page.data.sending) {
+  if (!page || !page.data || page.data.sending) {
     return
   }
 
@@ -89,17 +152,23 @@ async function chooseVideoFromAlbum(page, deps) {
     if (!tempFile || !tempFile.tempFilePath) {
       return
     }
-    page.setData({ sending: true })
-    const media = await deps.uploadVideo(tempFile)
-    await page.sendWsMessageWithAck(
-      buildBaseSendPayload(page, 'VIDEO', {
+
+    if (!beginSending(page)) {
+      return
+    }
+    const batchResult = await sendUploadedMediaBatch(page, [tempFile], {
+      upload: deps.uploadVideo,
+      buildPayload: (media) => buildBaseSendPayload(page, 'VIDEO', {
         mediaKey: media.mediaKey,
         mediaWidth: media.mediaWidth,
         mediaHeight: media.mediaHeight,
         mediaSize: media.mediaSize,
         mediaMimeType: media.mediaMimeType
       })
-    )
+    })
+    if (!page.pageUnloaded) {
+      showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
+    }
   } catch (error) {
     if (page.pageUnloaded) {
       return
@@ -108,12 +177,12 @@ async function chooseVideoFromAlbum(page, deps) {
       return
     }
   } finally {
-    page.setData({ sending: false })
+    endSending(page)
   }
 }
 
 async function chooseFileForShare(page, deps) {
-  if (page.data.sending) {
+  if (!page || !page.data || page.data.sending) {
     return
   }
 
@@ -129,24 +198,20 @@ async function chooseFileForShare(page, deps) {
       return
     }
 
-    page.setData({ sending: true })
-    for (let index = 0; index < selectedFiles.length; index++) {
-      const file = selectedFiles[index]
-      try {
-        const media = await deps.uploadFile(file)
-        await page.sendWsMessageWithAck(
-          buildBaseSendPayload(page, 'FILE', {
-            content: imHelper.normalizeFileNameForMessage(media.fileName),
-            mediaKey: media.mediaKey,
-            mediaSize: media.mediaSize,
-            mediaMimeType: media.mediaMimeType
-          })
-        )
-      } catch (error) {
-        if (page.pageUnloaded) {
-          return
-        }
-      }
+    if (!beginSending(page)) {
+      return
+    }
+    const batchResult = await sendUploadedMediaBatch(page, selectedFiles, {
+      upload: deps.uploadFile,
+      buildPayload: (media) => buildBaseSendPayload(page, 'FILE', {
+        content: imHelper.normalizeFileNameForMessage(media.fileName),
+        mediaKey: media.mediaKey,
+        mediaSize: media.mediaSize,
+        mediaMimeType: media.mediaMimeType
+      })
+    })
+    if (!page.pageUnloaded) {
+      showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
     }
   } catch (error) {
     if (page.pageUnloaded) {
@@ -156,11 +221,11 @@ async function chooseFileForShare(page, deps) {
       return
     }
   } finally {
-    page.setData({ sending: false })
+    endSending(page)
   }
 }
 
-async function shareLinkAsText(page, deps) {
+async function shareLinkAsText(page) {
   const modalRes = await imHelper.showEditableModal({
     title: '分享链接',
     placeholderText: '请输入链接地址'
@@ -174,19 +239,22 @@ async function shareLinkAsText(page, deps) {
     return
   }
 
-  if (page.data.sending) {
+  if (!page || !page.data || page.data.sending) {
     return
   }
 
-  page.setData({ sending: true })
+  if (!beginSending(page)) {
+    return
+  }
   try {
     await sendTextMessage(page, link)
   } catch (error) {
     if (page.pageUnloaded) {
       return
     }
+    showBatchFailureToast(1, 1)
   } finally {
-    page.setData({ sending: false })
+    endSending(page)
   }
 }
 
