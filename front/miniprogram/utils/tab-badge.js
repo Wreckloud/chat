@@ -4,6 +4,11 @@ const auth = require('./auth')
 const CHAT_TAB_INDEX = 0
 const ME_TAB_INDEX = 2
 const MAX_BADGE = 99
+const TAB_BASE_TEXT = {
+  0: '聊天',
+  1: '社区',
+  2: '我的'
+}
 
 function normalizeCount(value) {
   const count = Number(value)
@@ -23,17 +28,17 @@ function toBadgeText(count) {
 function setBadge(index, count) {
   return new Promise(resolve => {
     const normalized = normalizeCount(count)
-    if (normalized <= 0) {
-      wx.removeTabBarBadge({
-        index,
-        complete: () => resolve(0)
-      })
-      return
-    }
-    wx.setTabBarBadge({
+    const baseText = TAB_BASE_TEXT[index] || ''
+    const suffix = normalized > 0 ? `[${toBadgeText(normalized)}]` : ''
+    wx.removeTabBarBadge({
       index,
-      text: toBadgeText(normalized),
-      complete: () => resolve(normalized)
+      complete: () => {
+        wx.setTabBarItem({
+          index,
+          text: `${baseText}${suffix}`,
+          complete: () => resolve(normalized)
+        })
+      }
     })
   })
 }

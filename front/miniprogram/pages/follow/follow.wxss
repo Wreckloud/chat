@@ -77,10 +77,7 @@
 .user-title-badge {
   flex-shrink: 0;
   max-width: 130rpx;
-  padding: 0 6rpx;
-  margin-right: 6rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.72);
+  margin-left: 6rpx;
   font-size: 18rpx;
   line-height: 1.2;
   color: var(--retro-accent-text);

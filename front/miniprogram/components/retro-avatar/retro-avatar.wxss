@@ -47,9 +47,9 @@
 }
 
 .shape-round {
-  border-radius: 50%;
+  border-radius: 0;
 }
 
 .shape-square {
-  border-radius: 8rpx;
+  border-radius: 0;
 }

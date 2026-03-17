@@ -120,9 +120,7 @@ page {
 .im-title-badge {
   flex-shrink: 0;
   max-width: 180rpx;
-  padding: 0 6rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.72);
+  margin-left: 6rpx;
   font-size: 19rpx;
   line-height: 1.2;
   color: var(--retro-accent-text);
@@ -158,16 +156,6 @@ page {
 .im-cluster-self .im-name-line,
 .im-cluster-self .im-time-line {
   justify-content: flex-end;
-}
-
-.im-cluster-self .im-title-badge {
-  order: 2;
-  margin-left: 6rpx;
-  margin-right: 0;
-}
-
-.im-cluster-self .im-name {
-  order: 1;
 }
 
 .im-line {

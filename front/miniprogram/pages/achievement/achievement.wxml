@@ -13,12 +13,12 @@
     </view>
 
     <view wx:if="{{userInfo && userInfo.equippedTitleName}}" class="equipped-main">
+      <text class="equipped-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
       <text
         class="equipped-title-badge"
         style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
         [{{userInfo.equippedTitleName}}]
       </text>
-      <text class="equipped-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
     </view>
     <view wx:else class="equipped-empty">未佩戴头衔</view>
   </view>

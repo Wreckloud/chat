@@ -46,9 +46,7 @@
 .profile-title-badge {
   flex-shrink: 0;
   max-width: 180rpx;
-  padding: 0 8rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.72);
+  margin-left: 6rpx;
   font-size: 20rpx;
   line-height: 1.2;
   color: var(--retro-accent-text);
@@ -158,9 +156,6 @@
 .showcase-title {
   display: block;
   max-width: 100%;
-  padding: 4rpx 10rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.72);
   font-size: 20rpx;
   line-height: 1.2;
   color: var(--retro-accent-text);

@@ -12,13 +12,13 @@
       </retro-avatar>
       <view class="im-header-meta">
         <view class="im-header-name-line">
+          <text class="im-header-name">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
           <text
             wx:if="{{targetUser.displayTitleName}}"
             class="im-header-title-badge"
             style="{{targetUser.displayTitleColor ? 'color:' + targetUser.displayTitleColor + ';' : ''}}">
             [{{targetUser.displayTitleName}}]
           </text>
-          <text class="im-header-name">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
         </view>
       </view>
     </view>

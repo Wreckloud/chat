@@ -51,9 +51,7 @@
 .identity-title-badge {
   flex-shrink: 0;
   max-width: 180rpx;
-  padding: 0 8rpx;
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.72);
+  margin-left: 6rpx;
   font-size: 20rpx;
   line-height: 1.2;
   color: var(--retro-accent-text);
@@ -156,6 +154,10 @@
   color: var(--retro-accent-text);
 }
 
+.quick-badge-blink {
+  animation: unread-blink 1.2s steps(1, end) infinite;
+}
+
 .quick-desc {
   margin-top: 4rpx;
   font-size: 20rpx;
@@ -254,4 +256,16 @@
   text-align: center;
   color: var(--retro-muted-text);
   padding-top: 80rpx;
+}
+
+@keyframes unread-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
 }
