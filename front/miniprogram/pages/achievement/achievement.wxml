@@ -13,12 +13,12 @@
     </view>
 
     <view wx:if="{{userInfo && userInfo.equippedTitleName}}" class="equipped-main u-name-line">
-      <text class="equipped-name u-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
-      <text
+      <view class="equipped-name u-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</view>
+      <view
         class="equipped-title-badge u-title-badge retro-title-badge retro-title-badge-xl"
         style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
         [{{userInfo.equippedTitleName}}]
-      </text>
+      </view>
     </view>
     <view wx:else class="equipped-empty">未佩戴头衔</view>
   </view>
@@ -36,13 +36,13 @@
       <view wx:for="{{achievements}}" wx:key="achievementCode" class="achievement-item">
         <view class="achievement-main">
           <view class="achievement-name-row u-name-line">
-            <text class="achievement-name u-name">{{item.name}}</text>
-            <text
+            <view class="achievement-name u-name">{{item.name}}</view>
+            <view
               wx:if="{{item.titleName}}"
               class="achievement-title-badge u-title-badge retro-title-badge retro-title-badge-md"
               style="{{item.titleColor ? 'color:' + item.titleColor + ';' : ''}}">
               [{{item.titleName}}]
-            </text>
+            </view>
           </view>
           <view class="achievement-desc">{{item.description || '--'}}</view>
           <view class="achievement-meta">

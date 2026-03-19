@@ -45,13 +45,13 @@
       </view>
       <view class="thread-meta-line">
         <view class="thread-author-line u-name-line">
-          <text class="thread-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</text>
-          <text
+          <view class="thread-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</view>
+          <view
             wx:if="{{item.author.displayTitleName}}"
             class="thread-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
             style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
             [{{item.author.displayTitleName}}]
-          </text>
+          </view>
         </view>
         <text class="thread-stat">回复 {{item.replyCount}} / 浏览 {{item.viewCount}}</text>
       </view>

@@ -13,13 +13,13 @@
 
         <view class="identity-meta">
           <view class="identity-name-line u-name-line">
-            <text class="identity-name u-name">{{userInfo.nickname || userInfo.wolfNo}}</text>
-            <text
+            <view class="identity-name u-name">{{userInfo.nickname || userInfo.wolfNo}}</view>
+            <view
               wx:if="{{userInfo.equippedTitleName}}"
               class="identity-title-badge u-title-badge retro-title-badge retro-title-badge-lg"
               style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
               [{{userInfo.equippedTitleName}}]
-            </text>
+            </view>
           </view>
           <view class="identity-wolf">狼藉号 {{userInfo.wolfNo || '--'}}</view>
           <view class="identity-email">{{userInfo.email || '未绑定邮箱'}}</view>

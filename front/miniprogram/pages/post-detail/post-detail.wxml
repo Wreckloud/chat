@@ -34,13 +34,13 @@
             </retro-avatar>
             <view class="thread-info">
               <view class="thread-name-line u-name-line">
-                <text class="thread-name u-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
-                <text
+                <view class="thread-name u-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</view>
+                <view
                   wx:if="{{thread.author.displayTitleName}}"
                   class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
                   style="{{thread.author.displayTitleColor ? 'color:' + thread.author.displayTitleColor + ';' : ''}}">
                   [{{thread.author.displayTitleName}}]
-                </text>
+                </view>
               </view>
               <view class="thread-time">{{thread.createTimeText}}</view>
             </view>
@@ -102,13 +102,13 @@
               </retro-avatar>
               <view class="reply-info">
                 <view class="reply-author-line u-name-line">
-                  <text class="reply-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
-                  <text
+                  <view class="reply-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</view>
+                  <view
                     wx:if="{{item.author.displayTitleName}}"
                     class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
                     style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
                     [{{item.author.displayTitleName}}]
-                  </text>
+                  </view>
                 </view>
                 <view class="reply-time">{{item.timeText}}</view>
               </view>

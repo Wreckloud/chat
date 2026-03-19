@@ -14,13 +14,13 @@
 
         <view class="profile-info">
           <view class="nickname-line u-name-line">
-            <text class="nickname u-name">{{userInfo.displayName || userInfo.nickname || userInfo.wolfNo}}</text>
-            <text
+            <view class="nickname u-name">{{userInfo.displayName || userInfo.nickname || userInfo.wolfNo}}</view>
+            <view
               wx:if="{{userInfo.displayTitleName}}"
               class="profile-title-badge u-title-badge retro-title-badge retro-title-badge-lg"
               style="{{userInfo.displayTitleColor ? 'color:' + userInfo.displayTitleColor + ';' : ''}}">
               [{{userInfo.displayTitleName}}]
-            </text>
+            </view>
           </view>
           <view class="wolfno">狼藉号 {{userInfo.wolfNo || '--'}}</view>
           <view wx:if="{{userInfo.signature}}" class="signature">{{userInfo.signature}}</view>

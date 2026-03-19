@@ -34,24 +34,24 @@
           <view class="im-message-col">
             <view class="im-meta-col">
               <view class="im-name-line">
-                <text
+                <view
                   wx:if="{{blockItem.isSelf && blockItem.senderTitleName}}"
                   class="im-title-badge u-title-badge retro-title-badge retro-title-badge-md"
                   style="{{blockItem.senderTitleColor ? 'color:' + blockItem.senderTitleColor + ';' : ''}}">
                   [{{blockItem.senderTitleName}}]
-                </text>
+                </view>
                 <view
                   class="im-name {{blockItem.isSelf ? 'im-name-self' : 'im-name-peer'}}"
                   data-user-id="{{blockItem.senderId}}"
                   bindtap="onTapUserElement">
                   {{blockItem.senderName}}
                 </view>
-                <text
+                <view
                   wx:if="{{!blockItem.isSelf && blockItem.senderTitleName}}"
                   class="im-title-badge u-title-badge retro-title-badge retro-title-badge-md"
                   style="{{blockItem.senderTitleColor ? 'color:' + blockItem.senderTitleColor + ';' : ''}}">
                   [{{blockItem.senderTitleName}}]
-                </text>
+                </view>
               </view>
               <view class="im-time-line">
                 <view class="im-meta-time">{{blockItem.headerTimeText}}</view>
