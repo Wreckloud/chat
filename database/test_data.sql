@@ -5,21 +5,30 @@ USE `wolf_chat`;
 
 -- 测试账号说明（明文密码一致）
 -- 密码：Wolf123456
--- 账号1：狼藉号 1234567890，邮箱 wolf1@example.com（已认证）
--- 账号2：狼藉号 1234567891，邮箱 wolf2@example.com（未认证）
--- 账号3：狼藉号 1234567892（未绑定邮箱）
+-- 账号1~12：狼藉号 1234567890 ~ 1234567901
+-- 邮箱策略：部分已认证、部分未认证、部分未绑定（覆盖登录/资料/通知联调）
 SET @seed_password_hash := '$2a$10$ENlIGWJCpjy8Dz63BNO4M.cJatv7N3l1LyBUJ6kVmFRLcztHelhXS';
 
 -- 1) 用户主表
 INSERT INTO `wf_user` (
     `wolf_no`, `status`, `onboarding_status`, `onboarding_completed_at`,
     `first_login_at`, `last_login_at`, `active_day_count`,
+    `disabled_by_ban`,
     `equipped_title_code`, `equipped_title_name`, `equipped_title_color`,
     `create_time`, `update_time`
 ) VALUES
-    ('1234567890', 'NORMAL', 'COMPLETED', '2026-03-09 10:00:00', '2026-03-09 10:00:00', '2026-03-10 10:00:00', 5, 'WOLF_CUB', '小狼', '#5f7ea2', NOW(), NOW()),
-    ('1234567891', 'NORMAL', 'PENDING', NULL, '2026-03-09 11:00:00', '2026-03-10 09:00:00', 3, 'FIRST_POST', '初啸者', '#4f7f63', NOW(), NOW()),
-    ('1234567892', 'NORMAL', 'PENDING', NULL, '2026-03-09 12:00:00', '2026-03-10 08:30:00', 2, NULL, NULL, NULL, NOW(), NOW())
+    ('1234567890', 'NORMAL', 'COMPLETED', '2026-03-09 10:00:00', '2026-03-09 10:00:00', '2026-03-10 10:00:00', 5, 0, 'WOLF_CUB', '小狼', '#5f7ea2', NOW(), NOW()),
+    ('1234567891', 'NORMAL', 'PENDING', NULL, '2026-03-09 11:00:00', '2026-03-10 09:00:00', 3, 0, 'FIRST_POST', '初啸者', '#4f7f63', NOW(), NOW()),
+    ('1234567892', 'NORMAL', 'PENDING', NULL, '2026-03-09 12:00:00', '2026-03-10 08:30:00', 2, 0, NULL, NULL, NULL, NOW(), NOW()),
+    ('1234567893', 'NORMAL', 'COMPLETED', '2026-03-10 09:10:00', '2026-03-09 20:00:00', '2026-03-11 12:15:00', 6, 0, 'FIRST_REPLY', '回声者', '#8a6d4b', NOW(), NOW()),
+    ('1234567894', 'NORMAL', 'COMPLETED', '2026-03-10 09:20:00', '2026-03-09 20:10:00', '2026-03-11 08:40:00', 4, 0, 'FIRST_FOLLOW', '同行者', '#875f8c', NOW(), NOW()),
+    ('1234567895', 'NORMAL', 'PENDING', NULL, '2026-03-09 20:20:00', '2026-03-11 10:10:00', 3, 0, NULL, NULL, NULL, NOW(), NOW()),
+    ('1234567896', 'NORMAL', 'COMPLETED', '2026-03-10 09:35:00', '2026-03-09 20:30:00', '2026-03-11 11:45:00', 5, 0, 'FIRST_POST', '初啸者', '#4f7f63', NOW(), NOW()),
+    ('1234567897', 'NORMAL', 'PENDING', NULL, '2026-03-09 20:40:00', '2026-03-11 09:05:00', 2, 0, NULL, NULL, NULL, NOW(), NOW()),
+    ('1234567898', 'NORMAL', 'COMPLETED', '2026-03-11 09:10:00', '2026-03-10 08:00:00', '2026-03-12 21:30:00', 7, 0, 'FIRST_FOLLOW', '同行者', '#875f8c', NOW(), NOW()),
+    ('1234567899', 'NORMAL', 'SKIPPED', NULL, '2026-03-10 09:00:00', '2026-03-13 08:20:00', 1, 0, NULL, NULL, NULL, NOW(), NOW()),
+    ('1234567900', 'NORMAL', 'PENDING', NULL, '2026-03-10 09:05:00', '2026-03-14 18:05:00', 2, 0, NULL, NULL, NULL, NOW(), NOW()),
+    ('1234567901', 'DISABLED', 'COMPLETED', '2026-03-10 10:30:00', '2026-03-10 10:00:00', '2026-03-10 10:30:00', 1, 1, NULL, NULL, NULL, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     `status` = VALUES(`status`),
     `onboarding_status` = VALUES(`onboarding_status`),
@@ -27,6 +36,7 @@ ON DUPLICATE KEY UPDATE
     `first_login_at` = VALUES(`first_login_at`),
     `last_login_at` = VALUES(`last_login_at`),
     `active_day_count` = VALUES(`active_day_count`),
+    `disabled_by_ban` = VALUES(`disabled_by_ban`),
     `equipped_title_code` = VALUES(`equipped_title_code`),
     `equipped_title_name` = VALUES(`equipped_title_name`),
     `equipped_title_color` = VALUES(`equipped_title_color`),
@@ -35,12 +45,30 @@ ON DUPLICATE KEY UPDATE
 SET @uid_1 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567890' LIMIT 1);
 SET @uid_2 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567891' LIMIT 1);
 SET @uid_3 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567892' LIMIT 1);
+SET @uid_4 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567893' LIMIT 1);
+SET @uid_5 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567894' LIMIT 1);
+SET @uid_6 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567895' LIMIT 1);
+SET @uid_7 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567896' LIMIT 1);
+SET @uid_8 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567897' LIMIT 1);
+SET @uid_9 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567898' LIMIT 1);
+SET @uid_10 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567899' LIMIT 1);
+SET @uid_11 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567900' LIMIT 1);
+SET @uid_12 := (SELECT `id` FROM `wf_user` WHERE `wolf_no` = '1234567901' LIMIT 1);
 
 -- 2) 号码池（标记为已分配）
 INSERT INTO `wf_no_pool` (`wolf_no`, `status`, `user_id`, `create_time`, `update_time`) VALUES
     ('1234567890', 'USED', @uid_1, NOW(), NOW()),
     ('1234567891', 'USED', @uid_2, NOW(), NOW()),
-    ('1234567892', 'USED', @uid_3, NOW(), NOW())
+    ('1234567892', 'USED', @uid_3, NOW(), NOW()),
+    ('1234567893', 'USED', @uid_4, NOW(), NOW()),
+    ('1234567894', 'USED', @uid_5, NOW(), NOW()),
+    ('1234567895', 'USED', @uid_6, NOW(), NOW()),
+    ('1234567896', 'USED', @uid_7, NOW(), NOW()),
+    ('1234567897', 'USED', @uid_8, NOW(), NOW()),
+    ('1234567898', 'USED', @uid_9, NOW(), NOW()),
+    ('1234567899', 'USED', @uid_10, NOW(), NOW()),
+    ('1234567900', 'USED', @uid_11, NOW(), NOW()),
+    ('1234567901', 'USED', @uid_12, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     `status` = VALUES(`status`),
     `user_id` = VALUES(`user_id`),
@@ -71,7 +99,15 @@ INSERT INTO `wf_user_achievement` (
     (@uid_1, 'FIRST_FOLLOW', '2026-03-10 10:16:00', NOW()),
     (@uid_2, 'WOLF_CUB', '2026-03-09 11:00:00', NOW()),
     (@uid_2, 'FIRST_POST', '2026-03-10 09:45:00', NOW()),
-    (@uid_3, 'WOLF_CUB', '2026-03-09 12:00:00', NOW())
+    (@uid_3, 'WOLF_CUB', '2026-03-09 12:00:00', NOW()),
+    (@uid_4, 'WOLF_CUB', '2026-03-09 20:00:00', NOW()),
+    (@uid_4, 'FIRST_REPLY', '2026-03-10 11:22:00', NOW()),
+    (@uid_5, 'WOLF_CUB', '2026-03-09 20:10:00', NOW()),
+    (@uid_5, 'FIRST_FOLLOW', '2026-03-10 12:10:00', NOW()),
+    (@uid_6, 'WOLF_CUB', '2026-03-09 20:20:00', NOW()),
+    (@uid_7, 'WOLF_CUB', '2026-03-09 20:30:00', NOW()),
+    (@uid_7, 'FIRST_POST', '2026-03-11 08:50:00', NOW()),
+    (@uid_8, 'WOLF_CUB', '2026-03-09 20:40:00', NOW())
 ON DUPLICATE KEY UPDATE
     `unlock_time` = VALUES(`unlock_time`);
 
@@ -81,7 +117,16 @@ INSERT INTO `wf_user_profile` (
 ) VALUES
     (@uid_1, 'Wreckloud', NULL, '欢迎来到 WolfChat', '测试账号1，用于主账号联调', NOW(), NOW()),
     (@uid_2, 'USVING', NULL, '今天也要写代码', '测试账号2，用于双端会话联调', NOW(), NOW()),
-    (@uid_3, '旅行青蛙', NULL, '消息已读但未回', '测试账号3，用于关注/列表场景', NOW(), NOW())
+    (@uid_3, '旅行青蛙', NULL, '消息已读但未回', '测试账号3，用于关注/列表场景', NOW(), NOW()),
+    (@uid_4, '夜航灯塔', NULL, '慢慢来，先把功能做稳', '偏好讨论产品体验和交互细节', NOW(), NOW()),
+    (@uid_5, '纸鸢', NULL, '今天也在调接口', '偏好写实现记录和踩坑总结', NOW(), NOW()),
+    (@uid_6, '北岸回声', NULL, '晚上再上线', '偏好在大厅里聊天打卡', NOW(), NOW()),
+    (@uid_7, '星尘旅人', NULL, '每周都想优化一点点', '偏好发帖讨论社区规则与产品方向', NOW(), NOW()),
+    (@uid_8, '橘子汽水', NULL, '正在潜水观察', '低频用户，主要浏览帖子和聊天记录', NOW(), NOW()),
+    (@uid_9, '南风', NULL, '今天想把未读做完', '偏好做回归清单与冒烟测试', NOW(), NOW()),
+    (@uid_10, '白噪音', NULL, '上线前再看看日志', '偏好刷大厅与看通知', NOW(), NOW()),
+    (@uid_11, '墨迹', NULL, '写完再说', '偏好在论坛里讨论需求边界', NOW(), NOW()),
+    (@uid_12, '已封禁示例', NULL, '（账号被封禁）', '用于验证禁用/封禁相关联调', NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     `nickname` = VALUES(`nickname`),
     `avatar` = VALUES(`avatar`),
@@ -96,8 +141,23 @@ INSERT INTO `wf_user_auth` (
     (@uid_1, 'WOLF_NO_PASSWORD', '1234567890', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
     (@uid_2, 'WOLF_NO_PASSWORD', '1234567891', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
     (@uid_3, 'WOLF_NO_PASSWORD', '1234567892', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_4, 'WOLF_NO_PASSWORD', '1234567893', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_5, 'WOLF_NO_PASSWORD', '1234567894', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_6, 'WOLF_NO_PASSWORD', '1234567895', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_7, 'WOLF_NO_PASSWORD', '1234567896', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_8, 'WOLF_NO_PASSWORD', '1234567897', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_9, 'WOLF_NO_PASSWORD', '1234567898', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_10, 'WOLF_NO_PASSWORD', '1234567899', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_11, 'WOLF_NO_PASSWORD', '1234567900', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_12, 'WOLF_NO_PASSWORD', '1234567901', @seed_password_hash, 1, 0, NOW(), NOW(), NOW()),
     (@uid_1, 'EMAIL_PASSWORD', 'wolf1@example.com', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
-    (@uid_2, 'EMAIL_PASSWORD', 'wolf2@example.com', @seed_password_hash, 0, 1, NOW(), NOW(), NOW())
+    (@uid_2, 'EMAIL_PASSWORD', 'wolf2@example.com', @seed_password_hash, 0, 1, NOW(), NOW(), NOW()),
+    (@uid_4, 'EMAIL_PASSWORD', 'wolf4@example.com', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_5, 'EMAIL_PASSWORD', 'wolf5@example.com', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_6, 'EMAIL_PASSWORD', 'wolf6@example.com', @seed_password_hash, 0, 1, NOW(), NOW(), NOW()),
+    (@uid_7, 'EMAIL_PASSWORD', 'wolf7@example.com', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_9, 'EMAIL_PASSWORD', 'wolf9@example.com', @seed_password_hash, 1, 1, NOW(), NOW(), NOW()),
+    (@uid_10, 'EMAIL_PASSWORD', 'wolf10@example.com', @seed_password_hash, 0, 1, NOW(), NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     `credential_hash` = VALUES(`credential_hash`),
     `verified` = VALUES(`verified`),
@@ -105,18 +165,35 @@ ON DUPLICATE KEY UPDATE
     `last_login_at` = VALUES(`last_login_at`),
     `update_time` = NOW();
 
--- 6) 关注关系（1<->2 互关，1->3 单向）
+-- 6) 关注关系（构造互关/单向关注混合场景）
 INSERT INTO `wf_follow` (
     `follower_id`, `followee_id`, `status`, `create_time`, `update_time`
 ) VALUES
     (@uid_1, @uid_2, 'FOLLOWING', NOW(), NOW()),
     (@uid_2, @uid_1, 'FOLLOWING', NOW(), NOW()),
-    (@uid_1, @uid_3, 'FOLLOWING', NOW(), NOW())
+    (@uid_1, @uid_3, 'FOLLOWING', NOW(), NOW()),
+    (@uid_1, @uid_4, 'FOLLOWING', NOW(), NOW()),
+    (@uid_4, @uid_1, 'FOLLOWING', NOW(), NOW()),
+    (@uid_2, @uid_4, 'FOLLOWING', NOW(), NOW()),
+    (@uid_5, @uid_1, 'FOLLOWING', NOW(), NOW()),
+    (@uid_6, @uid_1, 'FOLLOWING', NOW(), NOW()),
+    (@uid_7, @uid_1, 'FOLLOWING', NOW(), NOW()),
+    (@uid_2, @uid_6, 'FOLLOWING', NOW(), NOW()),
+    (@uid_6, @uid_2, 'FOLLOWING', NOW(), NOW()),
+    (@uid_3, @uid_7, 'FOLLOWING', NOW(), NOW()),
+    (@uid_7, @uid_3, 'FOLLOWING', NOW(), NOW()),
+    (@uid_8, @uid_2, 'FOLLOWING', NOW(), NOW()),
+    (@uid_9, @uid_1, 'FOLLOWING', NOW(), NOW()),
+    (@uid_1, @uid_9, 'FOLLOWING', NOW(), NOW()),
+    (@uid_10, @uid_1, 'FOLLOWING', NOW(), NOW()),
+    (@uid_11, @uid_2, 'FOLLOWING', NOW(), NOW()),
+    (@uid_2, @uid_11, 'FOLLOWING', NOW(), NOW()),
+    (@uid_10, @uid_3, 'UNFOLLOWED', NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     `status` = VALUES(`status`),
     `update_time` = NOW();
 
--- 7) 会话与消息（账号1 与 账号2）
+-- 7) 会话与消息（账号1 与 账号2）：双端稳定联调基线
 SET @conv_user_a := LEAST(@uid_1, @uid_2);
 SET @conv_user_b := GREATEST(@uid_1, @uid_2);
 
@@ -169,7 +246,115 @@ SET `last_message_id` = 990002,
     `update_time` = NOW()
 WHERE `id` = @conv_12;
 
--- 8) 大厅消息
+-- 7.2) 会话与消息（账号1 与 账号4）：构造未读 + 未送达消息（用于 WS 补发与未读联调）
+SET @conv_user_a_14 := LEAST(@uid_1, @uid_4);
+SET @conv_user_b_14 := GREATEST(@uid_1, @uid_4);
+
+INSERT INTO `wf_conversation` (
+    `user_a_id`, `user_b_id`, `last_message_id`, `last_message`, `last_message_time`,
+    `user_a_unread_count`, `user_b_unread_count`, `create_time`, `update_time`
+) VALUES
+    (@conv_user_a_14, @conv_user_b_14, 990012, '我这边先离线一会儿', '2026-03-12 22:31:00', 0, 2, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    `last_message_id` = VALUES(`last_message_id`),
+    `last_message` = VALUES(`last_message`),
+    `last_message_time` = VALUES(`last_message_time`),
+    `user_a_unread_count` = VALUES(`user_a_unread_count`),
+    `user_b_unread_count` = VALUES(`user_b_unread_count`),
+    `update_time` = NOW();
+
+SET @conv_14 := (
+    SELECT `id`
+    FROM `wf_conversation`
+    WHERE `user_a_id` = @conv_user_a_14 AND `user_b_id` = @conv_user_b_14
+    LIMIT 1
+);
+
+INSERT INTO `wf_message` (
+    `id`, `conversation_id`, `sender_id`, `receiver_id`, `content`, `msg_type`,
+    `media_key`, `media_width`, `media_height`, `media_size`, `media_mime_type`,
+    `delivered`, `delivered_time`, `create_time`
+) VALUES
+    (990011, @conv_14, @uid_4, @uid_1, '我在看你论坛那篇公告，写得不错。', 'TEXT', NULL, NULL, NULL, NULL, NULL, 1, '2026-03-12 22:30:00', '2026-03-12 22:30:00'),
+    (990012, @conv_14, @uid_1, @uid_4, '谢谢！我准备把社区从帖子流升级成 BBS 楼层。', 'TEXT', NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-03-12 22:31:00'),
+    (990013, @conv_14, @uid_1, @uid_4, '你离线期间我先把接口和表都对齐了，等你上线再一起验。', 'TEXT', NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-03-12 22:31:20')
+ON DUPLICATE KEY UPDATE
+    `conversation_id` = VALUES(`conversation_id`),
+    `sender_id` = VALUES(`sender_id`),
+    `receiver_id` = VALUES(`receiver_id`),
+    `content` = VALUES(`content`),
+    `msg_type` = VALUES(`msg_type`),
+    `media_key` = VALUES(`media_key`),
+    `media_width` = VALUES(`media_width`),
+    `media_height` = VALUES(`media_height`),
+    `media_size` = VALUES(`media_size`),
+    `media_mime_type` = VALUES(`media_mime_type`),
+    `delivered` = VALUES(`delivered`),
+    `delivered_time` = VALUES(`delivered_time`),
+    `create_time` = VALUES(`create_time`);
+
+UPDATE `wf_conversation`
+SET `last_message_id` = 990013,
+    `last_message` = '你离线期间我先把接口和表都对齐了，等你上线再一起验。',
+    `last_message_time` = '2026-03-12 22:31:20',
+    `update_time` = NOW()
+WHERE `id` = @conv_14;
+
+-- 7.3) 会话与消息（账号2 与 账号6）：构造富媒体消息（IMAGE/FILE）便于前端媒体渲染与下载联调
+SET @conv_user_a_26 := LEAST(@uid_2, @uid_6);
+SET @conv_user_b_26 := GREATEST(@uid_2, @uid_6);
+
+INSERT INTO `wf_conversation` (
+    `user_a_id`, `user_b_id`, `last_message_id`, `last_message`, `last_message_time`,
+    `user_a_unread_count`, `user_b_unread_count`, `create_time`, `update_time`
+) VALUES
+    (@conv_user_a_26, @conv_user_b_26, 990023, '[文件] WolfChat-接口对齐清单.pdf', '2026-03-13 09:12:00', 1, 0, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    `last_message_id` = VALUES(`last_message_id`),
+    `last_message` = VALUES(`last_message`),
+    `last_message_time` = VALUES(`last_message_time`),
+    `user_a_unread_count` = VALUES(`user_a_unread_count`),
+    `user_b_unread_count` = VALUES(`user_b_unread_count`),
+    `update_time` = NOW();
+
+SET @conv_26 := (
+    SELECT `id`
+    FROM `wf_conversation`
+    WHERE `user_a_id` = @conv_user_a_26 AND `user_b_id` = @conv_user_b_26
+    LIMIT 1
+);
+
+INSERT INTO `wf_message` (
+    `id`, `conversation_id`, `sender_id`, `receiver_id`, `content`, `msg_type`,
+    `media_key`, `media_width`, `media_height`, `media_size`, `media_mime_type`,
+    `delivered`, `delivered_time`, `create_time`
+) VALUES
+    (990021, @conv_26, @uid_2, @uid_6, '我把接口清单和截图发你，帮我看下管理端那边是不是要补个筛选。', 'TEXT', NULL, NULL, NULL, NULL, NULL, 1, '2026-03-13 09:10:00', '2026-03-13 09:10:00'),
+    (990022, @conv_26, @uid_2, @uid_6, '会议室白板草图（随手拍）', 'IMAGE', 'chat/image/2026/03/board_sketch_001.jpg', 1080, 1440, 246812, 'image/jpeg', 1, '2026-03-13 09:11:00', '2026-03-13 09:11:00'),
+    (990023, @conv_26, @uid_6, @uid_2, 'WolfChat-接口对齐清单.pdf', 'FILE', 'chat/file/2026/03/WolfChat-接口对齐清单.pdf', NULL, NULL, 483220, 'application/pdf', 1, '2026-03-13 09:12:00', '2026-03-13 09:12:00')
+ON DUPLICATE KEY UPDATE
+    `conversation_id` = VALUES(`conversation_id`),
+    `sender_id` = VALUES(`sender_id`),
+    `receiver_id` = VALUES(`receiver_id`),
+    `content` = VALUES(`content`),
+    `msg_type` = VALUES(`msg_type`),
+    `media_key` = VALUES(`media_key`),
+    `media_width` = VALUES(`media_width`),
+    `media_height` = VALUES(`media_height`),
+    `media_size` = VALUES(`media_size`),
+    `media_mime_type` = VALUES(`media_mime_type`),
+    `delivered` = VALUES(`delivered`),
+    `delivered_time` = VALUES(`delivered_time`),
+    `create_time` = VALUES(`create_time`);
+
+UPDATE `wf_conversation`
+SET `last_message_id` = 990023,
+    `last_message` = '[文件] WolfChat-接口对齐清单.pdf',
+    `last_message_time` = '2026-03-13 09:12:00',
+    `update_time` = NOW()
+WHERE `id` = @conv_26;
+
+-- 8) 大厅消息（补充更多发言人/更真实的时间线）
 INSERT INTO `wf_lobby_message` (
     `id`, `sender_id`, `content`, `msg_type`,
     `media_key`, `media_width`, `media_height`, `media_size`, `media_mime_type`, `create_time`
@@ -177,7 +362,13 @@ INSERT INTO `wf_lobby_message` (
     (980001, @uid_1, '欢迎来到公共聊天室，在线的人都可以发言。', 'TEXT',
      NULL, NULL, NULL, NULL, NULL, '2026-03-10 10:20:00'),
     (980002, @uid_2, '这里后续可以一起聊社区话题和项目进展。', 'TEXT',
-     NULL, NULL, NULL, NULL, NULL, '2026-03-10 10:21:00')
+     NULL, NULL, NULL, NULL, NULL, '2026-03-10 10:21:00'),
+    (980003, @uid_6, '今天上线了一版通知页，大家帮我看看未读角标有没有漏。', 'TEXT',
+     NULL, NULL, NULL, NULL, NULL, '2026-03-11 21:05:00'),
+    (980004, @uid_7, '论坛那边我想加“置顶/精华/锁帖”的标签展示，你们觉得放哪里更顺手？', 'TEXT',
+     NULL, NULL, NULL, NULL, NULL, '2026-03-11 21:08:00'),
+    (980005, @uid_9, '我明天把“会话未读闭环”补一下，顺便测 WS 离线补发。', 'TEXT',
+     NULL, NULL, NULL, NULL, NULL, '2026-03-12 09:10:00')
 ON DUPLICATE KEY UPDATE
     `sender_id` = VALUES(`sender_id`),
     `content` = VALUES(`content`),
@@ -221,7 +412,16 @@ INSERT INTO `wf_forum_thread` (
      86, 1, 2, 970103, @uid_1, '2026-03-10 10:15:00', '2026-03-10 09:45:00', NOW()),
     (980103, @board_life, @uid_3, '今日打卡：你在听什么歌？',
      '欢迎在这里分享今日循环播放歌单。', 'NORMAL', 'NORMAL', 0,
-     15, 0, 1, NULL, NULL, '2026-03-10 08:40:00', '2026-03-10 08:40:00', NOW())
+     15, 0, 1, NULL, NULL, '2026-03-10 08:40:00', '2026-03-10 08:40:00', NOW()),
+    (980104, @board_dev, @uid_9, '会话未读模型：我现在这样设计对吗？',
+     '我计划只在 `wf_conversation` 维护未读数，消息表不引入 read 状态，客户端进入会话后调用 /read 清零。这样是否足够覆盖论文主线？', 'NORMAL', 'NORMAL', 0,
+     33, 3, 1, 970106, @uid_2, '2026-03-12 10:40:00', '2026-03-12 10:10:00', NOW()),
+    (980105, @board_general, @uid_10, '【反馈】登录后偶现 token 失效？',
+     '刚刚用邮箱登录后刷新会话列表提示未授权，过一会又好了。有人遇到过吗？（可能是我本地缓存问题）', 'NORMAL', 'NORMAL', 0,
+     42, 1, 0, 970107, @uid_1, '2026-03-12 11:05:00', '2026-03-12 11:00:00', NOW()),
+    (980106, @board_life, @uid_7, '周末大家准备怎么放松？',
+     '我打算先把论文结构列完，再去跑步。你们呢？', 'NORMAL', 'LOCKED', 0,
+     12, 2, 0, 970109, @uid_6, '2026-03-13 20:11:00', '2026-03-13 19:50:00', NOW())
 ON DUPLICATE KEY UPDATE
     `board_id` = VALUES(`board_id`),
     `author_id` = VALUES(`author_id`),
@@ -244,7 +444,13 @@ INSERT INTO `wf_forum_reply` (
 ) VALUES
     (970101, 980101, 2, @uid_2, '已读，感谢公告。', NULL, 2, 'NORMAL', '2026-03-10 10:05:00', NOW()),
     (970102, 980101, 3, @uid_1, '收到，后续会持续更新。', 970101, 1, 'NORMAL', '2026-03-10 10:12:00', NOW()),
-    (970103, 980102, 2, @uid_1, '链路很稳，晚点补压测结果。', NULL, 1, 'NORMAL', '2026-03-10 10:15:00', NOW())
+    (970103, 980102, 2, @uid_1, '链路很稳，晚点补压测结果。', NULL, 1, 'NORMAL', '2026-03-10 10:15:00', NOW()),
+    (970104, 980104, 2, @uid_2, '如果只做论文主线，我觉得够了：未读数放会话表，进入会话就清零。后续要扩“逐条已读”再另起表。', NULL, 2, 'NORMAL', '2026-03-12 10:25:00', NOW()),
+    (970105, 980104, 3, @uid_6, '赞同。另外未读总数接口也要测一下：/conversations/unread-count。', 970104, 1, 'NORMAL', '2026-03-12 10:33:00', NOW()),
+    (970106, 980104, 4, @uid_9, '收到，我先按最小可交付闭环做。', 970105, 0, 'NORMAL', '2026-03-12 10:40:00', NOW()),
+    (970107, 980105, 2, @uid_1, '我之前也遇到过，后来发现是本地时间偏差导致 token 校验异常。你可以先对齐系统时间再试。', NULL, 1, 'NORMAL', '2026-03-12 11:05:00', NOW()),
+    (970108, 980106, 2, @uid_6, '我周末想把 Lobby 的消息分页再压一下，避免首屏抖动。', NULL, 0, 'NORMAL', '2026-03-13 20:05:00', NOW()),
+    (970109, 980106, 3, @uid_7, '锁帖前留个记录：本帖到此为止，周末愉快。', 970108, 0, 'NORMAL', '2026-03-13 20:11:00', NOW())
 ON DUPLICATE KEY UPDATE
     `thread_id` = VALUES(`thread_id`),
     `floor_no` = VALUES(`floor_no`),
@@ -264,7 +470,10 @@ INSERT INTO `wf_forum_thread_like` (
     (980101, @uid_3, '2026-03-10 10:20:00'),
     (980102, @uid_1, '2026-03-10 10:22:00'),
     (980102, @uid_2, '2026-03-10 10:23:00'),
-    (980103, @uid_1, '2026-03-10 10:24:00')
+    (980103, @uid_1, '2026-03-10 10:24:00'),
+    (980104, @uid_1, '2026-03-12 10:45:00'),
+    (980104, @uid_2, '2026-03-12 10:46:00'),
+    (980105, @uid_4, '2026-03-12 11:10:00')
 ON DUPLICATE KEY UPDATE
     `create_time` = VALUES(`create_time`);
 
@@ -274,33 +483,74 @@ INSERT INTO `wf_forum_reply_like` (
     (970101, @uid_1, '2026-03-10 10:25:00'),
     (970101, @uid_3, '2026-03-10 10:26:00'),
     (970102, @uid_2, '2026-03-10 10:27:00'),
-    (970103, @uid_2, '2026-03-10 10:28:00')
+    (970103, @uid_2, '2026-03-10 10:28:00'),
+    (970104, @uid_1, '2026-03-12 10:47:00'),
+    (970107, @uid_2, '2026-03-12 11:12:00')
 ON DUPLICATE KEY UPDATE
     `create_time` = VALUES(`create_time`);
 
-UPDATE `wf_forum_board`
-SET `thread_count` = 1,
-    `reply_count` = 2,
-    `last_thread_id` = 980101,
-    `last_reply_time` = '2026-03-10 10:12:00',
-    `update_time` = NOW()
-WHERE `id` = @board_general;
+-- 论坛统计字段：用聚合回写，避免后续加主题/回复时漏改
+UPDATE `wf_forum_board` b
+SET
+    b.`thread_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_thread` t
+        WHERE t.`board_id` = b.`id` AND t.`status` <> 'DELETED'
+    ),
+    b.`reply_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_reply` r
+        JOIN `wf_forum_thread` t ON t.`id` = r.`thread_id`
+        WHERE t.`board_id` = b.`id` AND t.`status` <> 'DELETED' AND r.`status` <> 'DELETED'
+    ),
+    b.`last_thread_id` = (
+        SELECT t2.`id`
+        FROM `wf_forum_thread` t2
+        WHERE t2.`board_id` = b.`id` AND t2.`status` <> 'DELETED'
+        ORDER BY COALESCE(t2.`last_reply_time`, t2.`create_time`) DESC, t2.`id` DESC
+        LIMIT 1
+    ),
+    b.`last_reply_time` = (
+        SELECT COALESCE(MAX(t3.`last_reply_time`), MAX(t3.`create_time`))
+        FROM `wf_forum_thread` t3
+        WHERE t3.`board_id` = b.`id` AND t3.`status` <> 'DELETED'
+    ),
+    b.`update_time` = NOW()
+WHERE b.`id` IN (@board_general, @board_dev, @board_life);
 
-UPDATE `wf_forum_board`
-SET `thread_count` = 1,
-    `reply_count` = 1,
-    `last_thread_id` = 980102,
-    `last_reply_time` = '2026-03-10 10:15:00',
-    `update_time` = NOW()
-WHERE `id` = @board_dev;
-
-UPDATE `wf_forum_board`
-SET `thread_count` = 1,
-    `reply_count` = 0,
-    `last_thread_id` = 980103,
-    `last_reply_time` = '2026-03-10 08:40:00',
-    `update_time` = NOW()
-WHERE `id` = @board_life;
+UPDATE `wf_forum_thread` t
+SET
+    t.`reply_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_reply` r
+        WHERE r.`thread_id` = t.`id` AND r.`status` <> 'DELETED'
+    ),
+    t.`like_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_thread_like` l
+        WHERE l.`thread_id` = t.`id`
+    ),
+    t.`last_reply_id` = (
+        SELECT r2.`id`
+        FROM `wf_forum_reply` r2
+        WHERE r2.`thread_id` = t.`id` AND r2.`status` <> 'DELETED'
+        ORDER BY r2.`floor_no` DESC, r2.`id` DESC
+        LIMIT 1
+    ),
+    t.`last_reply_user_id` = (
+        SELECT r3.`author_id`
+        FROM `wf_forum_reply` r3
+        WHERE r3.`thread_id` = t.`id` AND r3.`status` <> 'DELETED'
+        ORDER BY r3.`floor_no` DESC, r3.`id` DESC
+        LIMIT 1
+    ),
+    t.`last_reply_time` = (
+        SELECT MAX(r4.`create_time`)
+        FROM `wf_forum_reply` r4
+        WHERE r4.`thread_id` = t.`id` AND r4.`status` <> 'DELETED'
+    ),
+    t.`update_time` = NOW()
+WHERE t.`board_id` IN (@board_general, @board_dev, @board_life);
 
 -- 10) 版务日志样例
 INSERT INTO `wf_forum_moderation_log` (
@@ -343,7 +593,9 @@ INSERT INTO `wf_user_notice` (
     (940001, @uid_1, 'ACHIEVEMENT_UNLOCK', '你解锁了成就「初入群落」，获得头衔「小狼」', 'ACHIEVEMENT', NULL, 0, NULL, '2026-03-10 10:40:00', NOW()),
     (940002, @uid_1, 'THREAD_LIKED', '你的主题收到新的点赞', 'THREAD', 980101, 0, NULL, '2026-03-10 10:42:00', NOW()),
     (940003, @uid_1, 'THREAD_REPLIED', '你的主题收到新的回复', 'THREAD', 980101, 1, '2026-03-10 10:50:00', '2026-03-10 10:45:00', NOW()),
-    (940004, @uid_2, 'FOLLOW_RECEIVED', '你收到新的关注', 'FOLLOW', NULL, 0, NULL, '2026-03-10 10:47:00', NOW())
+    (940004, @uid_2, 'FOLLOW_RECEIVED', '你收到新的关注', 'FOLLOW', NULL, 0, NULL, '2026-03-10 10:47:00', NOW()),
+    (940005, @uid_4, 'MESSAGE_RECEIVED', '你有新的私信（来自 夜航灯塔）', 'THREAD', NULL, 0, NULL, '2026-03-12 22:31:30', NOW()),
+    (940006, @uid_9, 'THREAD_REPLIED', '你的主题收到新的回复', 'THREAD', 980104, 0, NULL, '2026-03-12 10:25:30', NOW())
 ON DUPLICATE KEY UPDATE
     `user_id` = VALUES(`user_id`),
     `notice_type` = VALUES(`notice_type`),
@@ -370,3 +622,255 @@ ON DUPLICATE KEY UPDATE
     `lifted_at` = VALUES(`lifted_at`),
     `create_time` = VALUES(`create_time`),
     `update_time` = NOW();
+
+-- ===========================
+-- 扩展测试数据（更接近真实线上）
+-- 覆盖：更多会话/未读/离线补发、更多论坛状态（DELETED/楼层删除）、更多登录记录与通知类型
+-- ===========================
+
+-- A) 会话与消息（账号7 与 账号8）：构造“对方多条离线未送达”以验证 WS 补发顺序/批量标记 delivered
+SET @conv_user_a_78 := LEAST(@uid_7, @uid_8);
+SET @conv_user_b_78 := GREATEST(@uid_7, @uid_8);
+
+INSERT INTO `wf_conversation` (
+    `user_a_id`, `user_b_id`, `last_message_id`, `last_message`, `last_message_time`,
+    `user_a_unread_count`, `user_b_unread_count`, `create_time`, `update_time`
+) VALUES
+    (@conv_user_a_78, @conv_user_b_78, 990034, '我先发几条，看看离线补发顺不顺', '2026-03-14 22:12:00', 0, 4, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    `last_message_id` = VALUES(`last_message_id`),
+    `last_message` = VALUES(`last_message`),
+    `last_message_time` = VALUES(`last_message_time`),
+    `user_a_unread_count` = VALUES(`user_a_unread_count`),
+    `user_b_unread_count` = VALUES(`user_b_unread_count`),
+    `update_time` = NOW();
+
+SET @conv_78 := (
+    SELECT `id`
+    FROM `wf_conversation`
+    WHERE `user_a_id` = @conv_user_a_78 AND `user_b_id` = @conv_user_b_78
+    LIMIT 1
+);
+
+INSERT INTO `wf_message` (
+    `id`, `conversation_id`, `sender_id`, `receiver_id`, `content`, `msg_type`,
+    `media_key`, `media_width`, `media_height`, `media_size`, `media_mime_type`,
+    `delivered`, `delivered_time`, `create_time`
+) VALUES
+    (990031, @conv_78, @uid_7, @uid_8, '1/4：你现在在线吗？', 'TEXT', NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-03-14 22:10:00'),
+    (990032, @conv_78, @uid_7, @uid_8, '2/4：我在测 WS 补发和 ACK。', 'TEXT', NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-03-14 22:10:20'),
+    (990033, @conv_78, @uid_7, @uid_8, '3/4：如果你刚好离线，重连后应该会一次性推送。', 'TEXT', NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-03-14 22:11:00'),
+    (990034, @conv_78, @uid_7, @uid_8, '4/4：我先发几条，看看离线补发顺不顺', 'TEXT', NULL, NULL, NULL, NULL, NULL, 0, NULL, '2026-03-14 22:12:00')
+ON DUPLICATE KEY UPDATE
+    `conversation_id` = VALUES(`conversation_id`),
+    `sender_id` = VALUES(`sender_id`),
+    `receiver_id` = VALUES(`receiver_id`),
+    `content` = VALUES(`content`),
+    `msg_type` = VALUES(`msg_type`),
+    `media_key` = VALUES(`media_key`),
+    `media_width` = VALUES(`media_width`),
+    `media_height` = VALUES(`media_height`),
+    `media_size` = VALUES(`media_size`),
+    `media_mime_type` = VALUES(`media_mime_type`),
+    `delivered` = VALUES(`delivered`),
+    `delivered_time` = VALUES(`delivered_time`),
+    `create_time` = VALUES(`create_time`);
+
+UPDATE `wf_conversation`
+SET `last_message_id` = 990034,
+    `last_message` = '我先发几条，看看离线补发顺不顺',
+    `last_message_time` = '2026-03-14 22:12:00',
+    `update_time` = NOW()
+WHERE `id` = @conv_78;
+
+-- B) 大厅消息：补 1 条图片 + 1 条文件（覆盖 Lobby 富媒体渲染/下载）
+INSERT INTO `wf_lobby_message` (
+    `id`, `sender_id`, `content`, `msg_type`,
+    `media_key`, `media_width`, `media_height`, `media_size`, `media_mime_type`, `create_time`
+) VALUES
+    (980006, @uid_2, '大厅示例图：复古蓝主题卡片布局', 'IMAGE',
+     'lobby/image/2026/03/theme_preview.png', 1170, 2532, 182744, 'image/png', '2026-03-14 09:20:00'),
+    (980007, @uid_6, '大厅资料：回归清单（草稿）.txt', 'FILE',
+     'lobby/file/2026/03/regression_checklist.txt', NULL, NULL, 8921, 'text/plain', '2026-03-14 09:22:00')
+ON DUPLICATE KEY UPDATE
+    `sender_id` = VALUES(`sender_id`),
+    `content` = VALUES(`content`),
+    `msg_type` = VALUES(`msg_type`),
+    `media_key` = VALUES(`media_key`),
+    `media_width` = VALUES(`media_width`),
+    `media_height` = VALUES(`media_height`),
+    `media_size` = VALUES(`media_size`),
+    `media_mime_type` = VALUES(`media_mime_type`),
+    `create_time` = VALUES(`create_time`);
+
+-- C) 论坛：增加 DELETED 主题 + DELETED 回复，用于列表过滤与权限/统计边界测试
+INSERT INTO `wf_forum_thread` (
+    `id`, `board_id`, `author_id`, `title`, `content`, `thread_type`, `status`, `is_essence`,
+    `view_count`, `reply_count`, `like_count`, `last_reply_id`, `last_reply_user_id`, `last_reply_time`,
+    `create_time`, `update_time`
+) VALUES
+    (980110, @board_general, @uid_11, '【临时】这条主题会被删除（用于测试）',
+     '发完就删，主要测试：主题逻辑删除、列表不展示、统计不计入。', 'NORMAL', 'DELETED', 0,
+     9, 2, 0, 970121, @uid_11, '2026-03-14 10:05:00', '2026-03-14 10:00:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `board_id` = VALUES(`board_id`),
+    `author_id` = VALUES(`author_id`),
+    `title` = VALUES(`title`),
+    `content` = VALUES(`content`),
+    `thread_type` = VALUES(`thread_type`),
+    `status` = VALUES(`status`),
+    `is_essence` = VALUES(`is_essence`),
+    `view_count` = VALUES(`view_count`),
+    `reply_count` = VALUES(`reply_count`),
+    `like_count` = VALUES(`like_count`),
+    `last_reply_id` = VALUES(`last_reply_id`),
+    `last_reply_user_id` = VALUES(`last_reply_user_id`),
+    `last_reply_time` = VALUES(`last_reply_time`),
+    `create_time` = VALUES(`create_time`),
+    `update_time` = NOW();
+
+INSERT INTO `wf_forum_reply` (
+    `id`, `thread_id`, `floor_no`, `author_id`, `content`, `quote_reply_id`, `like_count`, `status`, `create_time`, `update_time`
+) VALUES
+    (970120, 980110, 2, @uid_11, '先回一条，等下删主题。', NULL, 0, 'NORMAL', '2026-03-14 10:03:00', NOW()),
+    (970121, 980110, 3, @uid_11, '这条回复也标记删除，用于测试楼层过滤。', 970120, 0, 'DELETED', '2026-03-14 10:05:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `thread_id` = VALUES(`thread_id`),
+    `floor_no` = VALUES(`floor_no`),
+    `author_id` = VALUES(`author_id`),
+    `content` = VALUES(`content`),
+    `quote_reply_id` = VALUES(`quote_reply_id`),
+    `like_count` = VALUES(`like_count`),
+    `status` = VALUES(`status`),
+    `create_time` = VALUES(`create_time`),
+    `update_time` = NOW();
+
+INSERT INTO `wf_forum_moderation_log` (
+    `id`, `operator_user_id`, `target_type`, `target_id`, `action`, `reason`, `create_time`
+) VALUES
+    (950005, @uid_11, 'THREAD', 980110, 'DELETE_THREAD', 'AUTHOR_OPERATION', '2026-03-14 10:06:00'),
+    (950006, @uid_11, 'REPLY', 970121, 'DELETE_REPLY', 'AUTHOR_OPERATION', '2026-03-14 10:06:10')
+ON DUPLICATE KEY UPDATE
+    `operator_user_id` = VALUES(`operator_user_id`),
+    `target_type` = VALUES(`target_type`),
+    `target_id` = VALUES(`target_id`),
+    `action` = VALUES(`action`),
+    `reason` = VALUES(`reason`),
+    `create_time` = VALUES(`create_time`);
+
+-- D) 登录记录：扩充多终端、多失败原因（用于管理端审计筛选与分页）
+INSERT INTO `wf_login_record` (
+    `id`, `user_id`, `login_method`, `login_result`, `fail_code`, `account_mask`, `ip`, `user_agent`, `client_type`, `client_version`, `login_time`
+) VALUES
+    (960003, @uid_4, 'WOLF_NO', 'SUCCESS', NULL, '1234****93', '192.168.3.20', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome', 'WEB', 'admin-1.0.0', '2026-03-12 21:10:00'),
+    (960004, @uid_6, 'EMAIL', 'SUCCESS', NULL, 'w***6@example.com', '192.168.3.33', 'MiniProgram iOS', 'WECHAT_MINIPROGRAM', '1.0.0', '2026-03-13 09:00:00'),
+    (960005, NULL, 'UNKNOWN', 'FAIL', 2001, '12**90', '192.168.3.88', 'MiniProgram Devtools', 'WECHAT_MINIPROGRAM', '1.0.0', '2026-03-13 09:01:00'),
+    (960006, @uid_12, 'WOLF_NO', 'FAIL', 2001, '1234****01', '192.168.3.55', 'MiniProgram Android', 'WECHAT_MINIPROGRAM', '1.0.0', '2026-03-14 08:40:00')
+ON DUPLICATE KEY UPDATE
+    `user_id` = VALUES(`user_id`),
+    `login_method` = VALUES(`login_method`),
+    `login_result` = VALUES(`login_result`),
+    `fail_code` = VALUES(`fail_code`),
+    `account_mask` = VALUES(`account_mask`),
+    `ip` = VALUES(`ip`),
+    `user_agent` = VALUES(`user_agent`),
+    `client_type` = VALUES(`client_type`),
+    `client_version` = VALUES(`client_version`),
+    `login_time` = VALUES(`login_time`);
+
+-- E) 系统通知：补充“未读/已读混合 + 不同用户”，并覆盖更多业务提示文本
+INSERT INTO `wf_user_notice` (
+    `id`, `user_id`, `notice_type`, `content`, `biz_type`, `biz_id`, `is_read`, `read_time`, `create_time`, `update_time`
+) VALUES
+    (940007, @uid_8, 'MESSAGE_RECEIVED', '你收到了 4 条离线消息', 'THREAD', NULL, 0, NULL, '2026-03-14 22:12:10', NOW()),
+    (940008, @uid_2, 'THREAD_LIKED', '你的主题「聊天图片上传链路调通记录」收到新的点赞', 'THREAD', 980102, 1, '2026-03-12 12:00:00', '2026-03-12 11:58:00', NOW()),
+    (940009, @uid_6, 'FOLLOW_RECEIVED', '你收到新的关注（来自 南风）', 'FOLLOW', NULL, 0, NULL, '2026-03-12 09:30:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `user_id` = VALUES(`user_id`),
+    `notice_type` = VALUES(`notice_type`),
+    `content` = VALUES(`content`),
+    `biz_type` = VALUES(`biz_type`),
+    `biz_id` = VALUES(`biz_id`),
+    `is_read` = VALUES(`is_read`),
+    `read_time` = VALUES(`read_time`),
+    `create_time` = VALUES(`create_time`),
+    `update_time` = NOW();
+
+-- F) 封禁记录：补 1 条 ACTIVE（与 uid_12 的 disabled_by_ban=1 配套），用于测试封禁/禁用链路
+INSERT INTO `wf_user_ban_record` (
+    `id`, `user_id`, `operator_user_id`, `reason`, `start_time`, `end_time`, `status`, `lifted_at`, `create_time`, `update_time`
+) VALUES
+    (930002, @uid_12, @uid_1, '测试样例：当前封禁（用于验证禁用/登录拦截）', '2026-03-14 08:30:00', '2026-04-01 08:30:00', 'ACTIVE', NULL, '2026-03-14 08:30:00', NOW())
+ON DUPLICATE KEY UPDATE
+    `user_id` = VALUES(`user_id`),
+    `operator_user_id` = VALUES(`operator_user_id`),
+    `reason` = VALUES(`reason`),
+    `start_time` = VALUES(`start_time`),
+    `end_time` = VALUES(`end_time`),
+    `status` = VALUES(`status`),
+    `lifted_at` = VALUES(`lifted_at`),
+    `create_time` = VALUES(`create_time`),
+    `update_time` = NOW();
+
+-- G) 重新回写论坛统计（包含扩展数据）
+UPDATE `wf_forum_board` b
+SET
+    b.`thread_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_thread` t
+        WHERE t.`board_id` = b.`id` AND t.`status` <> 'DELETED'
+    ),
+    b.`reply_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_reply` r
+        JOIN `wf_forum_thread` t ON t.`id` = r.`thread_id`
+        WHERE t.`board_id` = b.`id` AND t.`status` <> 'DELETED' AND r.`status` <> 'DELETED'
+    ),
+    b.`last_thread_id` = (
+        SELECT t2.`id`
+        FROM `wf_forum_thread` t2
+        WHERE t2.`board_id` = b.`id` AND t2.`status` <> 'DELETED'
+        ORDER BY COALESCE(t2.`last_reply_time`, t2.`create_time`) DESC, t2.`id` DESC
+        LIMIT 1
+    ),
+    b.`last_reply_time` = (
+        SELECT COALESCE(MAX(t3.`last_reply_time`), MAX(t3.`create_time`))
+        FROM `wf_forum_thread` t3
+        WHERE t3.`board_id` = b.`id` AND t3.`status` <> 'DELETED'
+    ),
+    b.`update_time` = NOW()
+WHERE b.`id` IN (@board_general, @board_dev, @board_life);
+
+UPDATE `wf_forum_thread` t
+SET
+    t.`reply_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_reply` r
+        WHERE r.`thread_id` = t.`id` AND r.`status` <> 'DELETED'
+    ),
+    t.`like_count` = (
+        SELECT COUNT(1)
+        FROM `wf_forum_thread_like` l
+        WHERE l.`thread_id` = t.`id`
+    ),
+    t.`last_reply_id` = (
+        SELECT r2.`id`
+        FROM `wf_forum_reply` r2
+        WHERE r2.`thread_id` = t.`id` AND r2.`status` <> 'DELETED'
+        ORDER BY r2.`floor_no` DESC, r2.`id` DESC
+        LIMIT 1
+    ),
+    t.`last_reply_user_id` = (
+        SELECT r3.`author_id`
+        FROM `wf_forum_reply` r3
+        WHERE r3.`thread_id` = t.`id` AND r3.`status` <> 'DELETED'
+        ORDER BY r3.`floor_no` DESC, r3.`id` DESC
+        LIMIT 1
+    ),
+    t.`last_reply_time` = (
+        SELECT MAX(r4.`create_time`)
+        FROM `wf_forum_reply` r4
+        WHERE r4.`thread_id` = t.`id` AND r4.`status` <> 'DELETED'
+    ),
+    t.`update_time` = NOW()
+WHERE t.`board_id` IN (@board_general, @board_dev, @board_life);

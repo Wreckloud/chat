@@ -17,19 +17,22 @@
 
 ## 2. 当前状态盘点（代码事实）
 
-### 2.1 后端现状
+> 更新说明：本文件最初用于“从 posts/comments 升级到 BBS”的规划。
+> 当前主工程已落地 `/forum/*` 与 `wf_forum_*` 表结构，因此本节的“旧接口/旧表”描述已过时；保留原文仅用于记录演进背景。
 
-当前社区只有一个 `community` 模块，核心能力是：
+### 2.1 后端现状（历史描述，已过时）
 
-- 发帖：`POST /posts`
-- 帖子列表：`GET /posts?page&size`
-- 帖子详情：`GET /posts/{postId}`
-- 发评论：`POST /posts/{postId}/comments`
+（历史）当前社区只有一个 `community` 模块，核心能力是：
 
-当前数据模型：
+-- 发帖：`POST /posts`
+-- 帖子列表：`GET /posts?page&size`
+-- 帖子详情：`GET /posts/{postId}`
+-- 发评论：`POST /posts/{postId}/comments`
 
-- `wf_post`：`user_id + content + room_id + status + create_time/update_time`
-- `wf_comment`：`post_id + user_id + content + status + create_time`
+（历史）当前数据模型：
+
+-- `wf_post`：`user_id + content + room_id + status + create_time/update_time`
+-- `wf_comment`：`post_id + user_id + content + status + create_time`
 
 当前缺失：
 
@@ -240,4 +243,3 @@
 2. 重建后端社区 API 到 `/forum/*`。  
 3. 重构前端三个社区页面的路由与数据绑定。  
 4. 清理旧社区调用链（不留并行旧入口）。
-
