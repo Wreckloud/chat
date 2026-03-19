@@ -594,7 +594,7 @@ INSERT INTO `wf_user_notice` (
     (940002, @uid_1, 'THREAD_LIKED', '你的主题收到新的点赞', 'THREAD', 980101, 0, NULL, '2026-03-10 10:42:00', NOW()),
     (940003, @uid_1, 'THREAD_REPLIED', '你的主题收到新的回复', 'THREAD', 980101, 1, '2026-03-10 10:50:00', '2026-03-10 10:45:00', NOW()),
     (940004, @uid_2, 'FOLLOW_RECEIVED', '你收到新的关注', 'FOLLOW', NULL, 0, NULL, '2026-03-10 10:47:00', NOW()),
-    (940005, @uid_4, 'MESSAGE_RECEIVED', '你有新的私信（来自 夜航灯塔）', 'THREAD', NULL, 0, NULL, '2026-03-12 22:31:30', NOW()),
+    (940005, @uid_4, 'CHAT_MESSAGE_REPLIED', '你的消息收到新的回复', 'CHAT', @conv_14, 0, NULL, '2026-03-12 22:31:30', NOW()),
     (940006, @uid_9, 'THREAD_REPLIED', '你的主题收到新的回复', 'THREAD', 980104, 0, NULL, '2026-03-12 10:25:30', NOW())
 ON DUPLICATE KEY UPDATE
     `user_id` = VALUES(`user_id`),
@@ -782,7 +782,7 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO `wf_user_notice` (
     `id`, `user_id`, `notice_type`, `content`, `biz_type`, `biz_id`, `is_read`, `read_time`, `create_time`, `update_time`
 ) VALUES
-    (940007, @uid_8, 'MESSAGE_RECEIVED', '你收到了 4 条离线消息', 'THREAD', NULL, 0, NULL, '2026-03-14 22:12:10', NOW()),
+    (940007, @uid_8, 'LOBBY_MESSAGE_REPLIED', '你的大厅消息收到新的回复', 'LOBBY', NULL, 0, NULL, '2026-03-14 22:12:10', NOW()),
     (940008, @uid_2, 'THREAD_LIKED', '你的主题「聊天图片上传链路调通记录」收到新的点赞', 'THREAD', 980102, 1, '2026-03-12 12:00:00', '2026-03-12 11:58:00', NOW()),
     (940009, @uid_6, 'FOLLOW_RECEIVED', '你收到新的关注（来自 南风）', 'FOLLOW', NULL, 0, NULL, '2026-03-12 09:30:00', NOW())
 ON DUPLICATE KEY UPDATE
