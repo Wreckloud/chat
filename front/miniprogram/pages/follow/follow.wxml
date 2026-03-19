@@ -11,18 +11,18 @@
     <view wx:for="{{list}}" wx:key="userId" class="user-row">
       <view class="user-main" bindtap="goUserProfile" data-user="{{item}}">
         <retro-avatar
-          class="user-avatar"
+          class="user-avatar u-avatar-top"
           size="small"
           shape="square"
           image="{{item.avatar}}">
           {{item.nickname ? item.nickname.charAt(0) : '行'}}
         </retro-avatar>
         <view class="user-meta">
-          <view class="user-name-line">
-            <text class="user-name">{{item.displayName || item.nickname || item.wolfNo}}</text>
+          <view class="user-name-line u-name-line">
+            <text class="user-name u-name">{{item.displayName || item.nickname || item.wolfNo}}</text>
             <text
               wx:if="{{item.displayTitleName}}"
-              class="user-title-badge retro-title-badge retro-title-badge-sm"
+              class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
               style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
               [{{item.displayTitleName}}]
             </text>

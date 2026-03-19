@@ -1,0 +1,25 @@
+.u-name-line {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 6rpx;
+}
+
+.u-name {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.u-title-badge {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: -1rpx;
+}
+
+.u-avatar-top {
+  align-self: flex-start;
+}

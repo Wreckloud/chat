@@ -22,7 +22,7 @@
 
         <view wx:elif="{{blockItem.type === 'cluster'}}" class="im-cluster {{blockItem.isSelf ? 'im-cluster-self' : ''}}">
           <retro-avatar
-            class="im-avatar"
+            class="im-avatar u-avatar-top"
             size="medium"
             shape="square"
             image="{{blockItem.senderAvatar}}"
@@ -34,6 +34,12 @@
           <view class="im-message-col">
             <view class="im-meta-col">
               <view class="im-name-line">
+                <text
+                  wx:if="{{blockItem.isSelf && blockItem.senderTitleName}}"
+                  class="im-title-badge u-title-badge retro-title-badge retro-title-badge-md"
+                  style="{{blockItem.senderTitleColor ? 'color:' + blockItem.senderTitleColor + ';' : ''}}">
+                  [{{blockItem.senderTitleName}}]
+                </text>
                 <view
                   class="im-name {{blockItem.isSelf ? 'im-name-self' : 'im-name-peer'}}"
                   data-user-id="{{blockItem.senderId}}"
@@ -41,8 +47,8 @@
                   {{blockItem.senderName}}
                 </view>
                 <text
-                  wx:if="{{blockItem.senderTitleName}}"
-                  class="im-title-badge retro-title-badge retro-title-badge-md"
+                  wx:if="{{!blockItem.isSelf && blockItem.senderTitleName}}"
+                  class="im-title-badge u-title-badge retro-title-badge retro-title-badge-md"
                   style="{{blockItem.senderTitleColor ? 'color:' + blockItem.senderTitleColor + ';' : ''}}">
                   [{{blockItem.senderTitleName}}]
                 </text>

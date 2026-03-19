@@ -54,7 +54,7 @@
 
 .user-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
   flex: 1;
 }
@@ -68,21 +68,10 @@
   margin-left: 12rpx;
 }
 
-.user-name-line {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
 .user-name {
-  min-width: 0;
-  flex: 1;
-  max-width: 220rpx;
   font-size: 26rpx;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .mutual-tag {

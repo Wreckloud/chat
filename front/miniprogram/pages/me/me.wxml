@@ -4,7 +4,7 @@
       <view class="identity-edit-entry" catchtap="onTapProfileCard">[编辑资料]</view>
       <view class="identity-main" bindtap="onTapUserHome">
         <retro-avatar
-          class="identity-avatar"
+          class="identity-avatar u-avatar-top"
           size="large"
           shape="square"
           image="{{userInfo.avatar || ''}}">
@@ -12,11 +12,11 @@
         </retro-avatar>
 
         <view class="identity-meta">
-          <view class="identity-name-line">
-            <text class="identity-name">{{userInfo.nickname || userInfo.wolfNo}}</text>
+          <view class="identity-name-line u-name-line">
+            <text class="identity-name u-name">{{userInfo.nickname || userInfo.wolfNo}}</text>
             <text
               wx:if="{{userInfo.equippedTitleName}}"
-              class="identity-title-badge retro-title-badge retro-title-badge-lg"
+              class="identity-title-badge u-title-badge retro-title-badge retro-title-badge-lg"
               style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
               [{{userInfo.equippedTitleName}}]
             </text>

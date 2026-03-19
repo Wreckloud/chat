@@ -26,7 +26,7 @@
 
 .identity-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding-right: 112rpx;
 }
 
@@ -41,22 +41,11 @@
   margin-left: 14rpx;
 }
 
-.identity-name-line {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6rpx;
-}
-
 .identity-name {
-  min-width: 0;
-  flex: 1;
   font-size: 30rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .identity-wolf {

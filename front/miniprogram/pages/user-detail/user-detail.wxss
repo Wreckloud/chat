@@ -27,7 +27,7 @@
 
 .profile-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14rpx;
 }
 
@@ -36,22 +36,11 @@
   flex: 1;
 }
 
-.nickname-line {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6rpx;
-}
-
 .nickname {
-  min-width: 0;
-  flex: 1;
   font-size: 30rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .wolfno {

@@ -122,13 +122,16 @@ page {
 }
 
 .im-name-peer {
-  color: var(--retro-link-text);
+  color: var(--retro-strong-text);
 }
 
 .im-name-self {
-  color: var(--retro-record-name-self);
+  color: var(--retro-strong-text);
   text-align: right;
-  width: 100%;
+}
+
+.im-cluster-self .im-title-badge {
+  margin-left: 0;
 }
 
 .im-meta-time {

@@ -4,18 +4,18 @@
   <view class="im-header">
     <view class="im-header-main" catchtap="goUserProfile">
       <retro-avatar
-        class="im-header-avatar"
+        class="im-header-avatar u-avatar-top"
         size="medium"
         shape="square"
         image="{{targetUser.avatar}}">
         {{targetUser.nickname ? targetUser.nickname.charAt(0) : '行'}}
       </retro-avatar>
       <view class="im-header-meta">
-        <view class="im-header-name-line">
-          <text class="im-header-name">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
+        <view class="im-header-name-line u-name-line">
+          <text class="im-header-name u-name">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</text>
           <text
             wx:if="{{targetUser.displayTitleName}}"
-            class="im-header-title-badge retro-title-badge retro-title-badge-md"
+            class="im-header-title-badge u-title-badge retro-title-badge retro-title-badge-md"
             style="{{targetUser.displayTitleColor ? 'color:' + targetUser.displayTitleColor + ';' : ''}}">
             [{{targetUser.displayTitleName}}]
           </text>

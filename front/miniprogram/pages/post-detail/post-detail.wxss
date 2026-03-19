@@ -87,7 +87,7 @@
   min-width: 0;
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .author-avatar {
@@ -101,20 +101,9 @@
 }
 
 .thread-name {
-  min-width: 0;
-  flex: 1;
   font-size: 28rpx;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.thread-name-line {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
 }
 
 .thread-time {
@@ -136,8 +125,26 @@
 }
 
 .thread-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
   font-size: 21rpx;
+  line-height: 1;
   color: var(--retro-accent-color);
+}
+
+.thread-like-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.thread-like-label-liked {
+  color: var(--retro-accent-text);
+}
+
+.thread-like-count {
+  color: var(--retro-muted-text);
 }
 
 .thread-manage-actions {
@@ -236,7 +243,7 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .reply-avatar {
@@ -260,20 +267,9 @@
 }
 
 .reply-author {
-  min-width: 0;
-  flex: 1;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 24rpx;
   font-weight: 600;
-}
-
-.reply-author-line {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
 }
 
 .reply-time {
@@ -319,18 +315,31 @@
   gap: 16rpx;
 }
 
-.quote-btn {
+.reply-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  line-height: 1;
   font-size: 21rpx;
   color: var(--retro-accent-color);
 }
 
-.reply-like-btn {
-  font-size: 21rpx;
-  color: var(--retro-accent-color);
+.reply-action-text,
+.reply-action-count {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.reply-action-count {
+  color: var(--retro-muted-text);
+}
+
+.reply-like-btn-liked {
+  color: var(--retro-accent-text);
 }
 
 .reply-delete-btn {
-  font-size: 21rpx;
   color: #b4474f;
 }
 

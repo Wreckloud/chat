@@ -52,7 +52,7 @@
             <view class="session-pin-bar {{item.pinned ? 'session-pin-bar-active' : ''}}"></view>
             <view class="session-user">
               <retro-avatar
-                class="session-avatar {{item.isOnline ? '' : 'session-avatar-offline'}}"
+                class="session-avatar u-avatar-top {{item.isOnline ? '' : 'session-avatar-offline'}}"
                 size="medium"
                 shape="square"
                 image="{{item.targetAvatar}}">
@@ -60,11 +60,11 @@
               </retro-avatar>
 
               <view class="session-user-meta">
-                <view class="session-name-line">
-                  <text class="session-name">{{item.displayName || item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
+                <view class="session-name-line u-name-line">
+                  <text class="session-name u-name">{{item.displayName || item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
                   <text
                     wx:if="{{item.displayTitleName}}"
-                    class="session-title-badge retro-title-badge retro-title-badge-md"
+                    class="session-title-badge u-title-badge retro-title-badge retro-title-badge-md"
                     style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
                     [{{item.displayTitleName}}]
                   </text>

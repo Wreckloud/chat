@@ -35,28 +35,16 @@
   margin-left: 12rpx;
 }
 
-.im-header-name-line {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6rpx;
-}
-
 .im-header-title-badge {
   max-width: 140rpx;
 }
 
 .im-header-name {
   display: block;
-  min-width: 0;
-  flex: 1;
-  max-width: 410rpx;
   font-size: 29rpx;
   font-weight: 600;
   color: var(--retro-strong-text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .im-header-actions {

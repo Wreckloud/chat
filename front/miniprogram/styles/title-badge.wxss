@@ -1,7 +1,9 @@
 .retro-title-badge {
   flex-shrink: 0;
   margin-left: 6rpx;
-  line-height: 1.2;
+  display: inline-flex;
+  align-items: flex-start;
+  line-height: 1;
   color: var(--retro-accent-text);
   white-space: nowrap;
   overflow: hidden;
@@ -26,5 +28,5 @@
 .retro-title-badge-xl {
   max-width: 180rpx;
   font-size: 21rpx;
-  line-height: 1.3;
+  line-height: 1;
 }

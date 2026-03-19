@@ -26,18 +26,18 @@
             data-user-id="{{thread.author.userId}}"
             bindtap="onTapUserElement">
             <retro-avatar
-              class="author-avatar"
+              class="author-avatar u-avatar-top"
               size="medium"
               shape="square"
               image="{{thread.author.avatar}}">
               {{thread.author.nickname ? thread.author.nickname.charAt(0) : '行'}}
             </retro-avatar>
             <view class="thread-info">
-              <view class="thread-name-line">
-                <text class="thread-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
+              <view class="thread-name-line u-name-line">
+                <text class="thread-name u-name">{{thread.author.displayName || thread.author.nickname || thread.author.wolfNo}}</text>
                 <text
                   wx:if="{{thread.author.displayTitleName}}"
-                  class="user-title-badge retro-title-badge retro-title-badge-sm"
+                  class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
                   style="{{thread.author.displayTitleColor ? 'color:' + thread.author.displayTitleColor + ';' : ''}}">
                   [{{thread.author.displayTitleName}}]
                 </text>
@@ -48,7 +48,8 @@
           <view class="thread-stat-wrap">
             <view class="thread-stat">回 {{thread.replyCount}} / 看 {{thread.viewCount}}</view>
             <view class="thread-like-btn" bindtap="handleToggleThreadLike">
-              {{thread.likedByCurrentUser ? '[已赞]' : '[点赞]'}} {{thread.likeCount || 0}}
+              <text class="thread-like-label {{thread.likedByCurrentUser ? 'thread-like-label-liked' : ''}}">{{thread.likedByCurrentUser ? '已赞' : '点赞'}}</text>
+              <text class="thread-like-count">{{thread.likeCount || 0}}</text>
             </view>
             <view wx:if="{{canManageThread}}" class="thread-manage-actions">
               <text class="manage-btn" bindtap="handleToggleLock">{{thread.status === 'LOCKED' ? '解锁' : '锁帖'}}</text>
@@ -93,18 +94,18 @@
               data-user-id="{{item.author.userId}}"
               bindtap="onTapUserElement">
               <retro-avatar
-                class="reply-avatar"
+                class="reply-avatar u-avatar-top"
                 size="small"
                 shape="square"
                 image="{{item.author.avatar}}">
                 {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
               </retro-avatar>
               <view class="reply-info">
-                <view class="reply-author-line">
-                  <text class="reply-author">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
+                <view class="reply-author-line u-name-line">
+                  <text class="reply-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</text>
                   <text
                     wx:if="{{item.author.displayTitleName}}"
-                    class="user-title-badge retro-title-badge retro-title-badge-sm"
+                    class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
                     style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
                     [{{item.author.displayTitleName}}]
                   </text>
@@ -120,7 +121,7 @@
             {{item.quoteAuthor.displayName || item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}
             <text
               wx:if="{{item.quoteAuthor.displayTitleName}}"
-              class="user-title-badge retro-title-badge retro-title-badge-sm"
+              class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
               style="{{item.quoteAuthor.displayTitleColor ? 'color:' + item.quoteAuthor.displayTitleColor + ';' : ''}}">
               [{{item.quoteAuthor.displayTitleName}}]
             </text>
@@ -137,11 +138,16 @@
             bindtap="previewReplyImage" />
 
           <view class="reply-actions">
-            <text class="reply-like-btn" bindtap="handleToggleReplyLike" data-id="{{item.replyId}}">
-              {{item.likedByCurrentUser ? '[已赞]' : '[点赞]'}} {{item.likeCount || 0}}
-            </text>
-            <text class="quote-btn" bindtap="chooseQuote" data-reply="{{item}}">引用</text>
-            <text wx:if="{{item.canDelete}}" class="reply-delete-btn" bindtap="handleDeleteReply" data-id="{{item.replyId}}">删除</text>
+            <view class="reply-action-btn reply-like-btn {{item.likedByCurrentUser ? 'reply-like-btn-liked' : ''}}" bindtap="handleToggleReplyLike" data-id="{{item.replyId}}">
+              <text class="reply-action-text">{{item.likedByCurrentUser ? '已赞' : '点赞'}}</text>
+              <text class="reply-action-count">{{item.likeCount || 0}}</text>
+            </view>
+            <view class="reply-action-btn quote-btn" bindtap="chooseQuote" data-reply="{{item}}">
+              <text class="reply-action-text">引用</text>
+            </view>
+            <view wx:if="{{item.canDelete}}" class="reply-action-btn reply-delete-btn" bindtap="handleDeleteReply" data-id="{{item.replyId}}">
+              <text class="reply-action-text">删除</text>
+            </view>
           </view>
         </view>
 

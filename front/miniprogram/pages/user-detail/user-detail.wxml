@@ -5,6 +5,7 @@
     <view class="profile-card">
       <view class="profile-main">
         <retro-avatar
+          class="u-avatar-top"
           size="large"
           shape="square"
           image="{{userInfo.avatar}}">
@@ -12,11 +13,11 @@
         </retro-avatar>
 
         <view class="profile-info">
-          <view class="nickname-line">
-            <text class="nickname">{{userInfo.displayName || userInfo.nickname || userInfo.wolfNo}}</text>
+          <view class="nickname-line u-name-line">
+            <text class="nickname u-name">{{userInfo.displayName || userInfo.nickname || userInfo.wolfNo}}</text>
             <text
               wx:if="{{userInfo.displayTitleName}}"
-              class="profile-title-badge retro-title-badge retro-title-badge-lg"
+              class="profile-title-badge u-title-badge retro-title-badge retro-title-badge-lg"
               style="{{userInfo.displayTitleColor ? 'color:' + userInfo.displayTitleColor + ';' : ''}}">
               [{{userInfo.displayTitleName}}]
             </text>
