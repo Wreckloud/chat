@@ -38,7 +38,6 @@
 
 .preview-avatar {
   flex-shrink: 0;
-  border: 1rpx solid var(--retro-avatar-border);
 }
 
 .preview-meta {

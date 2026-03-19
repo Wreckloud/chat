@@ -64,7 +64,6 @@ page {
 }
 
 .im-avatar {
-  border: 1rpx solid var(--retro-avatar-border);
   flex-shrink: 0;
 }
 

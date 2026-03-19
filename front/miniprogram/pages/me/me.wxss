@@ -32,7 +32,6 @@
 
 .identity-avatar {
   flex-shrink: 0;
-  border: 1rpx solid var(--retro-avatar-border);
 }
 
 .identity-meta {

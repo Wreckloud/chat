@@ -1,10 +1,21 @@
 // 统一默认头像资源
 const DEFAULT_AVATAR = '/images/default-avatar.png'
 
+function trimTextField(value) {
+  return typeof value === 'string' ? value.trim() : value
+}
+
 function withDefaultAvatar(user) {
   if (!user) return null
-  // 仅兜底缺失头像，避免覆盖有效头像
-  const normalized = { ...user }
+  // 仅做前端展示数据规整，避免昵称尾空格拉开头衔布局。
+  const normalized = {
+    ...user,
+    nickname: trimTextField(user.nickname),
+    targetNickname: trimTextField(user.targetNickname),
+    displayName: trimTextField(user.displayName),
+    wolfNo: trimTextField(user.wolfNo),
+    targetWolfNo: trimTextField(user.targetWolfNo)
+  }
   if (!normalized.avatar) {
     normalized.avatar = DEFAULT_AVATAR
   }

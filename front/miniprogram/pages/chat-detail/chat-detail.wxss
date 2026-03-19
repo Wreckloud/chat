@@ -26,10 +26,6 @@
   flex: 1;
 }
 
-.im-header-avatar {
-  border: 1rpx solid var(--retro-avatar-border);
-}
-
 .im-header-meta {
   min-width: 0;
   margin-left: 12rpx;

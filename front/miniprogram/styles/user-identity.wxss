@@ -2,12 +2,15 @@
   display: flex;
   align-items: flex-start;
   min-width: 0;
-  gap: 6rpx;
+  gap: 4rpx;
 }
 
 .u-name {
-  flex: 1;
+  flex: 0 1 auto;
+  width: auto;
+  display: inline-block;
   min-width: 0;
+  max-width: 100%;
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
@@ -17,9 +20,9 @@
 .u-title-badge {
   flex-shrink: 0;
   align-self: flex-start;
-  position: relative;
-  top: -2rpx;
-  margin-top: 0;
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-5rpx);
 }
 
 .u-avatar-top {

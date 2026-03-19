@@ -3,7 +3,8 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  border: 1rpx solid var(--retro-avatar-border, #8c9caf);
+  margin: 0;
+  padding: 0;
   background: var(--retro-panel-bg, #eff4fb);
   color: var(--retro-page-text, #1f2d3d);
   font-weight: 600;
@@ -11,8 +12,10 @@
 }
 
 .retro-avatar-image {
+  display: block;
   width: 100%;
   height: 100%;
+  border-radius: 0;
 }
 
 .retro-avatar-fallback {
