@@ -37,7 +37,7 @@
 
 .equipped-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
   gap: 8rpx;
 }
@@ -83,7 +83,7 @@
 
 .achievement-name-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
   gap: 6rpx;
 }

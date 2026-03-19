@@ -12,10 +12,10 @@
       </retro-button>
     </view>
 
-    <view wx:if="{{userInfo && userInfo.equippedTitleName}}" class="equipped-main">
-      <text class="equipped-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
+    <view wx:if="{{userInfo && userInfo.equippedTitleName}}" class="equipped-main u-name-line">
+      <text class="equipped-name u-name">{{userInfo.nickname || userInfo.wolfNo || '行者'}}</text>
       <text
-        class="equipped-title-badge retro-title-badge retro-title-badge-xl"
+        class="equipped-title-badge u-title-badge retro-title-badge retro-title-badge-xl"
         style="{{userInfo.equippedTitleColor ? 'color:' + userInfo.equippedTitleColor + ';' : ''}}">
         [{{userInfo.equippedTitleName}}]
       </text>
@@ -35,11 +35,11 @@
     <view wx:else class="achievement-list">
       <view wx:for="{{achievements}}" wx:key="achievementCode" class="achievement-item">
         <view class="achievement-main">
-          <view class="achievement-name-row">
-            <text class="achievement-name">{{item.name}}</text>
+          <view class="achievement-name-row u-name-line">
+            <text class="achievement-name u-name">{{item.name}}</text>
             <text
               wx:if="{{item.titleName}}"
-              class="achievement-title-badge retro-title-badge retro-title-badge-md"
+              class="achievement-title-badge u-title-badge retro-title-badge retro-title-badge-md"
               style="{{item.titleColor ? 'color:' + item.titleColor + ';' : ''}}">
               [{{item.titleName}}]
             </text>
