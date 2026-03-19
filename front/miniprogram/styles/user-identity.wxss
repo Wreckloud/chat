@@ -22,7 +22,8 @@
   align-self: flex-start;
   display: inline-block;
   line-height: 1;
-  transform: translateY(-5rpx);
+  position: relative;
+  top: -6rpx;
 }
 
 .u-avatar-top {

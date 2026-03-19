@@ -61,13 +61,13 @@
 
               <view class="session-user-meta">
                 <view class="session-name-line u-name-line">
-                  <text class="session-name u-name">{{item.displayName || item.targetNickname || item.targetWolfNo || '未命名会话'}}</text>
-                  <text
+                  <view class="session-name u-name">{{item.displayName || item.targetNickname || item.targetWolfNo || '未命名会话'}}</view>
+                  <view
                     wx:if="{{item.displayTitleName}}"
                     class="session-title-badge u-title-badge retro-title-badge retro-title-badge-md"
                     style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
                     [{{item.displayTitleName}}]
-                  </text>
+                  </view>
                   <text wx:if="{{item.unreadCount > 0}}" class="session-unread">[{{item.unreadCount}}]</text>
                 </view>
                 <text class="session-presence {{item.isOnline ? 'session-presence-online' : ''}}">{{item.presenceText}}</text>

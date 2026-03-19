@@ -158,6 +158,11 @@
   margin-left: 12rpx;
 }
 
+.session-name-line {
+  display: flex;
+  align-items: flex-start;
+}
+
 .session-title-badge {
   max-width: 132rpx;
   font-size: 19rpx;
