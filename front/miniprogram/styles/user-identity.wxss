@@ -17,7 +17,9 @@
 .u-title-badge {
   flex-shrink: 0;
   align-self: flex-start;
-  margin-top: -1rpx;
+  position: relative;
+  top: -2rpx;
+  margin-top: 0;
 }
 
 .u-avatar-top {

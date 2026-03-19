@@ -2,11 +2,11 @@ function resolveDisplayName(user) {
   if (!user) {
     return '行者'
   }
-  const nickname = String(user.nickname || '').trim()
+  const nickname = String(user.nickname || user.targetNickname || '').trim()
   if (nickname) {
     return nickname
   }
-  const wolfNo = String(user.wolfNo || '').trim()
+  const wolfNo = String(user.wolfNo || user.targetWolfNo || '').trim()
   if (wolfNo) {
     return wolfNo
   }

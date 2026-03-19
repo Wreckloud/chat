@@ -23,7 +23,6 @@
       label="称谓"
       placeholder="输入你的公开称谓"
       required="{{true}}"
-      maxlength="{{64}}"
       value="{{nickname}}"
       bind:input="onNicknameInput"
     />

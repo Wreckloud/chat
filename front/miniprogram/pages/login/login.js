@@ -13,6 +13,8 @@ const {
   getPasswordStrengthInlineText
 } = require('../../utils/password')
 
+const NICKNAME_MAX_LEN = 12
+
 const EMPTY_REGISTER_FORM = {
   nickname: '',
   password: '',
@@ -147,6 +149,11 @@ Page({
 
     if (!normalizedNickname) {
       toastError(copy.validation.nicknameRequired)
+      return
+    }
+
+    if (normalizedNickname.length > NICKNAME_MAX_LEN) {
+      toastError(`称谓最多 ${NICKNAME_MAX_LEN} 个字符`)
       return
     }
 

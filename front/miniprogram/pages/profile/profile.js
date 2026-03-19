@@ -8,6 +8,8 @@ const { applyPageTheme } = require('../../utils/page-theme')
 const { normalizeUser } = require('../../utils/user')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
+const NICKNAME_MAX_LEN = 12
+
 function normalizeText(value) {
   if (value === undefined || value === null) {
     return ''
@@ -112,10 +114,12 @@ Page({
       signature: this.data.signature,
       bio: this.data.bio
     }
-    const hasNickname = !!normalizeText(currentForm.nickname)
+    const normalizedNickname = normalizeText(currentForm.nickname)
+    const hasNickname = !!normalizedNickname
+    const nicknameWithinLimit = normalizedNickname.length <= NICKNAME_MAX_LEN
     const hasChanged = !isSameForm(this.originalFormState || {}, currentForm)
     this.setData({
-      canSubmit: hasNickname && hasChanged && !this.data.submitting
+      canSubmit: hasNickname && nicknameWithinLimit && hasChanged && !this.data.submitting
     })
   },
 
@@ -132,6 +136,11 @@ Page({
 
     if (!payload.nickname) {
       toastError('称谓不能为空')
+      return
+    }
+
+    if (payload.nickname.length > NICKNAME_MAX_LEN) {
+      toastError(`称谓最多 ${NICKNAME_MAX_LEN} 个字符`)
       return
     }
 

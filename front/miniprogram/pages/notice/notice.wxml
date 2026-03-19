@@ -2,7 +2,7 @@
   <view class="retro-card notice-card">
     <view class="notice-head">
       <view class="notice-title">系统通知</view>
-      <view class="notice-action" bindtap="onMarkAllRead">[全部已读]</view>
+      <view class="notice-action" bindtap="onMarkAllRead">全部已读</view>
     </view>
 
     <view class="notice-filters">
@@ -12,7 +12,7 @@
         class="notice-filter-item {{activeFilterKey === item.key ? 'notice-filter-item-active' : ''}}"
         bindtap="onTapFilter"
         data-key="{{item.key}}">
-        [{{item.label}}]
+        {{item.label}}
       </view>
     </view>
 
@@ -30,16 +30,17 @@
             wx:for-item="notice"
             class="notice-item {{notice.read ? 'notice-item-read' : ''}} {{notice.navigable ? 'notice-item-nav' : ''}}"
             bindtap="onTapNotice"
+            hover-class="none"
             data-id="{{notice.noticeId}}">
             <view class="notice-row">
-              <text wx:if="{{!notice.read}}" class="notice-unread">[未读]</text>
+              <text class="notice-unread {{notice.read ? 'notice-unread-hidden' : ''}}">未读</text>
               <text class="notice-content">{{notice.content}}</text>
             </view>
             <view class="notice-meta">
               <text>{{notice.typeText}}</text>
               <view class="notice-meta-right">
                 <text>{{notice.timeText}}</text>
-                <text wx:if="{{notice.navigable}}" class="notice-nav-hint">[查看]</text>
+                <text wx:if="{{notice.navigable}}" class="notice-nav-hint">查看</text>
               </view>
             </view>
           </view>

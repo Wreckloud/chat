@@ -33,11 +33,17 @@
 }
 
 .notice-filter-item {
-  padding: 2rpx 8rpx;
-  font-size: 20rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 50rpx;
+  padding: 0 18rpx;
+  line-height: 1;
+  font-size: 23rpx;
   color: var(--retro-muted-text);
   border: 1rpx solid var(--retro-row-border);
   background: rgba(255, 255, 255, 0.5);
+  box-sizing: border-box;
 }
 
 .notice-filter-item-active {
@@ -53,8 +59,16 @@
 }
 
 .notice-action {
-  font-size: 22rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 50rpx;
+  padding: 0 18rpx;
+  line-height: 1;
+  font-size: 23rpx;
   color: var(--retro-accent-text);
+  border: 1rpx solid var(--retro-row-border);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .notice-item {
@@ -63,7 +77,6 @@
 }
 
 .notice-item-nav {
-  cursor: pointer;
 }
 
 .notice-item-read {
@@ -107,15 +120,23 @@
 
 .notice-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8rpx;
 }
 
 .notice-unread {
   flex-shrink: 0;
+  min-width: 46rpx;
+  text-align: left;
   color: var(--retro-accent-text);
-  font-size: 20rpx;
+  font-size: 21rpx;
+  line-height: 1;
   animation: unread-blink 1.2s steps(1, end) infinite;
+}
+
+.notice-unread-hidden {
+  visibility: hidden;
+  animation: none;
 }
 
 .notice-content {
