@@ -74,34 +74,22 @@
 
 .thread-title-line {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8rpx;
+  align-items: baseline;
 }
 
-.thread-tag {
+.thread-board-col {
+  width: 108rpx;
+  flex-shrink: 0;
+  padding-right: 8rpx;
+}
+
+.thread-board-tag {
+  display: block;
   font-size: 20rpx;
-  color: var(--retro-muted-text);
-}
-
-.thread-tag-board {
   color: var(--retro-link-text);
-}
-
-.thread-tag-ann {
-  color: #a24f2a;
-}
-
-.thread-tag-sticky {
-  color: #235e94;
-}
-
-.thread-tag-essence {
-  color: #5f5321;
-}
-
-.thread-tag-locked {
-  color: #7a4258;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .thread-title {

@@ -69,6 +69,7 @@ public class ForumQueryService {
             + "+ CASE WHEN TIMESTAMPDIFF(HOUR, COALESCE(last_reply_time, create_time), NOW()) < 24 THEN 20 ELSE 0 END "
             + "- TIMESTAMPDIFF(HOUR, COALESCE(last_reply_time, create_time), NOW()) * 0.2) DESC, "
             + "COALESCE(last_reply_time, create_time) DESC, create_time DESC, id DESC";
+    private static final List<String> FEED_EXCLUDED_TITLE_PREFIXES = List.of("[公告]", "【公告】", "[反馈]", "【反馈】");
     private static final int RECOMMEND_INTEREST_RATIO = 60;
     private static final int RECOMMEND_HOT_RATIO = 25;
 
@@ -289,14 +290,14 @@ public class ForumQueryService {
     }
 
     private ForumThreadPageVO listLatestFeed(Long userId, long page, long size) {
-        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery()
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery()
                 .last(FEED_LATEST_ORDER_SQL);
         Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size), queryWrapper);
         return toThreadPageVO(userId, result.getRecords(), result.getTotal(), page, size);
     }
 
     private ForumThreadPageVO listHotFeed(Long userId, long page, long size) {
-        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery()
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery()
                 .last(FEED_HOT_ORDER_SQL);
         Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size), queryWrapper);
         return toThreadPageVO(userId, result.getRecords(), result.getTotal(), page, size);
@@ -308,14 +309,14 @@ public class ForumQueryService {
             return forumViewAssembler.toThreadPageVO(Collections.emptyList(), 0L, page, size);
         }
 
-        LambdaQueryWrapper<WfForumThread> countQueryWrapper = buildVisibleThreadQuery();
+        LambdaQueryWrapper<WfForumThread> countQueryWrapper = buildFeedVisibleThreadQuery();
         countQueryWrapper.in(WfForumThread::getAuthorId, friendIds);
         Long total = wfForumThreadMapper.selectCount(countQueryWrapper);
         if (total == null || total <= 0L) {
             return forumViewAssembler.toThreadPageVO(Collections.emptyList(), 0L, page, size);
         }
 
-        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery();
         queryWrapper.in(WfForumThread::getAuthorId, friendIds)
                 .last(FEED_LATEST_ORDER_SQL);
         Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
@@ -364,7 +365,7 @@ public class ForumQueryService {
             fillRemainingThreads(mixedThreads, fallbackPool, pageSize);
         }
 
-        Long total = wfForumThreadMapper.selectCount(buildVisibleThreadQuery());
+        Long total = wfForumThreadMapper.selectCount(buildFeedVisibleThreadQuery());
         long safeTotal = total == null ? 0L : total;
         return toThreadPageVO(userId, mixedThreads, safeTotal, page, size);
     }
@@ -541,7 +542,7 @@ public class ForumQueryService {
         if (size <= 0L) {
             return Collections.emptyList();
         }
-        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery().last(orderSql);
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery().last(orderSql);
         Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
         return result.getRecords();
     }
@@ -550,7 +551,7 @@ public class ForumQueryService {
         if (authorIds == null || authorIds.isEmpty() || size <= 0L) {
             return Collections.emptyList();
         }
-        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery();
         queryWrapper.in(WfForumThread::getAuthorId, authorIds).last(orderSql);
         Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
         return result.getRecords();
@@ -560,7 +561,7 @@ public class ForumQueryService {
         if (size <= 0L) {
             return Collections.emptyList();
         }
-        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery();
         if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
             queryWrapper.notIn(WfForumThread::getAuthorId, excludedAuthorIds);
         }
@@ -572,6 +573,15 @@ public class ForumQueryService {
     private LambdaQueryWrapper<WfForumThread> buildVisibleThreadQuery() {
         LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+        return queryWrapper;
+    }
+
+    private LambdaQueryWrapper<WfForumThread> buildFeedVisibleThreadQuery() {
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        queryWrapper.ne(WfForumThread::getThreadType, ForumThreadType.ANNOUNCEMENT);
+        for (String titlePrefix : FEED_EXCLUDED_TITLE_PREFIXES) {
+            queryWrapper.notLikeRight(WfForumThread::getTitle, titlePrefix);
+        }
         return queryWrapper;
     }
 

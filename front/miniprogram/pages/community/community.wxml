@@ -26,11 +26,9 @@
       bindtap="goPostDetail"
       data-id="{{item.threadId}}">
       <view class="thread-title-line">
-        <text wx:if="{{item.boardName}}" class="thread-tag thread-tag-board">[{{item.boardName}}]</text>
-        <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag thread-tag-ann">[公告]</text>
-        <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag thread-tag-sticky">[置顶]</text>
-        <text wx:if="{{item.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
-        <text wx:if="{{item.status === 'LOCKED'}}" class="thread-tag thread-tag-locked">[锁]</text>
+        <view class="thread-board-col">
+          <text class="thread-board-tag">[{{item.boardName || '广场'}}]</text>
+        </view>
         <text class="thread-title">{{item.title}}</text>
       </view>
 
