@@ -182,21 +182,14 @@ public class ForumService {
             return;
         }
 
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, threadId)
-                .eq(WfForumThread::getAuthorId, userId)
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = buildThreadAuthorUpdateWrapper(userId, threadId);
+        updateWrapper
                 .eq(WfForumThread::getStatus, thread.getStatus())
                 .set(WfForumThread::getStatus, targetStatus);
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper));
 
         String action = locked ? ForumModerationLogConstants.ACTION_LOCK_THREAD : ForumModerationLogConstants.ACTION_UNLOCK_THREAD;
-        forumModerationLogService.record(
-                userId,
-                ForumModerationLogConstants.TARGET_THREAD,
-                threadId,
-                action,
-                ForumModerationLogConstants.REASON_AUTHOR_OPERATION
-        );
+        recordThreadAuthorAction(userId, threadId, action);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -210,22 +203,14 @@ public class ForumService {
             return;
         }
 
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, threadId)
-                .eq(WfForumThread::getAuthorId, userId)
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = buildThreadAuthorUpdateWrapper(userId, threadId);
+        updateWrapper
                 .eq(WfForumThread::getThreadType, thread.getThreadType())
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
                 .set(WfForumThread::getThreadType, targetType);
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper));
 
         String action = sticky ? ForumModerationLogConstants.ACTION_STICKY_THREAD : ForumModerationLogConstants.ACTION_UNSTICKY_THREAD;
-        forumModerationLogService.record(
-                userId,
-                ForumModerationLogConstants.TARGET_THREAD,
-                threadId,
-                action,
-                ForumModerationLogConstants.REASON_AUTHOR_OPERATION
-        );
+        recordThreadAuthorAction(userId, threadId, action);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -238,21 +223,13 @@ public class ForumService {
             return;
         }
 
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, threadId)
-                .eq(WfForumThread::getAuthorId, userId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = buildThreadAuthorUpdateWrapper(userId, threadId);
+        updateWrapper
                 .set(WfForumThread::getIsEssence, essence);
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper));
 
         String action = essence ? ForumModerationLogConstants.ACTION_ESSENCE_THREAD : ForumModerationLogConstants.ACTION_UNESSENCE_THREAD;
-        forumModerationLogService.record(
-                userId,
-                ForumModerationLogConstants.TARGET_THREAD,
-                threadId,
-                action,
-                ForumModerationLogConstants.REASON_AUTHOR_OPERATION
-        );
+        recordThreadAuthorAction(userId, threadId, action);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -279,13 +256,7 @@ public class ForumService {
         forumContentMaintenanceService.deleteReplyLikesByReplyIds(replyIds);
 
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
-        forumModerationLogService.record(
-                userId,
-                ForumModerationLogConstants.TARGET_THREAD,
-                threadId,
-                ForumModerationLogConstants.ACTION_DELETE_THREAD,
-                ForumModerationLogConstants.REASON_AUTHOR_OPERATION
-        );
+        recordThreadAuthorAction(userId, threadId, ForumModerationLogConstants.ACTION_DELETE_THREAD);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -437,6 +408,24 @@ public class ForumService {
             return 2;
         }
         return maxFloorNo + 1;
+    }
+
+    private LambdaUpdateWrapper<WfForumThread> buildThreadAuthorUpdateWrapper(Long userId, Long threadId) {
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, threadId)
+                .eq(WfForumThread::getAuthorId, userId)
+                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+        return updateWrapper;
+    }
+
+    private void recordThreadAuthorAction(Long userId, Long threadId, String action) {
+        forumModerationLogService.record(
+                userId,
+                ForumModerationLogConstants.TARGET_THREAD,
+                threadId,
+                action,
+                ForumModerationLogConstants.REASON_AUTHOR_OPERATION
+        );
     }
 
     private void updateBoardOnThreadCreate(Long boardId, Long threadId, LocalDateTime now) {
