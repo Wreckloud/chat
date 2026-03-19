@@ -33,7 +33,7 @@
             hover-class="none"
             data-id="{{notice.noticeId}}">
             <view class="notice-row">
-              <text class="notice-unread {{notice.read ? 'notice-unread-hidden' : ''}}">未读</text>
+              <text class="notice-unread {{notice.read ? 'notice-unread-hidden' : ''}}">[未读]</text>
               <text class="notice-content">{{notice.content}}</text>
             </view>
             <view class="notice-meta">

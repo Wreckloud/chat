@@ -126,7 +126,7 @@
 
 .notice-unread {
   flex-shrink: 0;
-  min-width: 46rpx;
+  min-width: 68rpx;
   text-align: left;
   color: var(--retro-accent-text);
   font-size: 21rpx;
