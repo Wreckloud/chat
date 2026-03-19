@@ -112,15 +112,17 @@ public class ConversationService {
     @Transactional(rollbackFor = Exception.class)
     public void updateLastMessage(Long conversationId, Long messageId, String message, LocalDateTime time) {
         log.debug("更新会话最近消息: conversationId={}, messageId={}", conversationId, messageId);
-        LambdaUpdateWrapper<WfConversation> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfConversation::getId, conversationId)
-                .set(WfConversation::getLastMessageId, messageId)
-                .set(WfConversation::getLastMessage, message)
-                .set(WfConversation::getLastMessageTime, time);
-        int updateRows = conversationMapper.update(null, updateWrapper);
-        if (updateRows != 1) {
-            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        int updateRows = conversationMapper.updateLastMessageIfNewer(conversationId, messageId, message, time);
+        if (updateRows == 1) {
+            return;
         }
+
+        WfConversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BaseException(ErrorCode.CONVERSATION_NOT_FOUND);
+        }
+        log.debug("跳过会话最近消息覆盖: conversationId={}, incomingMessageId={}, currentLastMessageId={}",
+                conversationId, messageId, conversation.getLastMessageId());
     }
 
     @Transactional(rollbackFor = Exception.class)

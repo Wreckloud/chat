@@ -1,5 +1,7 @@
 package com.wreckloud.wolfchat.chat.message.api.vo;
 
+import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -49,6 +51,10 @@ public class MessageVO {
 
     @Schema(description = "媒体对象Key")
     private String mediaKey;
+
+    @JsonIgnore
+    @JSONField(serialize = false)
+    private String mediaPosterKey;
 
     @Schema(description = "媒体访问地址")
     private String mediaUrl;

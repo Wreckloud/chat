@@ -28,6 +28,11 @@ public class WfLobbyMessage {
     private Long senderId;
 
     /**
+     * 客户端消息ID（用于幂等去重）
+     */
+    private String clientMsgId;
+
+    /**
      * 消息内容
      */
     private String content;
@@ -41,6 +46,11 @@ public class WfLobbyMessage {
      * 媒体对象 Key
      */
     private String mediaKey;
+
+    /**
+     * 视频封面对象 Key
+     */
+    private String mediaPosterKey;
 
     /**
      * 媒体宽度
@@ -63,8 +73,22 @@ public class WfLobbyMessage {
     private String mediaMimeType;
 
     /**
+     * 回复目标消息ID
+     */
+    private Long replyToMessageId;
+
+    /**
+     * 回复目标发送者ID
+     */
+    private Long replyToSenderId;
+
+    /**
+     * 回复预览文案
+     */
+    private String replyToPreview;
+
+    /**
      * 发送时间
      */
     private LocalDateTime createTime;
 }
-

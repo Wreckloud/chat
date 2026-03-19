@@ -35,10 +35,14 @@ public final class LobbyMessageConverter {
         vo.setContent(message.getContent());
         vo.setMsgType(message.getMsgType());
         vo.setMediaKey(message.getMediaKey());
+        vo.setMediaPosterKey(message.getMediaPosterKey());
         vo.setMediaWidth(message.getMediaWidth());
         vo.setMediaHeight(message.getMediaHeight());
         vo.setMediaSize(message.getMediaSize());
         vo.setMediaMimeType(message.getMediaMimeType());
+        vo.setReplyToMessageId(message.getReplyToMessageId());
+        vo.setReplyToSenderId(message.getReplyToSenderId());
+        vo.setReplyToPreview(message.getReplyToPreview());
         vo.setCreateTime(message.getCreateTime());
         return vo;
     }

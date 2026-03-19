@@ -118,6 +118,7 @@ async function chooseVideoFromAlbum(page, deps) {
       upload: deps.uploadVideo,
       buildPayload: (media) => buildBaseSendPayload(page, 'VIDEO', {
         mediaKey: media.mediaKey,
+        mediaPosterKey: media.mediaPosterKey,
         mediaWidth: media.mediaWidth,
         mediaHeight: media.mediaHeight,
         mediaSize: media.mediaSize,

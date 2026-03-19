@@ -317,6 +317,39 @@ function previewImage(page, event) {
   })
 }
 
+function onVideoPosterError(page, event) {
+  if (!page || !page.data || !Array.isArray(page.data.messages)) {
+    return
+  }
+  const dataset = event && event.currentTarget ? (event.currentTarget.dataset || {}) : {}
+  const messageId = Number(dataset.messageId)
+  if (!messageId) {
+    return
+  }
+
+  const currentMessages = page.data.messages
+  const targetIndex = currentMessages.findIndex(item => Number(item.messageId) === messageId)
+  if (targetIndex < 0) {
+    return
+  }
+  const targetMessage = currentMessages[targetIndex]
+  if (!targetMessage || !targetMessage.mediaPosterUrl) {
+    return
+  }
+
+  const nextMessages = currentMessages.slice()
+  nextMessages[targetIndex] = {
+    ...targetMessage,
+    mediaPosterUrl: ''
+  }
+  page.setData({
+    messages: nextMessages,
+    messageBlocks: typeof page.buildMessageBlocks === 'function'
+      ? page.buildMessageBlocks(nextMessages)
+      : (page.data.messageBlocks || [])
+  })
+}
+
 function onLongPressMessage(page, event) {
   if (!page || !event || !event.currentTarget || !event.currentTarget.dataset) {
     return
@@ -339,6 +372,22 @@ function onMessageListUpper(page, loadMessagesFn) {
   }
 }
 
+function onTapMessageList(page) {
+  if (!page || !page.data) {
+    return
+  }
+  if (page.data.morePanelVisible) {
+    setMorePanelVisible(page, false)
+    return
+  }
+  if (page.data.keyboardHeightPx <= 0 && !page.data.composerFocused) {
+    return
+  }
+  wx.hideKeyboard()
+  page.setData({ composerFocused: false })
+  imHelper.resetKeyboardHeight(page)
+}
+
 module.exports = {
   initSocket,
   teardownSocket,
@@ -359,5 +408,7 @@ module.exports = {
   sendComposerTextMessage,
   onLongPressMessage,
   onMessageListUpper,
-  previewImage
+  onTapMessageList,
+  previewImage,
+  onVideoPosterError
 }

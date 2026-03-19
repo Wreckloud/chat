@@ -4,13 +4,27 @@
     <view class="session-total">共 {{conversationList.length}}</view>
   </view>
 
-  <view class="lobby-entry" bindtap="openLobby">
-    <view class="lobby-entry-main">
-      <text class="lobby-entry-title">公共聊天室</text>
-      <text class="lobby-entry-sub">{{lobbyActiveText}}</text>
-    </view>
-    <view class="lobby-entry-side">
-      <text class="lobby-entry-online">在线 {{lobbyOnlineCount}}</text>
+  <view class="lobby-entry-wrap">
+    <view class="session-row session-row-lobby" bindtap="openLobby">
+      <view class="session-pin-bar session-pin-bar-active"></view>
+      <view class="session-user">
+        <retro-avatar class="session-avatar u-avatar-top" size="medium" shape="square">
+          厅
+        </retro-avatar>
+
+        <view class="session-user-meta">
+          <view class="session-name-line u-name-line">
+            <view class="session-name u-name">公共聊天室</view>
+          </view>
+          <text class="session-presence">{{lobbyActiveText}}</text>
+        </view>
+      </view>
+
+      <view class="session-preview-col">
+        <text class="session-preview">{{recentUsersText}}</text>
+      </view>
+
+      <text class="session-time">在线 {{lobbyOnlineCount}}</text>
     </view>
   </view>
 

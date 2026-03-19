@@ -1,5 +1,6 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
+const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { uploadChatImage, uploadChatVideo, uploadChatFile } = require('../../utils/oss')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
@@ -50,7 +51,8 @@ Page({
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
     messagePolicy: null,
     systemNoticeBlocks: [],
-    replyDraft: null
+    replyDraft: null,
+    highlightMessageId: 0
   },
 
   SEND_TIMEOUT_MS: imConfig.SEND_TIMEOUT_MS,
@@ -58,6 +60,8 @@ Page({
   CLIENT_MSG_ID_PREFIX: 'c',
   MESSAGE_MERGE_GAP_MS: imHelper.DEFAULT_MESSAGE_MERGE_GAP_MS,
   MARK_READ_MIN_INTERVAL_MS: 1500,
+  RECALL_WINDOW_MS: 5 * 60 * 1000,
+  MESSAGE_HIGHLIGHT_MS: 1600,
   IM_SEND_TYPE: 'SEND',
 
   onLoad(options) {
@@ -106,6 +110,10 @@ Page({
         if (this.markReadThrottleTimer) {
           clearTimeout(this.markReadThrottleTimer)
           this.markReadThrottleTimer = null
+        }
+        if (this.highlightTimer) {
+          clearTimeout(this.highlightTimer)
+          this.highlightTimer = null
         }
       }
     })
@@ -241,10 +249,14 @@ Page({
     imMessageHelper.appendMessage(this, message, {
       isValidMessage: (current) => Boolean(current) && Number(current.conversationId) === Number(this.data.conversationId),
       isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
+      upsertOnDuplicate: true,
+      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
       appendMessageBlock: (payload) => this.appendMessageBlock(payload),
-      afterAppend: (current) => {
+      afterAppend: (current, messages, meta) => {
         this.ensureUserProfileById(current.senderId)
-        this.scrollToBottom()
+        if (!meta || meta.updated !== true) {
+          this.scrollToBottom()
+        }
       }
     })
   },
@@ -260,27 +272,7 @@ Page({
   },
 
   handleLongPressUserMeta(e) {
-    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
-    const isSelf = Number(dataset.isSelf) === 1
-    if (isSelf) {
-      return
-    }
-    const userName = String(dataset.userName || '').trim()
-    if (!userName) {
-      return
-    }
-    const origin = String(this.data.inputMessage || '')
-    const separator = origin && !/\s$/.test(origin) ? ' ' : ''
-    const nextInput = `${origin}${separator}@${userName} `
-    this.setData({
-      inputMessage: nextInput,
-      canSendText: nextInput.trim().length > 0,
-      composerFocused: true
-    })
-    if (this.data.morePanelVisible) {
-      this.setMorePanelVisible(false)
-    }
-    imHelper.refocusComposerInput(this)
+    // 私聊不支持 @ 逻辑，长按用户信息区保持无动作。
   },
 
   handleLongPressMessageRow(e) {
@@ -292,19 +284,31 @@ Page({
     }
 
     const copyContent = String(dataset.copy || '').trim()
-    const actionList = copyContent
-      ? ['回复该消息', '复制内容']
-      : ['回复该消息']
+    const actionList = [{ key: 'reply', label: '回复该消息' }]
+    if (copyContent) {
+      actionList.push({ key: 'copy-all', label: '复制全部' })
+    }
+    if (this.canRecallMessage(dataset)) {
+      actionList.push({ key: 'recall', label: '撤回消息' })
+    }
 
     wx.showActionSheet({
-      itemList: actionList,
+      itemList: actionList.map(item => item.label),
       success: ({ tapIndex }) => {
-        if (tapIndex === 0) {
+        const action = actionList[tapIndex]
+        if (!action) {
+          return
+        }
+        if (action.key === 'reply') {
           this.startReplyDraft(dataset)
           return
         }
-        if (tapIndex === 1 && copyContent) {
+        if (action.key === 'copy-all' && copyContent) {
           wx.setClipboardData({ data: copyContent })
+          return
+        }
+        if (action.key === 'recall') {
+          this.recallMessage(dataset)
         }
       }
     })
@@ -334,6 +338,97 @@ Page({
 
   buildReplyPayload() {
     return chatPolicyHelper.buildReplyPayload(this.data.replyDraft)
+  },
+
+  handleTapReplyQuote(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const targetMessageId = Number(dataset.replyTargetId)
+    if (!targetMessageId) {
+      return
+    }
+    this.jumpToMessage(targetMessageId)
+  },
+
+  hasMessage(messageId) {
+    if (!messageId) {
+      return false
+    }
+    return (this.data.messages || []).some(item => Number(item.messageId) === Number(messageId))
+  },
+
+  async jumpToMessage(messageId) {
+    if (!messageId) {
+      return
+    }
+    let loaded = this.hasMessage(messageId)
+    let loopCount = 0
+    while (!loaded && this.data.hasMore && loopCount < 20) {
+      // 向上补齐历史消息，直到目标消息出现或无更多历史。
+      await this.loadMessages()
+      loaded = this.hasMessage(messageId)
+      loopCount += 1
+    }
+    if (!loaded) {
+      return
+    }
+    this.scrollToMessageAnchor(messageId)
+  },
+
+  scrollToMessageAnchor(messageId) {
+    const anchorId = `im-msg-${messageId}`
+    this.setData({ scrollIntoView: '' }, () => {
+      this.setData({
+        scrollIntoView: anchorId,
+        highlightMessageId: Number(messageId)
+      })
+      if (this.highlightTimer) {
+        clearTimeout(this.highlightTimer)
+      }
+      this.highlightTimer = setTimeout(() => {
+        this.highlightTimer = null
+        if (Number(this.data.highlightMessageId) !== Number(messageId)) {
+          return
+        }
+        this.setData({ highlightMessageId: 0 })
+      }, this.MESSAGE_HIGHLIGHT_MS)
+    })
+  },
+
+  canRecallMessage(dataset) {
+    const data = dataset || {}
+    if (!Number(data.messageId) || Number(data.isSelf) !== 1 || Number(data.recalled) === 1) {
+      return false
+    }
+    const createTime = time.parseDateTime(data.createTime)
+    if (!createTime) {
+      return false
+    }
+    const elapsed = Date.now() - createTime.getTime()
+    if (!Number.isFinite(elapsed)) {
+      return false
+    }
+    return elapsed <= this.RECALL_WINDOW_MS
+  },
+
+  async recallMessage(dataset) {
+    const messageId = Number(dataset && dataset.messageId)
+    if (!messageId || this.data.sending) {
+      return
+    }
+    this.setData({ sending: true })
+    try {
+      await this.sendWsMessageWithAck({
+        type: 'RECALL',
+        conversationId: Number(this.data.conversationId),
+        messageId
+      })
+    } catch (error) {
+      toastError(error, '撤回失败')
+    } finally {
+      if (!this.pageUnloaded) {
+        this.setData({ sending: false })
+      }
+    }
   },
 
   buildMessageBlocks(messages, systemNoticeBlocks = this.data.systemNoticeBlocks) {

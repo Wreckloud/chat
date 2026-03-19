@@ -61,6 +61,10 @@ public class ForumService {
         return forumQueryService.listBoards();
     }
 
+    public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
+        return forumQueryService.listFeedThreads(userId, page, size, tab);
+    }
+
     public ForumThreadPageVO listBoardThreads(Long userId, Long boardId, long page, long size, String tab) {
         return forumQueryService.listBoardThreads(userId, boardId, page, size, tab);
     }

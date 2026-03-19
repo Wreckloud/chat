@@ -49,6 +49,15 @@ public class ForumController {
         return Result.success(forumService.listBoards());
     }
 
+    @Operation(summary = "社区信息流", description = "按推荐/热议/好友/最新获取帖子流")
+    @GetMapping("/feed")
+    public Result<ForumThreadPageVO> listFeedThreads(@RequestParam(defaultValue = "recommend") String tab,
+                                                      @RequestParam(defaultValue = "1") long page,
+                                                      @RequestParam(defaultValue = "20") long size) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(forumService.listFeedThreads(userId, page, size, tab));
+    }
+
     @Operation(summary = "主题列表", description = "分页获取指定版块主题列表")
     @GetMapping("/boards/{boardId}/threads")
     public Result<ForumThreadPageVO> listBoardThreads(@PathVariable Long boardId,

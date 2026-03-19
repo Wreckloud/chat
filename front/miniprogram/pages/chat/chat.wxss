@@ -16,47 +16,11 @@
   box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
-.lobby-entry {
+.lobby-entry-wrap {
   margin: 12rpx 12rpx 0;
-  min-height: 86rpx;
-  padding: 12rpx 14rpx;
-  box-sizing: border-box;
   border: 1rpx solid var(--retro-panel-border);
-  border-top-color: var(--retro-board-head-top-border);
-  border-bottom-color: var(--retro-board-head-bottom-border);
-  background: var(--retro-board-head-bg);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.lobby-entry-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.lobby-entry-title {
-  display: block;
-  font-size: 25rpx;
-  font-weight: 600;
-  color: var(--retro-board-head-text);
-}
-
-.lobby-entry-sub {
-  display: block;
-  margin-top: 4rpx;
-  font-size: 21rpx;
-  color: var(--retro-muted-text-2);
-}
-
-.lobby-entry-side {
-  margin-left: 16rpx;
-}
-
-.lobby-entry-online {
-  font-size: 23rpx;
-  color: var(--retro-link-text);
-  font-weight: 600;
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
 }
 
 .session-title {
@@ -116,6 +80,11 @@
   overflow: hidden;
 }
 
+.session-row-lobby {
+  border-bottom: 0;
+  background: var(--retro-record-peer-bg);
+}
+
 .session-row-offline {
   background: var(--retro-row-even-bg);
 }
@@ -137,6 +106,8 @@
 }
 
 .session-avatar {
+  display: block;
+  line-height: 0;
   background: #ffffff;
   flex-shrink: 0;
 }
@@ -180,14 +151,15 @@
 
 .session-unread {
   margin-left: 4rpx;
+  margin-top: 1rpx;
   align-self: flex-start;
   display: inline-block;
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
   padding: 0;
-  font-size: var(--retro-session-name-font-size);
-  line-height: 1;
+  font-size: var(--retro-session-unread-font-size);
+  line-height: 1.15;
   color: var(--retro-accent-text);
   white-space: nowrap;
 }

@@ -1,3 +1,5 @@
+const time = require('./time')
+
 function resolveMessageId(message) {
   const raw = message ? message.messageId : null
   if (raw == null) {
@@ -8,6 +10,64 @@ function resolveMessageId(message) {
     return null
   }
   return id
+}
+
+function resolveMessageIdNumber(message) {
+  const messageId = resolveMessageId(message)
+  if (messageId == null) {
+    return 0
+  }
+  const parsed = Number(messageId)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0
+  }
+  return parsed
+}
+
+function resolveMessageTimestamp(message) {
+  const parsedDate = time.parseDateTime(message && message.createTime)
+  if (!parsedDate) {
+    return Number.NaN
+  }
+  return parsedDate.getTime()
+}
+
+function compareMessageOrder(left, right) {
+  const leftTime = resolveMessageTimestamp(left)
+  const rightTime = resolveMessageTimestamp(right)
+  const leftTimeValid = Number.isFinite(leftTime)
+  const rightTimeValid = Number.isFinite(rightTime)
+
+  if (leftTimeValid && rightTimeValid && leftTime !== rightTime) {
+    return leftTime - rightTime
+  }
+  if (leftTimeValid && !rightTimeValid) {
+    return -1
+  }
+  if (!leftTimeValid && rightTimeValid) {
+    return 1
+  }
+
+  const leftId = resolveMessageIdNumber(left)
+  const rightId = resolveMessageIdNumber(right)
+  if (leftId > 0 && rightId > 0 && leftId !== rightId) {
+    return leftId - rightId
+  }
+  if (leftId > 0 && rightId <= 0) {
+    return -1
+  }
+  if (leftId <= 0 && rightId > 0) {
+    return 1
+  }
+  return 0
+}
+
+function sortMessagesByOrder(messages) {
+  const safeList = Array.isArray(messages) ? messages : []
+  if (safeList.length <= 1) {
+    return safeList.slice()
+  }
+  return safeList.slice().sort(compareMessageOrder)
 }
 
 function buildMessageIdSet(messages) {
@@ -53,7 +113,7 @@ function mergeUniqueMessages(messages) {
     idSet.add(messageId)
     merged.push(item)
   }
-  return merged
+  return sortMessagesByOrder(merged)
 }
 
 function appendMessage(page, message, options = {}) {
@@ -67,22 +127,53 @@ function appendMessage(page, message, options = {}) {
   const list = Array.isArray(page.data.messages) ? page.data.messages : []
   const messageIdSet = ensureMessageIdSet(page, list)
   const messageId = resolveMessageId(message)
+  const upsertOnDuplicate = options.upsertOnDuplicate === true
+  const hasBuildMessageBlocks = typeof options.buildMessageBlocks === 'function'
 
-  // 先走 O(1) messageId 判重，避免长会话时每次 append 线性扫描。
+  const findDuplicateIndex = () => list.findIndex(item => {
+    if (typeof options.isDuplicate === 'function') {
+      return options.isDuplicate(item, message)
+    }
+    if (messageId != null) {
+      return resolveMessageId(item) === messageId
+    }
+    return Number(item.messageId) === Number(message.messageId)
+  })
+
+  // 先走 O(1) messageId 判重，命中后再定位索引做更新或忽略。
   let isDuplicate = messageId != null && messageIdSet.has(messageId)
-  if (!isDuplicate) {
-    // 自定义判重或无 messageId 场景再回退到遍历判重。
-    isDuplicate = list.some(item => {
-      if (typeof options.isDuplicate === 'function') {
-        return options.isDuplicate(item, message)
-      }
-      if (messageId != null) {
-        return resolveMessageId(item) === messageId
-      }
-      return Number(item.messageId) === Number(message.messageId)
-    })
+  let duplicateIndex = -1
+  if (isDuplicate || messageId == null || typeof options.isDuplicate === 'function') {
+    duplicateIndex = findDuplicateIndex()
+    isDuplicate = duplicateIndex >= 0
   }
   if (isDuplicate) {
+    if (!upsertOnDuplicate || duplicateIndex < 0) {
+      return false
+    }
+    const nextMessages = list.slice()
+    nextMessages[duplicateIndex] = {
+      ...nextMessages[duplicateIndex],
+      ...message
+    }
+    const messages = hasBuildMessageBlocks
+      ? sortMessagesByOrder(nextMessages)
+      : nextMessages
+    const updates = { messages }
+    if (hasBuildMessageBlocks) {
+      updates.messageBlocks = options.buildMessageBlocks(messages)
+    } else if (typeof options.appendMessageBlock === 'function') {
+      updates.messageBlocks = options.appendMessageBlock({
+        messageBlocks: Array.isArray(page.data.messageBlocks) ? page.data.messageBlocks : [],
+        message,
+        previousMessage: duplicateIndex > 0 ? nextMessages[duplicateIndex - 1] : null,
+        messageIndex: duplicateIndex
+      })
+    }
+    page.setData(updates)
+    if (typeof options.afterAppend === 'function') {
+      options.afterAppend(message, messages, { updated: true })
+    }
     return false
   }
 
@@ -90,12 +181,16 @@ function appendMessage(page, message, options = {}) {
     options.beforeAppend(message)
   }
 
-  const messages = [...list, message]
+  const messages = hasBuildMessageBlocks
+    ? sortMessagesByOrder([...list, message])
+    : [...list, message]
   if (messageId != null) {
     messageIdSet.add(messageId)
   }
   const updates = { messages }
-  if (typeof options.appendMessageBlock === 'function') {
+  if (hasBuildMessageBlocks) {
+    updates.messageBlocks = options.buildMessageBlocks(messages)
+  } else if (typeof options.appendMessageBlock === 'function') {
     const previousMessage = list.length > 0 ? list[list.length - 1] : null
     const currentBlocks = Array.isArray(page.data.messageBlocks) ? page.data.messageBlocks : []
     const nextBlocks = options.appendMessageBlock({
@@ -107,13 +202,11 @@ function appendMessage(page, message, options = {}) {
     if (Array.isArray(nextBlocks)) {
       updates.messageBlocks = nextBlocks
     }
-  } else if (typeof options.buildMessageBlocks === 'function') {
-    updates.messageBlocks = options.buildMessageBlocks(messages)
   }
   page.setData(updates)
 
   if (typeof options.afterAppend === 'function') {
-    options.afterAppend(message, messages)
+    options.afterAppend(message, messages, { updated: false })
   }
   return true
 }

@@ -1,6 +1,5 @@
-const BLUR_RESET_DELAY_MS = 60
+const BLUR_RESET_DELAY_MS = 16
 const REFOCUS_DELAY_MS = 24
-const DEFAULT_KEYBOARD_HEIGHT_PX = 300
 
 function resolveKeyboardHeight(event) {
   const rawHeight = event && event.detail ? Number(event.detail.height) : 0
@@ -108,16 +107,17 @@ function handleComposerFocus(page, event, closeMorePanel) {
   }
 
   const eventHeight = resolveKeyboardHeight(event)
-  let focusHeight = eventHeight || Number(page.lastKeyboardHeightPx || 0)
-  if (focusHeight <= 0) {
-    focusHeight = DEFAULT_KEYBOARD_HEIGHT_PX
-  }
-
-  if (focusHeight > 0) {
+  if (eventHeight > 0) {
     page.lastKeyboardOpenedAt = Date.now()
-    const changed = updateKeyboardLayout(page, focusHeight)
+    page.lastKeyboardHeightPx = eventHeight
+    const changed = updateKeyboardLayout(page, eventHeight)
     if (!changed) {
       scrollToBottom(page)
+    }
+  } else {
+    const cachedHeight = Number(page.lastKeyboardHeightPx || 0)
+    if (cachedHeight > 0) {
+      updateKeyboardLayout(page, cachedHeight)
     }
   }
 
@@ -219,4 +219,3 @@ module.exports = {
   shouldKeepComposerAfterSend,
   refocusComposerInput
 }
-

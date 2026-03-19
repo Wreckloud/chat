@@ -31,6 +31,11 @@ public class SendLobbyMessageCommand {
     private String mediaKey;
 
     /**
+     * 视频封面对象Key
+     */
+    private String mediaPosterKey;
+
+    /**
      * 媒体宽度
      */
     private Integer mediaWidth;
@@ -49,5 +54,14 @@ public class SendLobbyMessageCommand {
      * 媒体 MIME 类型
      */
     private String mediaMimeType;
-}
 
+    /**
+     * 回复目标消息ID
+     */
+    private Long replyToMessageId;
+
+    /**
+     * 客户端消息ID（用于幂等去重）
+     */
+    private String clientMsgId;
+}

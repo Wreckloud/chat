@@ -34,6 +34,11 @@ public class WfMessage {
     private Long senderId;
 
     /**
+     * 客户端消息ID（用于幂等去重）
+     */
+    private String clientMsgId;
+
+    /**
      * 接收者ID
      */
     private Long receiverId;
@@ -52,6 +57,11 @@ public class WfMessage {
      * 媒体对象 Key
      */
     private String mediaKey;
+
+    /**
+     * 视频封面对象 Key
+     */
+    private String mediaPosterKey;
 
     /**
      * 媒体宽度

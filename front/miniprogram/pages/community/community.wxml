@@ -1,20 +1,9 @@
 <view class="community-page {{themeClass}}">
   <view class="community-toolbar">
-    <view class="community-title">社区论坛</view>
+    <view class="community-title">社区广场</view>
+    <view class="community-total">共 {{total}}</view>
     <retro-button size="small" theme="primary" bindtap="goCreatePost">发主题</retro-button>
   </view>
-
-  <scroll-view class="board-strip" scroll-x>
-    <view
-      wx:for="{{boards}}"
-      wx:key="boardId"
-      class="board-chip {{item.boardId === activeBoardId ? 'board-chip-active' : ''}}"
-      bindtap="selectBoard"
-      data-id="{{item.boardId}}">
-      <view class="board-name">{{item.name}}</view>
-      <view class="board-meta">[{{item.threadCount}}/{{item.replyCount}}]</view>
-    </view>
-  </scroll-view>
 
   <view class="tab-strip">
     <view
@@ -37,12 +26,14 @@
       bindtap="goPostDetail"
       data-id="{{item.threadId}}">
       <view class="thread-title-line">
+        <text wx:if="{{item.boardName}}" class="thread-tag thread-tag-board">[{{item.boardName}}]</text>
         <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag thread-tag-ann">[公告]</text>
         <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag thread-tag-sticky">[置顶]</text>
         <text wx:if="{{item.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
         <text wx:if="{{item.status === 'LOCKED'}}" class="thread-tag thread-tag-locked">[锁]</text>
         <text class="thread-title">{{item.title}}</text>
       </view>
+
       <view class="thread-meta-line">
         <view class="thread-author-line u-name-line">
           <view class="thread-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</view>
@@ -53,7 +44,11 @@
             [{{item.author.displayTitleName}}]
           </view>
         </view>
-        <text class="thread-stat">回复 {{item.replyCount}} / 浏览 {{item.viewCount}}</text>
+        <text class="thread-stat">回 {{item.replyCount}} / 阅 {{item.viewCount}}</text>
+      </view>
+
+      <view class="thread-time-line">
+        <text class="thread-time">{{item.createTimeText || '--'}}</text>
       </view>
     </view>
 

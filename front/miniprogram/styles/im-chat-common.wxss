@@ -55,9 +55,9 @@ page {
 
 .im-system-notice {
   margin: 12rpx 0;
-  padding: 8rpx 10rpx;
-  border: 1rpx solid var(--retro-divider-border);
-  background: var(--retro-divider-bg);
+  padding: 6rpx 0;
+  border: 0;
+  background: transparent;
   text-align: center;
 }
 
@@ -78,6 +78,8 @@ page {
 }
 
 .im-avatar {
+  display: block;
+  line-height: 0;
   flex-shrink: 0;
 }
 
@@ -85,44 +87,45 @@ page {
   flex: 0 1 auto;
   min-width: 0;
   max-width: 560rpx;
-  margin-left: var(--retro-chat-row-gap);
+  margin-left: 12rpx;
   display: flex;
   flex-direction: column;
 }
 
 .im-cluster-self .im-message-col {
   margin-left: 0;
-  margin-right: var(--retro-chat-row-gap);
+  margin-right: 12rpx;
   align-items: flex-end;
 }
 
 .im-meta-col {
   width: 100%;
   height: var(--retro-chat-meta-height);
+  min-height: var(--retro-chat-meta-height);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .im-name-line,
 .im-time-line {
   width: 100%;
   display: flex;
+  min-width: 0;
 }
 
 .im-name-line {
-  flex: 3;
   align-items: flex-start;
-  gap: 6rpx;
+  gap: 4rpx;
 }
 
 .im-time-line {
-  flex: 1;
   align-items: flex-end;
 }
 
 .im-name {
   max-width: 360rpx;
-  font-size: var(--retro-chat-name-font-size);
+  font-size: var(--retro-session-name-font-size);
   line-height: 1.15;
   font-weight: 600;
   white-space: nowrap;
@@ -131,7 +134,11 @@ page {
 }
 
 .im-title-badge {
-  max-width: 180rpx;
+  max-width: 132rpx;
+  align-self: flex-start;
+  font-size: 19rpx;
+  line-height: 1.15;
+  margin-top: 1rpx;
 }
 
 .im-name-peer {
@@ -148,10 +155,10 @@ page {
 }
 
 .im-meta-time {
-  font-size: var(--retro-chat-time-font-size);
-  line-height: 1;
-  color: var(--retro-muted-text);
-  width: 100%;
+  font-size: var(--retro-session-presence-font-size);
+  line-height: 1.2;
+  color: var(--retro-muted-text-2);
+  width: auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,10 +188,14 @@ page {
 }
 
 .im-reply-quote {
-  margin-bottom: 4rpx;
-  padding: 4rpx 8rpx;
+  margin-bottom: 6rpx;
+  padding: 6rpx 10rpx;
+  border: 1rpx solid var(--retro-divider-border);
   border-left: 4rpx solid var(--retro-record-peer-line);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--retro-divider-bg);
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
 }
 
 .im-cluster-self .im-reply-quote {
@@ -192,11 +203,32 @@ page {
   border-right: 4rpx solid var(--retro-record-self-line);
 }
 
+.im-reply-quote.is-replied-to-me {
+  border-left-color: var(--retro-accent-color);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.im-cluster-self .im-reply-quote.is-replied-to-me {
+  border-right-color: var(--retro-accent-color);
+}
+
+.im-reply-quote-label {
+  flex-shrink: 0;
+  font-size: 19rpx;
+  line-height: 1.25;
+  color: var(--retro-link-text);
+}
+
 .im-reply-quote-text {
-  font-size: 21rpx;
+  flex: 1;
+  min-width: 0;
+  font-size: 20rpx;
   line-height: 1.35;
-  color: var(--retro-muted-text);
+  color: var(--retro-body-text);
   word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .im-text {
@@ -219,6 +251,10 @@ page {
 .im-file {
   color: var(--retro-link-text);
   text-decoration: underline;
+}
+
+.im-recall-text {
+  color: var(--retro-muted-text-2);
 }
 
 .im-image {
@@ -459,4 +495,8 @@ page {
 
 .im-bottom-anchor {
   height: 1rpx;
+}
+
+.im-line.is-highlighted {
+  background: rgba(99, 142, 196, 0.15);
 }

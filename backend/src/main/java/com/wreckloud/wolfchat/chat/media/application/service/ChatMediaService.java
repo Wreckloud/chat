@@ -195,15 +195,18 @@ public class ChatMediaService {
                         command.getMediaSize(),
                         command.getMediaMimeType()
                 );
+                validateNoVideoPosterKey(command.getMediaPosterKey());
                 break;
             case IMAGE:
                 validateImageMessage(userId, command);
+                validateNoVideoPosterKey(command.getMediaPosterKey());
                 break;
             case VIDEO:
                 validateVideoMessage(userId, command);
                 break;
             case FILE:
                 validateFileMessage(userId, command);
+                validateNoVideoPosterKey(command.getMediaPosterKey());
                 break;
             default:
                 throw new BaseException(ErrorCode.PARAM_ERROR, "消息类型不支持");
@@ -250,6 +253,15 @@ public class ChatMediaService {
                 "视频高度不合法",
                 this::validateVideoMimeIfPresentIgnoreExtension
         );
+        if (StringUtils.hasText(command.getMediaPosterKey())) {
+            validateMappedMediaKeyByUser(
+                    userId,
+                    command.getMediaPosterKey(),
+                    CATEGORY_CHAT_IMAGE,
+                    IMAGE_MIME_MAPPING,
+                    "视频封面对象无效"
+            );
+        }
     }
 
     /**
@@ -394,6 +406,12 @@ public class ChatMediaService {
         }
         if (value <= 0) {
             throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, errorMessage);
+        }
+    }
+
+    private void validateNoVideoPosterKey(String mediaPosterKey) {
+        if (StringUtils.hasText(mediaPosterKey)) {
+            throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, "当前消息类型不支持视频封面");
         }
     }
 

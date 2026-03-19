@@ -18,5 +18,14 @@ public interface WfMessageMapper extends BaseMapper<WfMessage> {
 
     @Select("SELECT EXISTS(SELECT 1 FROM wf_message WHERE conversation_id = #{conversationId} AND sender_id = #{senderId} LIMIT 1)")
     Integer existsByConversationAndSender(@Param("conversationId") Long conversationId, @Param("senderId") Long senderId);
+
+    @Select("SELECT * FROM wf_message " +
+            "WHERE sender_id = #{senderId} " +
+            "AND conversation_id = #{conversationId} " +
+            "AND client_msg_id = #{clientMsgId} " +
+            "LIMIT 1")
+    WfMessage selectBySenderAndConversationAndClientMsgId(@Param("senderId") Long senderId,
+                                                          @Param("conversationId") Long conversationId,
+                                                          @Param("clientMsgId") String clientMsgId);
 }
 

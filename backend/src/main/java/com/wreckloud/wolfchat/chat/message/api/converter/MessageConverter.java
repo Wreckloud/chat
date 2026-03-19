@@ -37,6 +37,7 @@ public final class MessageConverter {
         vo.setContent(message.getContent());
         vo.setMsgType(message.getMsgType());
         vo.setMediaKey(message.getMediaKey());
+        vo.setMediaPosterKey(message.getMediaPosterKey());
         vo.setMediaWidth(message.getMediaWidth());
         vo.setMediaHeight(message.getMediaHeight());
         vo.setMediaSize(message.getMediaSize());

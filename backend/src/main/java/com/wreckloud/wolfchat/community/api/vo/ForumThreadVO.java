@@ -22,6 +22,9 @@ public class ForumThreadVO {
     @Schema(description = "版块ID")
     private Long boardId;
 
+    @Schema(description = "版块名称")
+    private String boardName;
+
     @Schema(description = "主题标题")
     private String title;
 

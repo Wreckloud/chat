@@ -92,6 +92,7 @@ public class MessageController {
         command.setContent(dto.getContent());
         command.setMsgType(dto.getMsgType());
         command.setMediaKey(dto.getMediaKey());
+        command.setMediaPosterKey(dto.getMediaPosterKey());
         command.setMediaWidth(dto.getMediaWidth());
         command.setMediaHeight(dto.getMediaHeight());
         command.setMediaSize(dto.getMediaSize());

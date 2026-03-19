@@ -36,7 +36,17 @@ public enum NoticeType {
     /**
      * 回复被点赞
      */
-    REPLY_LIKED("REPLY_LIKED", "点赞", "THREAD");
+    REPLY_LIKED("REPLY_LIKED", "点赞", "THREAD"),
+
+    /**
+     * 私聊消息被回复
+     */
+    CHAT_MESSAGE_REPLIED("CHAT_MESSAGE_REPLIED", "回复", "CHAT"),
+
+    /**
+     * 大厅消息被回复
+     */
+    LOBBY_MESSAGE_REPLIED("LOBBY_MESSAGE_REPLIED", "回复", "LOBBY");
 
     @EnumValue
     @JsonValue

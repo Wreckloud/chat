@@ -15,9 +15,17 @@ public enum WsType {
      */
     SEND,
     /**
+     * 撤回消息
+     */
+    RECALL,
+    /**
      * 发送大厅消息
      */
     LOBBY_SEND,
+    /**
+     * 撤回大厅消息
+     */
+    LOBBY_RECALL,
     /**
      * 心跳
      */

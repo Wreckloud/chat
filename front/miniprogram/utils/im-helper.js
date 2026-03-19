@@ -3,6 +3,12 @@ const imLayoutHelper = require('./im-layout-helper')
 const imRequestHelper = require('./im-request-helper')
 
 const DEFAULT_MESSAGE_MERGE_GAP_MS = 5 * 60 * 1000
+const IMAGE_MAX_WIDTH_RPX = 320
+const IMAGE_MAX_HEIGHT_RPX = 420
+const IMAGE_MIN_WIDTH_RPX = 120
+const IMAGE_MIN_HEIGHT_RPX = 96
+const IMAGE_FALLBACK_WIDTH_RPX = 280
+const IMAGE_FALLBACK_HEIGHT_RPX = 210
 const VIDEO_MAX_WIDTH_RPX = 420
 const VIDEO_MAX_HEIGHT_RPX = 520
 const VIDEO_MIN_WIDTH_RPX = 220
@@ -91,6 +97,57 @@ function buildVideoRenderStyle(mediaWidth, mediaHeight) {
 
   const roundedWidth = Math.round(renderWidth)
   const roundedHeight = Math.round(renderHeight)
+  return `width:${roundedWidth}rpx;height:${roundedHeight}rpx;`
+}
+
+function buildImageRenderStyle(mediaWidth, mediaHeight) {
+  const width = Number(mediaWidth)
+  const height = Number(mediaHeight)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return `width:${IMAGE_FALLBACK_WIDTH_RPX}rpx;height:${IMAGE_FALLBACK_HEIGHT_RPX}rpx;`
+  }
+
+  const ratio = width / height
+  if (ratio >= 3) {
+    const renderHeight = Math.max(
+      IMAGE_MIN_HEIGHT_RPX,
+      Math.min(IMAGE_MAX_HEIGHT_RPX, Math.round(IMAGE_MAX_WIDTH_RPX / ratio))
+    )
+    return `width:${IMAGE_MAX_WIDTH_RPX}rpx;height:${renderHeight}rpx;`
+  }
+  if (ratio <= 1 / 3) {
+    const renderWidth = Math.max(
+      IMAGE_MIN_WIDTH_RPX,
+      Math.min(IMAGE_MAX_WIDTH_RPX, Math.round(IMAGE_MAX_HEIGHT_RPX * ratio))
+    )
+    return `width:${renderWidth}rpx;height:${IMAGE_MAX_HEIGHT_RPX}rpx;`
+  }
+
+  let renderWidth = IMAGE_MAX_WIDTH_RPX
+  let renderHeight = renderWidth / ratio
+  if (renderHeight > IMAGE_MAX_HEIGHT_RPX) {
+    renderHeight = IMAGE_MAX_HEIGHT_RPX
+    renderWidth = renderHeight * ratio
+  }
+  if (renderWidth < IMAGE_MIN_WIDTH_RPX) {
+    renderWidth = IMAGE_MIN_WIDTH_RPX
+    renderHeight = renderWidth / ratio
+  }
+  if (renderHeight < IMAGE_MIN_HEIGHT_RPX) {
+    renderHeight = IMAGE_MIN_HEIGHT_RPX
+    renderWidth = renderHeight * ratio
+  }
+  if (renderWidth > IMAGE_MAX_WIDTH_RPX) {
+    renderWidth = IMAGE_MAX_WIDTH_RPX
+    renderHeight = renderWidth / ratio
+  }
+  if (renderHeight > IMAGE_MAX_HEIGHT_RPX) {
+    renderHeight = IMAGE_MAX_HEIGHT_RPX
+    renderWidth = renderHeight * ratio
+  }
+
+  const roundedWidth = Math.max(1, Math.round(renderWidth))
+  const roundedHeight = Math.max(1, Math.round(renderHeight))
   return `width:${roundedWidth}rpx;height:${roundedHeight}rpx;`
 }
 
@@ -226,28 +283,44 @@ function getLastDividerLabel(blocks) {
   return ''
 }
 
-function createMessageRow(message, indexToken) {
+function createMessageRow(message, indexToken, currentUserId = 0) {
+  const msgType = message.msgType || 'TEXT'
+  const textContent = typeof message.content === 'string' ? message.content : ''
+  const mediaUrl = message.mediaUrl || ''
+  const linkUrl = extractStandaloneLink(textContent)
+  let copyContent = textContent
+  if (msgType === 'IMAGE' || msgType === 'VIDEO' || msgType === 'FILE') {
+    copyContent = mediaUrl || textContent
+  } else if (linkUrl) {
+    copyContent = linkUrl
+  }
+  const replyToSenderId = Number(message.replyToSenderId) || 0
   return {
     key: `m_${message.messageId || indexToken}`,
     messageId: message.messageId,
-    msgType: message.msgType || 'TEXT',
-    content: message.content || '',
-    linkUrl: extractStandaloneLink(message.content || ''),
-    mediaUrl: message.mediaUrl || '',
+    createTime: message.createTime || '',
+    msgType,
+    recalled: msgType === 'RECALL',
+    content: textContent,
+    linkUrl,
+    copyContent: String(copyContent || ''),
+    mediaUrl,
     mediaPosterUrl: message.mediaPosterUrl || '',
     mediaWidth: message.mediaWidth || 0,
     mediaHeight: message.mediaHeight || 0,
     mediaSize: Number(message.mediaSize) || 0,
     mediaMimeType: message.mediaMimeType || '',
+    imageRenderStyle: buildImageRenderStyle(message.mediaWidth, message.mediaHeight),
     replyToMessageId: Number(message.replyToMessageId) || 0,
-    replyToSenderId: Number(message.replyToSenderId) || 0,
+    replyToSenderId,
+    repliedToMe: replyToSenderId > 0 && Number(currentUserId) > 0 && replyToSenderId === Number(currentUserId),
     replyToPreview: String(message.replyToPreview || '').trim(),
     videoRenderStyle: buildVideoRenderStyle(message.mediaWidth, message.mediaHeight),
     fileLabel: buildFileLabel(message.content || '', message.mediaSize)
   }
 }
 
-function createClusterBlock(message, indexToken, sender, isSelf) {
+function createClusterBlock(message, indexToken, sender, isSelf, currentUserId = 0) {
   const senderName = sender.nickname || sender.wolfNo || '未知用户'
   const senderTitleName = String(sender.equippedTitleName || '').trim()
   const senderTitleColor = String(sender.equippedTitleColor || '').trim()
@@ -262,7 +335,7 @@ function createClusterBlock(message, indexToken, sender, isSelf) {
     senderTitleName,
     senderTitleColor,
     headerTimeText: time.formatMessageMetaTime(message.createTime),
-    rows: [createMessageRow(message, indexToken)]
+    rows: [createMessageRow(message, indexToken, currentUserId)]
   }
 }
 
@@ -305,13 +378,13 @@ function appendMessageBlock(messageBlocks, message, context = {}) {
   if (canMergeLastCluster) {
     const mergedCluster = {
       ...lastBlock,
-      rows: [...(lastBlock.rows || []), createMessageRow(message, indexToken)]
+      rows: [...(lastBlock.rows || []), createMessageRow(message, indexToken, currentUserId)]
     }
     blocks[blocks.length - 1] = mergedCluster
     return blocks
   }
 
-  blocks.push(createClusterBlock(message, indexToken, sender, isSelf))
+  blocks.push(createClusterBlock(message, indexToken, sender, isSelf, currentUserId))
   return blocks
 }
 
@@ -351,10 +424,10 @@ function buildMessageBlocks(messages, context) {
     const senderChanged = !currentCluster || Number(currentCluster.senderId) !== Number(message.senderId)
     const splitByGap = isMessageMergeGapExceeded(previousMessage, message, gapMs)
     if (!currentCluster || senderChanged || splitByGap) {
-      currentCluster = createClusterBlock(message, index, sender, isSelf)
+      currentCluster = createClusterBlock(message, index, sender, isSelf, currentUserId)
       blocks.push(currentCluster)
     } else {
-      currentCluster.rows.push(createMessageRow(message, index))
+      currentCluster.rows.push(createMessageRow(message, index, currentUserId))
     }
 
     previousDateLabel = currentDateLabel

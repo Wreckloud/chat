@@ -11,6 +11,7 @@ import com.wreckloud.wolfchat.chat.lobby.application.service.LobbyService;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.chat.websocket.dto.WsRequest;
 import com.wreckloud.wolfchat.chat.websocket.dto.WsResponse;
@@ -22,6 +23,7 @@ import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -31,6 +33,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -46,6 +49,10 @@ import java.util.function.BiConsumer;
 @Component
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
+    private static final String SEND_DEDUP_KEY_PREFIX = "chat:ws:send:dedup:";
+    private static final Duration SEND_DEDUP_TTL = Duration.ofMinutes(10);
+    private static final String SEND_DEDUP_PENDING = "PENDING";
+
     private final JwtUtil jwtUtil;
     private final MessageService messageService;
     private final LobbyService lobbyService;
@@ -53,13 +60,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final UserService userService;
     private final WsSessionManager sessionManager;
     private final SessionUserService sessionUserService;
+    private final StringRedisTemplate stringRedisTemplate;
     private final Map<WsType, BiConsumer<WebSocketSession, WsRequest>> requestHandlerMap = new EnumMap<>(WsType.class);
 
     @PostConstruct
     public void initRequestHandlers() {
         requestHandlerMap.put(WsType.AUTH, this::handleAuth);
         requestHandlerMap.put(WsType.SEND, this::handleSend);
+        requestHandlerMap.put(WsType.RECALL, this::handleRecall);
         requestHandlerMap.put(WsType.LOBBY_SEND, this::handleLobbySend);
+        requestHandlerMap.put(WsType.LOBBY_RECALL, this::handleLobbyRecall);
         requestHandlerMap.put(WsType.PING, this::handlePingRequest);
     }
 
@@ -199,18 +209,75 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if (!validateSendRequest(session, currentRequest, clientMsgId)) {
                 return;
             }
-            WfMessage message = messageService.sendMessage(buildSendCommand(userId, currentRequest));
-            MessageVO messageVO = buildMessageVOWithSender(message);
-            sendAck(session, clientMsgId, messageVO);
-            pushMessageToReceiver(message, messageVO);
+            String dedupKey = buildSendDedupKey(WsType.SEND, userId, clientMsgId);
+            MessageVO duplicateMessage = resolveDuplicatePrivateMessageVO(session, clientMsgId, dedupKey);
+            if (duplicateMessage != null) {
+                return;
+            }
+            if (!tryMarkSendDedupPending(dedupKey)) {
+                sendError(session, ErrorCode.PARAM_ERROR, "请求处理中，请勿重复发送", clientMsgId);
+                return;
+            }
+            try {
+                WfMessage message = messageService.sendMessage(buildSendCommand(userId, currentRequest));
+                MessageVO messageVO = buildMessageVOWithSender(message);
+                sendAck(session, clientMsgId, messageVO);
+                pushMessageToReceiver(message, messageVO);
+                storeSendDedupMessageId(dedupKey, message.getId());
+            } catch (Exception e) {
+                clearSendDedupPending(dedupKey);
+                throw e;
+            }
         });
     }
 
     private void handleLobbySend(WebSocketSession session, WsRequest request) {
         withAuthenticatedUser(session, request, "发送大厅消息", (userId, clientMsgId, currentRequest) -> {
-            LobbyMessageVO messageVO = lobbyService.sendMessage(buildLobbySendCommand(userId, currentRequest));
+            String dedupKey = buildSendDedupKey(WsType.LOBBY_SEND, userId, clientMsgId);
+            LobbyMessageVO duplicateMessage = resolveDuplicateLobbyMessageVO(session, clientMsgId, dedupKey);
+            if (duplicateMessage != null) {
+                return;
+            }
+            if (!tryMarkSendDedupPending(dedupKey)) {
+                sendError(session, ErrorCode.PARAM_ERROR, "请求处理中，请勿重复发送", clientMsgId);
+                return;
+            }
+            try {
+                LobbyMessageVO messageVO = lobbyService.sendMessage(buildLobbySendCommand(userId, currentRequest));
+                sendAck(session, clientMsgId, messageVO);
+                pushLobbyMessage(userId, messageVO);
+                storeSendDedupMessageId(dedupKey, messageVO.getMessageId());
+            } catch (Exception e) {
+                clearSendDedupPending(dedupKey);
+                throw e;
+            }
+        });
+    }
+
+    private void handleLobbyRecall(WebSocketSession session, WsRequest request) {
+        withAuthenticatedUser(session, request, "撤回大厅消息", (userId, clientMsgId, currentRequest) -> {
+            if (!validateLobbyRecallRequest(session, currentRequest, clientMsgId)) {
+                return;
+            }
+            LobbyMessageVO messageVO = lobbyService.recallMessage(userId, currentRequest.getMessageId());
             sendAck(session, clientMsgId, messageVO);
             pushLobbyMessage(userId, messageVO);
+        });
+    }
+
+    private void handleRecall(WebSocketSession session, WsRequest request) {
+        withAuthenticatedUser(session, request, "撤回消息", (userId, clientMsgId, currentRequest) -> {
+            if (!validateRecallRequest(session, currentRequest, clientMsgId)) {
+                return;
+            }
+            WfMessage message = messageService.recallMessage(
+                    userId,
+                    currentRequest.getConversationId(),
+                    currentRequest.getMessageId()
+            );
+            MessageVO messageVO = buildMessageVOWithSender(message);
+            sendAck(session, clientMsgId, messageVO);
+            pushMessageToConversationPeers(messageVO, message.getSenderId(), message.getReceiverId());
         });
     }
 
@@ -249,6 +316,26 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return true;
     }
 
+    private boolean validateRecallRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
+        if (request.getConversationId() == null) {
+            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
+            return false;
+        }
+        if (request.getMessageId() == null || request.getMessageId() <= 0L) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息ID不能为空", clientMsgId);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateLobbyRecallRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
+        if (request.getMessageId() == null || request.getMessageId() <= 0L) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息ID不能为空", clientMsgId);
+            return false;
+        }
+        return true;
+    }
+
     private void sendAck(WebSocketSession session, String clientMsgId, Object data) {
         WsResponse ack = buildResponse(WsType.ACK, data);
         ack.setClientMsgId(clientMsgId);
@@ -260,6 +347,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void pushMessageToReceiver(WfMessage message, MessageVO messageVO) {
+        if (MessageDeliveryStatus.DELIVERED.equals(message.getDelivered())) {
+            return;
+        }
         WsResponse push = buildMessageResponse(messageVO);
         int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
         if (successCount > 0) {
@@ -271,6 +361,95 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void pushLobbyMessage(Long senderUserId, LobbyMessageVO messageVO) {
         WsResponse push = buildResponse(WsType.LOBBY_MESSAGE, messageVO);
         sessionManager.sendToAll(JSON.toJSONString(push), senderUserId);
+    }
+
+    private void pushMessageToConversationPeers(MessageVO messageVO, Long senderUserId, Long receiverUserId) {
+        WsResponse push = buildMessageResponse(messageVO);
+        String payload = JSON.toJSONString(push);
+        sessionManager.sendToUser(senderUserId, payload);
+        sessionManager.sendToUser(receiverUserId, payload);
+    }
+
+    private String buildSendDedupKey(WsType wsType, Long userId, String clientMsgId) {
+        if (!StringUtils.hasText(clientMsgId) || userId == null || wsType == null) {
+            return null;
+        }
+        return SEND_DEDUP_KEY_PREFIX + wsType.name() + ":" + userId + ":" + clientMsgId.trim();
+    }
+
+    private Long getSendDedupMessageId(String key) {
+        if (!StringUtils.hasText(key)) {
+            return null;
+        }
+        String raw = stringRedisTemplate.opsForValue().get(key);
+        if (!StringUtils.hasText(raw) || SEND_DEDUP_PENDING.equals(raw)) {
+            return null;
+        }
+        try {
+            long parsed = Long.parseLong(raw);
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private boolean tryMarkSendDedupPending(String key) {
+        if (!StringUtils.hasText(key)) {
+            return true;
+        }
+        Boolean created = stringRedisTemplate.opsForValue()
+                .setIfAbsent(key, SEND_DEDUP_PENDING, SEND_DEDUP_TTL);
+        return Boolean.TRUE.equals(created);
+    }
+
+    private void clearSendDedupPending(String key) {
+        if (!StringUtils.hasText(key)) {
+            return;
+        }
+        String current = stringRedisTemplate.opsForValue().get(key);
+        if (SEND_DEDUP_PENDING.equals(current)) {
+            stringRedisTemplate.delete(key);
+        }
+    }
+
+    private void storeSendDedupMessageId(String key, Long messageId) {
+        if (!StringUtils.hasText(key) || messageId == null || messageId <= 0L) {
+            return;
+        }
+        stringRedisTemplate.opsForValue().set(key, String.valueOf(messageId), SEND_DEDUP_TTL);
+    }
+
+    private MessageVO resolveDuplicatePrivateMessageVO(WebSocketSession session, String clientMsgId, String dedupKey) {
+        Long duplicateMessageId = getSendDedupMessageId(dedupKey);
+        if (duplicateMessageId == null) {
+            return null;
+        }
+        WfMessage duplicateMessage = messageService.getById(duplicateMessageId);
+        if (duplicateMessage == null) {
+            stringRedisTemplate.delete(dedupKey);
+            return null;
+        }
+
+        MessageVO messageVO = buildMessageVOWithSender(duplicateMessage);
+        sendAck(session, clientMsgId, messageVO);
+        if (MessageDeliveryStatus.UNDELIVERED.equals(duplicateMessage.getDelivered())) {
+            pushMessageToReceiver(duplicateMessage, messageVO);
+        }
+        return messageVO;
+    }
+
+    private LobbyMessageVO resolveDuplicateLobbyMessageVO(WebSocketSession session, String clientMsgId, String dedupKey) {
+        Long duplicateMessageId = getSendDedupMessageId(dedupKey);
+        if (duplicateMessageId == null) {
+            return null;
+        }
+        LobbyMessageVO messageVO = lobbyService.getMessageById(duplicateMessageId);
+        if (messageVO == null) {
+            stringRedisTemplate.delete(dedupKey);
+            return null;
+        }
+        sendAck(session, clientMsgId, messageVO);
+        return messageVO;
     }
 
     private boolean send(WebSocketSession session, WsResponse response) {
@@ -315,9 +494,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         SendMessageCommand command = new SendMessageCommand();
         command.setUserId(userId);
         command.setConversationId(request.getConversationId());
+        command.setClientMsgId(request.getClientMsgId());
         command.setContent(request.getContent());
         command.setMsgType(request.getMsgType());
         command.setMediaKey(request.getMediaKey());
+        command.setMediaPosterKey(request.getMediaPosterKey());
         command.setMediaWidth(request.getMediaWidth());
         command.setMediaHeight(request.getMediaHeight());
         command.setMediaSize(request.getMediaSize());
@@ -329,13 +510,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private SendLobbyMessageCommand buildLobbySendCommand(Long userId, WsRequest request) {
         SendLobbyMessageCommand command = new SendLobbyMessageCommand();
         command.setUserId(userId);
+        command.setClientMsgId(request.getClientMsgId());
         command.setContent(request.getContent());
         command.setMsgType(request.getMsgType());
         command.setMediaKey(request.getMediaKey());
+        command.setMediaPosterKey(request.getMediaPosterKey());
         command.setMediaWidth(request.getMediaWidth());
         command.setMediaHeight(request.getMediaHeight());
         command.setMediaSize(request.getMediaSize());
         command.setMediaMimeType(request.getMediaMimeType());
+        command.setReplyToMessageId(request.getReplyToMessageId());
         return command;
     }
 }

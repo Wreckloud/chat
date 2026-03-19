@@ -13,16 +13,20 @@ import com.wreckloud.wolfchat.chat.lobby.domain.entity.WfLobbyMessage;
 import com.wreckloud.wolfchat.chat.lobby.infra.mapper.WfLobbyMessageMapper;
 import com.wreckloud.wolfchat.chat.media.application.service.ChatMediaService;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
+import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.application.support.MessageRuleSupport;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
+import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,13 +45,18 @@ import java.util.stream.Collectors;
 public class LobbyService {
     private static final int MAX_PAGE_SIZE = 100;
     private static final int RECENT_USER_LIMIT = 12;
+    private static final int RECALL_WINDOW_MINUTES = 5;
+    private static final int CLIENT_MSG_ID_MAX_LENGTH = 64;
+    private static final String RECALL_CONTENT = "该消息已撤回";
     private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
 
     private final WfLobbyMessageMapper lobbyMessageMapper;
     private final UserService userService;
     private final ChatMediaService chatMediaService;
+    private final MessageMediaService messageMediaService;
     private final UserPresenceService userPresenceService;
     private final OssStorageService ossStorageService;
+    private final UserNoticeService userNoticeService;
 
     /**
      * 发送大厅消息
@@ -55,6 +64,15 @@ public class LobbyService {
     @Transactional(rollbackFor = Exception.class)
     public LobbyMessageVO sendMessage(SendLobbyMessageCommand command) {
         Long userId = command.getUserId();
+        String clientMsgId = normalizeClientMsgId(command.getClientMsgId());
+        command.setClientMsgId(clientMsgId);
+
+        WfLobbyMessage existingMessage = findExistingMessageByClientMsgId(userId, clientMsgId);
+        if (existingMessage != null) {
+            WfUser existingSender = userService.getByIdOrThrow(existingMessage.getSenderId());
+            return fillMedia(LobbyMessageConverter.toLobbyMessageVO(existingMessage, existingSender));
+        }
+
         MessageType msgType = MessageRuleSupport.normalizeMessageType(command.getMsgType());
         String normalizedContent = MessageRuleSupport.normalizeContent(command.getContent(), msgType);
         command.setMsgType(msgType);
@@ -62,22 +80,89 @@ public class LobbyService {
         userService.getEnabledByIdOrThrow(userId);
 
         chatMediaService.validateMessagePayload(userId, toChatMediaCommand(command));
+        WfLobbyMessage replyToMessage = resolveReplyTargetMessage(command.getReplyToMessageId());
 
         WfLobbyMessage message = new WfLobbyMessage();
         message.setSenderId(userId);
+        message.setClientMsgId(clientMsgId);
         message.setContent(normalizedContent);
         message.setMsgType(msgType);
         message.setMediaKey(command.getMediaKey());
+        message.setMediaPosterKey(command.getMediaPosterKey());
         message.setMediaWidth(command.getMediaWidth());
         message.setMediaHeight(command.getMediaHeight());
         message.setMediaSize(command.getMediaSize());
         message.setMediaMimeType(command.getMediaMimeType());
+        if (replyToMessage != null) {
+            message.setReplyToMessageId(replyToMessage.getId());
+            message.setReplyToSenderId(replyToMessage.getSenderId());
+            message.setReplyToPreview(
+                    messageMediaService.buildReplyPreview(replyToMessage.getMsgType(), replyToMessage.getContent())
+            );
+        }
         message.setCreateTime(LocalDateTime.now());
-        int insertRows = lobbyMessageMapper.insert(message);
-        if (insertRows != 1) {
-            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        try {
+            int insertRows = lobbyMessageMapper.insert(message);
+            if (insertRows != 1) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
+        } catch (DuplicateKeyException ex) {
+            WfLobbyMessage duplicatedMessage = findExistingMessageByClientMsgId(userId, clientMsgId);
+            if (duplicatedMessage != null) {
+                WfUser existingSender = userService.getByIdOrThrow(duplicatedMessage.getSenderId());
+                return fillMedia(LobbyMessageConverter.toLobbyMessageVO(duplicatedMessage, existingSender));
+            }
+            throw ex;
+        }
+        if (replyToMessage != null) {
+            userNoticeService.notifyLobbyMessageReplied(replyToMessage.getSenderId(), userId);
         }
 
+        WfUser sender = userService.getByIdOrThrow(userId);
+        return fillMedia(LobbyMessageConverter.toLobbyMessageVO(message, sender));
+    }
+
+    /**
+     * 撤回大厅消息（仅发送者在 5 分钟内可撤回）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LobbyMessageVO recallMessage(Long userId, Long messageId) {
+        if (messageId == null || messageId <= 0L) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息ID不能为空");
+        }
+        userService.getEnabledByIdOrThrow(userId);
+
+        WfLobbyMessage message = lobbyMessageMapper.selectById(messageId);
+        if (message == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息不存在");
+        }
+        if (!userId.equals(message.getSenderId())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "只能撤回自己发送的消息");
+        }
+        if (MessageType.RECALL.equals(message.getMsgType())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息已撤回");
+        }
+
+        LocalDateTime createTime = message.getCreateTime();
+        if (createTime == null || LocalDateTime.now().isAfter(createTime.plusMinutes(RECALL_WINDOW_MINUTES))) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息超过5分钟，无法撤回");
+        }
+
+        message.setMsgType(MessageType.RECALL);
+        message.setContent(RECALL_CONTENT);
+        message.setMediaKey(null);
+        message.setMediaPosterKey(null);
+        message.setMediaWidth(null);
+        message.setMediaHeight(null);
+        message.setMediaSize(null);
+        message.setMediaMimeType(null);
+        message.setReplyToMessageId(null);
+        message.setReplyToSenderId(null);
+        message.setReplyToPreview(null);
+        int updateRows = lobbyMessageMapper.updateById(message);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
         WfUser sender = userService.getByIdOrThrow(userId);
         return fillMedia(LobbyMessageConverter.toLobbyMessageVO(message, sender));
     }
@@ -106,6 +191,18 @@ public class LobbyService {
             fillMedia(item);
         }
         return result;
+    }
+
+    public LobbyMessageVO getMessageById(Long messageId) {
+        if (messageId == null || messageId <= 0L) {
+            return null;
+        }
+        WfLobbyMessage message = lobbyMessageMapper.selectById(messageId);
+        if (message == null) {
+            return null;
+        }
+        WfUser sender = userService.getByIdOrThrow(message.getSenderId());
+        return fillMedia(LobbyMessageConverter.toLobbyMessageVO(message, sender));
     }
 
     /**
@@ -159,21 +256,57 @@ public class LobbyService {
         }
         vo.setMediaUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey()));
         if (MessageType.VIDEO.equals(msgType)) {
-            vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey(), VIDEO_POSTER_PROCESS));
+            if (vo.getMediaPosterKey() != null && !vo.getMediaPosterKey().trim().isEmpty()) {
+                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaPosterKey()));
+            } else {
+                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey(), VIDEO_POSTER_PROCESS));
+            }
         }
         return vo;
+    }
+
+    private WfLobbyMessage resolveReplyTargetMessage(Long replyToMessageId) {
+        if (replyToMessageId == null || replyToMessageId <= 0L) {
+            return null;
+        }
+        WfLobbyMessage replyToMessage = lobbyMessageMapper.selectById(replyToMessageId);
+        if (replyToMessage == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "回复目标消息不存在");
+        }
+        return replyToMessage;
+    }
+
+    private String normalizeClientMsgId(String clientMsgId) {
+        if (!StringUtils.hasText(clientMsgId)) {
+            return null;
+        }
+        String normalized = clientMsgId.trim();
+        if (normalized.length() > CLIENT_MSG_ID_MAX_LENGTH) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息标识长度非法");
+        }
+        return normalized;
+    }
+
+    private WfLobbyMessage findExistingMessageByClientMsgId(Long senderId, String clientMsgId) {
+        if (senderId == null || senderId <= 0L || !StringUtils.hasText(clientMsgId)) {
+            return null;
+        }
+        return lobbyMessageMapper.selectBySenderAndClientMsgId(senderId, clientMsgId);
     }
 
     private SendMessageCommand toChatMediaCommand(SendLobbyMessageCommand command) {
         SendMessageCommand mediaCommand = new SendMessageCommand();
         mediaCommand.setUserId(command.getUserId());
+        mediaCommand.setClientMsgId(command.getClientMsgId());
         mediaCommand.setContent(command.getContent());
         mediaCommand.setMsgType(command.getMsgType());
         mediaCommand.setMediaKey(command.getMediaKey());
+        mediaCommand.setMediaPosterKey(command.getMediaPosterKey());
         mediaCommand.setMediaWidth(command.getMediaWidth());
         mediaCommand.setMediaHeight(command.getMediaHeight());
         mediaCommand.setMediaSize(command.getMediaSize());
         mediaCommand.setMediaMimeType(command.getMediaMimeType());
+        mediaCommand.setReplyToMessageId(command.getReplyToMessageId());
         return mediaCommand;
     }
 

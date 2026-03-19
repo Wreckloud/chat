@@ -29,7 +29,12 @@ public enum MessageType {
     /**
      * 文件消息
      */
-    FILE("FILE");
+    FILE("FILE"),
+
+    /**
+     * 撤回消息（服务端更新原消息类型）
+     */
+    RECALL("RECALL");
 
     /**
      * 存储到数据库的值，同时用于 JSON 序列化

@@ -12,7 +12,7 @@ import lombok.Data;
 @Data
 public class WsRequest {
     /**
-     * 消息类型：AUTH / SEND / LOBBY_SEND / PING
+     * 消息类型：AUTH / SEND / RECALL / LOBBY_SEND / LOBBY_RECALL / PING
      */
     private WsType type;
 
@@ -47,6 +47,11 @@ public class WsRequest {
     private String mediaKey;
 
     /**
+     * 视频封面对象 Key
+     */
+    private String mediaPosterKey;
+
+    /**
      * 媒体宽度
      */
     private Integer mediaWidth;
@@ -70,4 +75,9 @@ public class WsRequest {
      * 回复目标消息ID
      */
     private Long replyToMessageId;
+
+    /**
+     * 操作目标消息ID（RECALL 消息使用）
+     */
+    private Long messageId;
 }

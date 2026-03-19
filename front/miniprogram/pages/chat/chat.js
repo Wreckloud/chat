@@ -5,7 +5,7 @@ const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
-const { DEFAULT_AVATAR } = require('../../utils/user')
+const { DEFAULT_AVATAR, normalizeUser } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
 const { getSwipeActionStyles } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
@@ -16,6 +16,7 @@ const conversationViewHelper = require('../../utils/conversation-view-helper')
 const conversationActionHelper = require('../../utils/conversation-action-helper')
 const { attachDisplayTitle } = require('../../utils/title')
 const { setChatBadge, refreshChatUnreadBadge } = require('../../utils/tab-badge')
+const pullRefreshHelper = require('../../utils/pull-refresh-helper')
 const PRESENCE_FLUSH_DELAY_MS = 80
 const CONVERSATION_RELOAD_DELAY_MS = 300
 
@@ -25,6 +26,7 @@ Page({
     conversationSections: [],
     lobbyOnlineCount: 0,
     lobbyActiveText: '最近活跃 --',
+    recentUsersText: '最近在线 --',
     loading: false,
     themeClass: 'theme-retro-blue'
   },
@@ -143,7 +145,8 @@ Page({
     item.lastMessageTime = message.createTime
     item.isOnline = true
     item.lastSeenAt = ''
-    if (Number(message.senderId) !== Number(this.currentUserId)) {
+    const isRecallMessage = String(message.msgType || '').toUpperCase() === 'RECALL'
+    if (!isRecallMessage && Number(message.senderId) !== Number(this.currentUserId)) {
       item.unreadCount = (Number(item.unreadCount) || 0) + 1
     }
     item.formattedTime = time.formatConversationTime(message.createTime)
@@ -160,10 +163,17 @@ Page({
       const onlineCount = Number(meta.onlineCount) || 0
       const latestActiveAt = meta.latestActiveAt || ''
       const activeText = this.buildLobbyActiveText(latestActiveAt)
-      if (onlineCount === this.data.lobbyOnlineCount && activeText === this.data.lobbyActiveText) {
+      const recentUsersText = this.buildRecentUsersText(Array.isArray(meta.recentUsers) ? meta.recentUsers : [])
+      if (onlineCount === this.data.lobbyOnlineCount
+        && activeText === this.data.lobbyActiveText
+        && recentUsersText === this.data.recentUsersText) {
         return
       }
-      this.setData({ lobbyOnlineCount: onlineCount, lobbyActiveText: activeText })
+      this.setData({
+        lobbyOnlineCount: onlineCount,
+        lobbyActiveText: activeText,
+        recentUsersText
+      })
     })
   },
 
@@ -177,6 +187,10 @@ Page({
 
   buildLobbyActiveText(latestActiveAt) {
     return lobbyMetaHelper.buildLobbyActiveText(latestActiveAt, time)
+  },
+
+  buildRecentUsersText(recentUsers) {
+    return lobbyMetaHelper.buildRecentUsersText(recentUsers, normalizeUser, time)
   },
 
   queuePresenceMessage(presence) {
@@ -464,9 +478,7 @@ Page({
    * 下拉刷新
    */
   onPullDownRefresh() {
-    this.loadConversations().then(() => {
-      wx.stopPullDownRefresh()
-    })
+    pullRefreshHelper.runPullDownRefresh(this, () => this.loadConversations())
   },
 
   /**

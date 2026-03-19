@@ -14,7 +14,6 @@ import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
-import com.wreckloud.wolfchat.community.api.vo.UserBriefVO;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReplyLike;
@@ -28,6 +27,7 @@ import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
+import com.wreckloud.wolfchat.follow.infra.mapper.WfFollowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,16 +55,29 @@ public class ForumQueryService {
     private static final String TAB_ALL = "all";
     private static final String TAB_STICKY = "sticky";
     private static final String TAB_ESSENCE = "essence";
+    private static final String FEED_TAB_RECOMMEND = "recommend";
+    private static final String FEED_TAB_HOT = "hot";
+    private static final String FEED_TAB_FRIENDS = "friends";
+    private static final String FEED_TAB_LATEST = "latest";
 
     private static final String THREAD_LIST_ORDER_SQL = "ORDER BY "
             + "CASE thread_type WHEN 'ANNOUNCEMENT' THEN 2 WHEN 'STICKY' THEN 1 ELSE 0 END DESC, "
             + "last_reply_time DESC, create_time DESC, id DESC";
+    private static final String FEED_LATEST_ORDER_SQL = "ORDER BY create_time DESC, id DESC";
+    private static final String FEED_HOT_ORDER_SQL = "ORDER BY "
+            + "(reply_count * 5 + like_count * 3 + view_count * 0.1 "
+            + "+ CASE WHEN TIMESTAMPDIFF(HOUR, COALESCE(last_reply_time, create_time), NOW()) < 24 THEN 20 ELSE 0 END "
+            + "- TIMESTAMPDIFF(HOUR, COALESCE(last_reply_time, create_time), NOW()) * 0.2) DESC, "
+            + "COALESCE(last_reply_time, create_time) DESC, create_time DESC, id DESC";
+    private static final int RECOMMEND_INTEREST_RATIO = 60;
+    private static final int RECOMMEND_HOT_RATIO = 25;
 
     private final WfForumBoardMapper wfForumBoardMapper;
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
     private final WfForumThreadLikeMapper wfForumThreadLikeMapper;
     private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
+    private final WfFollowMapper wfFollowMapper;
     private final UserService userService;
     private final ForumViewAssembler forumViewAssembler;
     private final OssStorageService ossStorageService;
@@ -84,9 +98,24 @@ public class ForumQueryService {
         return list;
     }
 
+    public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
+        validatePageParams(page, size);
+        String normalizedTab = normalizeFeedTab(tab);
+        if (FEED_TAB_HOT.equals(normalizedTab)) {
+            return listHotFeed(userId, page, size);
+        }
+        if (FEED_TAB_FRIENDS.equals(normalizedTab)) {
+            return listFriendsFeed(userId, page, size);
+        }
+        if (FEED_TAB_LATEST.equals(normalizedTab)) {
+            return listLatestFeed(userId, page, size);
+        }
+        return listRecommendFeed(userId, page, size);
+    }
+
     public ForumThreadPageVO listBoardThreads(Long userId, Long boardId, long page, long size, String tab) {
         validatePageParams(page, size);
-        getBoardOrThrow(boardId);
+        WfForumBoard board = getBoardOrThrow(boardId);
         String normalizedTab = normalizeTab(tab);
 
         LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
@@ -97,25 +126,14 @@ public class ForumQueryService {
 
         Page<WfForumThread> pageReq = new Page<>(page, size);
         Page<WfForumThread> result = wfForumThreadMapper.selectPage(pageReq, queryWrapper);
-
-        List<WfForumThread> records = result.getRecords();
-        Map<Long, WfUser> userMap = loadThreadUserMap(records);
-        Set<Long> likedThreadIds = loadLikedThreadIds(userId, records);
-        List<ForumThreadVO> list = new ArrayList<>(records.size());
-        for (WfForumThread thread : records) {
-            WfUser author = userMap.get(thread.getAuthorId());
-            WfUser lastReplyUser = userMap.get(thread.getLastReplyUserId());
-            list.add(forumViewAssembler.toThreadVO(
-                    thread,
-                    author,
-                    lastReplyUser,
-                    likedThreadIds.contains(thread.getId()),
-                    resolveImageUrls(thread.getImageKeys()),
-                    resolveMediaUrl(thread.getVideoKey())
-            ));
-        }
-
-        return forumViewAssembler.toThreadPageVO(list, result.getTotal(), page, size);
+        return toThreadPageVO(
+                userId,
+                result.getRecords(),
+                result.getTotal(),
+                page,
+                size,
+                Collections.singletonMap(board.getId(), board)
+        );
     }
 
     public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
@@ -174,7 +192,7 @@ public class ForumQueryService {
         }
         Map<Long, WfUser> userMap = loadUserMap(userIds);
         boolean likedByCurrentUser = isThreadLikedByUser(userId, threadId);
-        return forumViewAssembler.toThreadVO(
+        ForumThreadVO threadVO = forumViewAssembler.toThreadVO(
                 thread,
                 userMap.get(thread.getAuthorId()),
                 userMap.get(thread.getLastReplyUserId()),
@@ -182,6 +200,9 @@ public class ForumQueryService {
                 resolveImageUrls(thread.getImageKeys()),
                 resolveMediaUrl(thread.getVideoKey())
         );
+        WfForumBoard board = wfForumBoardMapper.selectById(thread.getBoardId());
+        threadVO.setBoardName(board == null ? "" : board.getName());
+        return threadVO;
     }
 
     public ForumReplyVO buildReplyVO(Long userId, Long replyId) {
@@ -267,6 +288,375 @@ public class ForumQueryService {
         return count != null && count > 0;
     }
 
+    private ForumThreadPageVO listLatestFeed(Long userId, long page, long size) {
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery()
+                .last(FEED_LATEST_ORDER_SQL);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size), queryWrapper);
+        return toThreadPageVO(userId, result.getRecords(), result.getTotal(), page, size);
+    }
+
+    private ForumThreadPageVO listHotFeed(Long userId, long page, long size) {
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery()
+                .last(FEED_HOT_ORDER_SQL);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size), queryWrapper);
+        return toThreadPageVO(userId, result.getRecords(), result.getTotal(), page, size);
+    }
+
+    private ForumThreadPageVO listFriendsFeed(Long userId, long page, long size) {
+        List<Long> friendIds = loadMutualFollowAuthorIds(userId);
+        if (friendIds.isEmpty()) {
+            return forumViewAssembler.toThreadPageVO(Collections.emptyList(), 0L, page, size);
+        }
+
+        LambdaQueryWrapper<WfForumThread> countQueryWrapper = buildVisibleThreadQuery();
+        countQueryWrapper.in(WfForumThread::getAuthorId, friendIds);
+        Long total = wfForumThreadMapper.selectCount(countQueryWrapper);
+        if (total == null || total <= 0L) {
+            return forumViewAssembler.toThreadPageVO(Collections.emptyList(), 0L, page, size);
+        }
+
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        queryWrapper.in(WfForumThread::getAuthorId, friendIds)
+                .last(FEED_LATEST_ORDER_SQL);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
+        return toThreadPageVO(userId, result.getRecords(), total, page, size);
+    }
+
+    private ForumThreadPageVO listRecommendFeed(Long userId, long page, long size) {
+        int pageSize = (int) size;
+        int interestQuota = Math.max(0, Math.round(pageSize * (RECOMMEND_INTEREST_RATIO / 100f)));
+        int hotQuota = Math.max(0, Math.round(pageSize * (RECOMMEND_HOT_RATIO / 100f)));
+        int exploreQuota = Math.max(0, pageSize - interestQuota - hotQuota);
+
+        List<Long> followingAuthorIds = loadFollowingAuthorIds(userId);
+        Set<Long> followingAuthorIdSet = new HashSet<>(followingAuthorIds);
+
+        int interestFetchSize = Math.max(interestQuota * 3, interestQuota + 6);
+        int hotFetchSize = Math.max(hotQuota * 3, hotQuota + 6);
+        int exploreFetchSize = Math.max(exploreQuota * 3, exploreQuota + 6);
+
+        List<WfForumThread> interestPool = fetchThreadsByAuthors(
+                followingAuthorIds,
+                page,
+                interestFetchSize,
+                FEED_LATEST_ORDER_SQL
+        );
+        List<WfForumThread> hotPool = fetchVisibleThreads(page, hotFetchSize, FEED_HOT_ORDER_SQL);
+        List<WfForumThread> explorePool = fetchThreadsExcludeAuthors(
+                followingAuthorIdSet,
+                page,
+                exploreFetchSize,
+                FEED_LATEST_ORDER_SQL
+        );
+
+        List<WfForumThread> mixedThreads = mixRecommendThreads(
+                interestPool,
+                hotPool,
+                explorePool,
+                interestQuota,
+                hotQuota,
+                exploreQuota,
+                pageSize
+        );
+
+        if (mixedThreads.size() < pageSize) {
+            List<WfForumThread> fallbackPool = fetchVisibleThreads(page, pageSize * 2, FEED_LATEST_ORDER_SQL);
+            fillRemainingThreads(mixedThreads, fallbackPool, pageSize);
+        }
+
+        Long total = wfForumThreadMapper.selectCount(buildVisibleThreadQuery());
+        long safeTotal = total == null ? 0L : total;
+        return toThreadPageVO(userId, mixedThreads, safeTotal, page, size);
+    }
+
+    private List<WfForumThread> mixRecommendThreads(List<WfForumThread> interestPool,
+                                                    List<WfForumThread> hotPool,
+                                                    List<WfForumThread> explorePool,
+                                                    int interestQuota,
+                                                    int hotQuota,
+                                                    int exploreQuota,
+                                                    int pageSize) {
+        LinkedHashMap<Long, WfForumThread> selectedMap = new LinkedHashMap<>();
+        int interestIndex = 0;
+        int hotIndex = 0;
+        int exploreIndex = 0;
+        int interestPicked = 0;
+        int hotPicked = 0;
+        int explorePicked = 0;
+
+        while (selectedMap.size() < pageSize) {
+            boolean progressed = false;
+
+            if (interestPicked < interestQuota) {
+                WfForumThread next = pollNextUniqueThread(interestPool, selectedMap, interestIndex);
+                if (next != null) {
+                    selectedMap.put(next.getId(), next);
+                    interestPicked++;
+                    interestIndex = findNextIndex(interestPool, selectedMap, interestIndex);
+                    progressed = true;
+                } else {
+                    interestPicked = interestQuota;
+                }
+            }
+
+            if (selectedMap.size() >= pageSize) {
+                break;
+            }
+
+            if (hotPicked < hotQuota) {
+                WfForumThread next = pollNextUniqueThread(hotPool, selectedMap, hotIndex);
+                if (next != null) {
+                    selectedMap.put(next.getId(), next);
+                    hotPicked++;
+                    hotIndex = findNextIndex(hotPool, selectedMap, hotIndex);
+                    progressed = true;
+                } else {
+                    hotPicked = hotQuota;
+                }
+            }
+
+            if (selectedMap.size() >= pageSize) {
+                break;
+            }
+
+            if (explorePicked < exploreQuota) {
+                WfForumThread next = pollNextUniqueThread(explorePool, selectedMap, exploreIndex);
+                if (next != null) {
+                    selectedMap.put(next.getId(), next);
+                    explorePicked++;
+                    exploreIndex = findNextIndex(explorePool, selectedMap, exploreIndex);
+                    progressed = true;
+                } else {
+                    explorePicked = exploreQuota;
+                }
+            }
+
+            if (!progressed) {
+                break;
+            }
+        }
+
+        if (selectedMap.size() < pageSize) {
+            fillRemainingThreads(
+                    new ArrayList<>(selectedMap.values()),
+                    mergeThreadPools(interestPool, hotPool, explorePool),
+                    pageSize,
+                    selectedMap
+            );
+            return new ArrayList<>(selectedMap.values());
+        }
+        return new ArrayList<>(selectedMap.values());
+    }
+
+    private List<WfForumThread> mergeThreadPools(List<WfForumThread> interestPool,
+                                                 List<WfForumThread> hotPool,
+                                                 List<WfForumThread> explorePool) {
+        List<WfForumThread> merged = new ArrayList<>();
+        if (interestPool != null) {
+            merged.addAll(interestPool);
+        }
+        if (hotPool != null) {
+            merged.addAll(hotPool);
+        }
+        if (explorePool != null) {
+            merged.addAll(explorePool);
+        }
+        return merged;
+    }
+
+    private WfForumThread pollNextUniqueThread(List<WfForumThread> pool,
+                                               Map<Long, WfForumThread> selectedMap,
+                                               int startIndex) {
+        if (pool == null || pool.isEmpty()) {
+            return null;
+        }
+        for (int index = Math.max(0, startIndex); index < pool.size(); index++) {
+            WfForumThread candidate = pool.get(index);
+            if (candidate == null || candidate.getId() == null) {
+                continue;
+            }
+            if (selectedMap.containsKey(candidate.getId())) {
+                continue;
+            }
+            return candidate;
+        }
+        return null;
+    }
+
+    private int findNextIndex(List<WfForumThread> pool,
+                              Map<Long, WfForumThread> selectedMap,
+                              int startIndex) {
+        if (pool == null || pool.isEmpty()) {
+            return 0;
+        }
+        for (int index = Math.max(0, startIndex); index < pool.size(); index++) {
+            WfForumThread candidate = pool.get(index);
+            if (candidate == null || candidate.getId() == null) {
+                continue;
+            }
+            if (!selectedMap.containsKey(candidate.getId())) {
+                return index;
+            }
+        }
+        return pool.size();
+    }
+
+    private void fillRemainingThreads(List<WfForumThread> current,
+                                      List<WfForumThread> candidates,
+                                      int limit) {
+        LinkedHashMap<Long, WfForumThread> selectedMap = new LinkedHashMap<>();
+        for (WfForumThread item : current) {
+            if (item == null || item.getId() == null) {
+                continue;
+            }
+            selectedMap.put(item.getId(), item);
+        }
+        fillRemainingThreads(current, candidates, limit, selectedMap);
+    }
+
+    private void fillRemainingThreads(List<WfForumThread> current,
+                                      List<WfForumThread> candidates,
+                                      int limit,
+                                      LinkedHashMap<Long, WfForumThread> selectedMap) {
+        if (selectedMap.size() >= limit || candidates == null || candidates.isEmpty()) {
+            return;
+        }
+        for (WfForumThread candidate : candidates) {
+            if (candidate == null || candidate.getId() == null) {
+                continue;
+            }
+            if (selectedMap.containsKey(candidate.getId())) {
+                continue;
+            }
+            selectedMap.put(candidate.getId(), candidate);
+            if (selectedMap.size() >= limit) {
+                break;
+            }
+        }
+        current.clear();
+        current.addAll(selectedMap.values());
+    }
+
+    private List<WfForumThread> fetchVisibleThreads(long page, long size, String orderSql) {
+        if (size <= 0L) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery().last(orderSql);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
+        return result.getRecords();
+    }
+
+    private List<WfForumThread> fetchThreadsByAuthors(List<Long> authorIds, long page, long size, String orderSql) {
+        if (authorIds == null || authorIds.isEmpty() || size <= 0L) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        queryWrapper.in(WfForumThread::getAuthorId, authorIds).last(orderSql);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
+        return result.getRecords();
+    }
+
+    private List<WfForumThread> fetchThreadsExcludeAuthors(Set<Long> excludedAuthorIds, long page, long size, String orderSql) {
+        if (size <= 0L) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildVisibleThreadQuery();
+        if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
+            queryWrapper.notIn(WfForumThread::getAuthorId, excludedAuthorIds);
+        }
+        queryWrapper.last(orderSql);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size, false), queryWrapper);
+        return result.getRecords();
+    }
+
+    private LambdaQueryWrapper<WfForumThread> buildVisibleThreadQuery() {
+        LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+        return queryWrapper;
+    }
+
+    private List<Long> loadFollowingAuthorIds(Long userId) {
+        if (userId == null || userId <= 0L) {
+            return Collections.emptyList();
+        }
+        List<Long> ids = wfFollowMapper.selectFollowingIdsByUserId(userId);
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return ids.stream()
+                .filter(id -> id != null && id > 0L)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private List<Long> loadMutualFollowAuthorIds(Long userId) {
+        if (userId == null || userId <= 0L) {
+            return Collections.emptyList();
+        }
+        List<Long> ids = wfFollowMapper.selectMutualFollowIdsByUserId(userId);
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return ids.stream()
+                .filter(id -> id != null && id > 0L)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private String normalizeFeedTab(String tab) {
+        if (!StringUtils.hasText(tab)) {
+            return FEED_TAB_RECOMMEND;
+        }
+        String normalizedTab = tab.trim().toLowerCase();
+        if (FEED_TAB_RECOMMEND.equals(normalizedTab)
+                || FEED_TAB_HOT.equals(normalizedTab)
+                || FEED_TAB_FRIENDS.equals(normalizedTab)
+                || FEED_TAB_LATEST.equals(normalizedTab)) {
+            return normalizedTab;
+        }
+        throw new BaseException(ErrorCode.PARAM_ERROR, "tab 参数不合法，仅支持 recommend/hot/friends/latest");
+    }
+
+    private ForumThreadPageVO toThreadPageVO(Long userId,
+                                             List<WfForumThread> records,
+                                             long total,
+                                             long page,
+                                             long size) {
+        return toThreadPageVO(userId, records, total, page, size, null);
+    }
+
+    private ForumThreadPageVO toThreadPageVO(Long userId,
+                                             List<WfForumThread> records,
+                                             long total,
+                                             long page,
+                                             long size,
+                                             Map<Long, WfForumBoard> fixedBoardMap) {
+        if (records == null || records.isEmpty()) {
+            return forumViewAssembler.toThreadPageVO(Collections.emptyList(), total, page, size);
+        }
+        Map<Long, WfUser> userMap = loadThreadUserMap(records);
+        Set<Long> likedThreadIds = loadLikedThreadIds(userId, records);
+        Map<Long, WfForumBoard> boardMap = fixedBoardMap == null ? loadBoardMap(records) : fixedBoardMap;
+
+        List<ForumThreadVO> list = new ArrayList<>(records.size());
+        for (WfForumThread thread : records) {
+            WfUser author = userMap.get(thread.getAuthorId());
+            WfUser lastReplyUser = userMap.get(thread.getLastReplyUserId());
+            ForumThreadVO threadVO = forumViewAssembler.toThreadVO(
+                    thread,
+                    author,
+                    lastReplyUser,
+                    likedThreadIds.contains(thread.getId()),
+                    resolveImageUrls(thread.getImageKeys()),
+                    resolveMediaUrl(thread.getVideoKey())
+            );
+            WfForumBoard board = boardMap.get(thread.getBoardId());
+            threadVO.setBoardName(board == null ? "" : board.getName());
+            list.add(threadVO);
+        }
+        return forumViewAssembler.toThreadPageVO(list, total, page, size);
+    }
+
     private void validatePageParams(long page, long size) {
         if (page < MIN_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
             throw new BaseException(ErrorCode.PARAM_ERROR, "分页参数不合法，page>=1 且 size 在1-50之间");
@@ -327,6 +717,25 @@ public class ForumQueryService {
             }
         }
         return loadUserMap(userIds);
+    }
+
+    private Map<Long, WfForumBoard> loadBoardMap(List<WfForumThread> threads) {
+        if (threads == null || threads.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> boardIds = threads.stream()
+                .map(WfForumThread::getBoardId)
+                .filter(id -> id != null && id > 0L)
+                .distinct()
+                .collect(Collectors.toList());
+        if (boardIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<WfForumBoard> boards = wfForumBoardMapper.selectBatchIds(boardIds);
+        if (boards == null || boards.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return boards.stream().collect(Collectors.toMap(WfForumBoard::getId, item -> item));
     }
 
     private Map<Long, WfForumReply> loadQuoteReplyMap(Long threadId, List<WfForumReply> replies) {

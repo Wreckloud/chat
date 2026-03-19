@@ -20,6 +20,7 @@ public class MessageMediaService {
     private static final String IMAGE_PREVIEW_TEXT = "[图片]";
     private static final String VIDEO_PREVIEW_TEXT = "[视频]";
     private static final String FILE_PREVIEW_TEXT = "[文件]";
+    private static final String RECALL_PREVIEW_TEXT = "[消息已撤回]";
     private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
     private static final int REPLY_PREVIEW_MAX_LENGTH = 80;
 
@@ -37,6 +38,9 @@ public class MessageMediaService {
         }
         if (MessageType.FILE.equals(msgType)) {
             return FILE_PREVIEW_TEXT;
+        }
+        if (MessageType.RECALL.equals(msgType)) {
+            return RECALL_PREVIEW_TEXT;
         }
         if (!StringUtils.hasText(content)) {
             return "";
@@ -72,7 +76,12 @@ public class MessageMediaService {
         }
         vo.setMediaUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey()));
         if (MessageType.VIDEO.equals(msgType)) {
-            vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey(), VIDEO_POSTER_PROCESS));
+            String mediaPosterKey = vo.getMediaPosterKey();
+            if (StringUtils.hasText(mediaPosterKey)) {
+                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(mediaPosterKey));
+            } else {
+                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey(), VIDEO_POSTER_PROCESS));
+            }
         }
         return vo;
     }

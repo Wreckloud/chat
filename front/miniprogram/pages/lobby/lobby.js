@@ -14,6 +14,7 @@ const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
 const lobbyMetaHelper = require('../../utils/lobby-meta-helper')
 const imConfig = require('../../utils/im-config')
+const chatPolicyHelper = require('../../utils/chat-policy-helper')
 const buildCommonImPageMethods = require('../../utils/im-page-methods')
 
 const commonImPageMethods = buildCommonImPageMethods({
@@ -45,6 +46,8 @@ Page({
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
+    replyDraft: null,
+    highlightMessageId: 0,
     lobbyOnlineCount: 0,
     lobbyActiveText: '最近活跃 --',
     recentUsersText: '最近在线 --'
@@ -54,6 +57,8 @@ Page({
   WS_READY_TIMEOUT_MS: imConfig.WS_READY_TIMEOUT_MS,
   CLIENT_MSG_ID_PREFIX: 'l',
   MESSAGE_MERGE_GAP_MS: imHelper.DEFAULT_MESSAGE_MERGE_GAP_MS,
+  RECALL_WINDOW_MS: 5 * 60 * 1000,
+  MESSAGE_HIGHLIGHT_MS: 1600,
   IM_SEND_TYPE: 'LOBBY_SEND',
 
   onLoad() {
@@ -83,6 +88,10 @@ Page({
     imPageHelper.cleanupPage(this, ws, {
       beforeTeardown: () => {
         this.clearLobbyMetaTimer()
+        if (this.highlightTimer) {
+          clearTimeout(this.highlightTimer)
+          this.highlightTimer = null
+        }
       }
     })
   },
@@ -154,6 +163,18 @@ Page({
 
   ...commonImPageMethods,
 
+  async sendMessage() {
+    return imPageHelper.sendComposerTextMessage(this, imSendHelper, {
+      buildExtraPayload: () => this.buildReplyPayload(),
+      onError: (error) => {
+        toastError(error, '发送失败')
+      },
+      onSuccess: () => {
+        this.clearReplyDraft()
+      }
+    })
+  },
+
   handleWsMessage(payload) {
     const commonHandled = imWsHelper.handleCommonPayload(this, payload, {
       toastError,
@@ -180,6 +201,8 @@ Page({
     imMessageHelper.appendMessage(this, message, {
       isValidMessage: (current) => Boolean(current && current.messageId),
       isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
+      upsertOnDuplicate: true,
+      buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
       appendMessageBlock: (payload) => this.appendMessageBlock(payload),
       beforeAppend: (current) => {
         const senderProfile = {
@@ -196,12 +219,194 @@ Page({
         }
         this.cacheUserProfile(senderProfile)
       },
-      afterAppend: () => this.scrollToBottom()
+      afterAppend: (current, messages, meta) => {
+        if (!meta || meta.updated !== true) {
+          this.scrollToBottom()
+        }
+      }
     })
   },
 
   onTapUserElement(e) {
     imUserHelper.openUserProfileByTapEvent(e, openUserProfile)
+  },
+
+  handleLongPressUserMeta(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const isSelf = Number(dataset.isSelf) === 1
+    if (isSelf) {
+      return
+    }
+    const userName = String(dataset.userName || '').trim()
+    if (!userName) {
+      return
+    }
+    const origin = String(this.data.inputMessage || '')
+    const separator = origin && !/\s$/.test(origin) ? ' ' : ''
+    const nextInput = `${origin}${separator}@${userName} `
+    this.setData({
+      inputMessage: nextInput,
+      canSendText: nextInput.trim().length > 0,
+      composerFocused: true
+    })
+    if (this.data.morePanelVisible) {
+      this.setMorePanelVisible(false)
+    }
+    imHelper.refocusComposerInput(this)
+  },
+
+  handleLongPressMessageRow(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const messageId = Number(dataset.messageId)
+    if (!messageId) {
+      imPageHelper.onLongPressMessage(this, e)
+      return
+    }
+
+    const copyContent = String(dataset.copy || '').trim()
+    const actionList = [{ key: 'reply', label: '回复该消息' }]
+    if (copyContent) {
+      actionList.push({ key: 'copy-all', label: '复制全部' })
+    }
+    if (this.canRecallMessage(dataset)) {
+      actionList.push({ key: 'recall', label: '撤回消息' })
+    }
+
+    wx.showActionSheet({
+      itemList: actionList.map(item => item.label),
+      success: ({ tapIndex }) => {
+        const action = actionList[tapIndex]
+        if (!action) {
+          return
+        }
+        if (action.key === 'reply') {
+          this.startReplyDraft(dataset)
+          return
+        }
+        if (action.key === 'copy-all' && copyContent) {
+          wx.setClipboardData({ data: copyContent })
+          return
+        }
+        if (action.key === 'recall') {
+          this.recallMessage(dataset)
+        }
+      }
+    })
+  },
+
+  startReplyDraft(dataset) {
+    const replyDraft = chatPolicyHelper.buildReplyDraft(dataset)
+    if (!replyDraft) {
+      return
+    }
+    this.setData({
+      replyDraft,
+      composerFocused: true
+    })
+    if (this.data.morePanelVisible) {
+      this.setMorePanelVisible(false)
+    }
+    imHelper.refocusComposerInput(this)
+  },
+
+  clearReplyDraft() {
+    if (!this.data.replyDraft) {
+      return
+    }
+    this.setData({ replyDraft: null })
+  },
+
+  buildReplyPayload() {
+    return chatPolicyHelper.buildReplyPayload(this.data.replyDraft)
+  },
+
+  handleTapReplyQuote(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const targetMessageId = Number(dataset.replyTargetId)
+    if (!targetMessageId) {
+      return
+    }
+    this.jumpToMessage(targetMessageId)
+  },
+
+  hasMessage(messageId) {
+    if (!messageId) {
+      return false
+    }
+    return (this.data.messages || []).some(item => Number(item.messageId) === Number(messageId))
+  },
+
+  async jumpToMessage(messageId) {
+    if (!messageId) {
+      return
+    }
+    let loaded = this.hasMessage(messageId)
+    let loopCount = 0
+    while (!loaded && this.data.hasMore && loopCount < 20) {
+      await this.loadMessages()
+      loaded = this.hasMessage(messageId)
+      loopCount += 1
+    }
+    if (!loaded) {
+      return
+    }
+    this.scrollToMessageAnchor(messageId)
+  },
+
+  scrollToMessageAnchor(messageId) {
+    const anchorId = `im-msg-${messageId}`
+    this.setData({ scrollIntoView: '' }, () => {
+      this.setData({
+        scrollIntoView: anchorId,
+        highlightMessageId: Number(messageId)
+      })
+      if (this.highlightTimer) {
+        clearTimeout(this.highlightTimer)
+      }
+      this.highlightTimer = setTimeout(() => {
+        this.highlightTimer = null
+        if (Number(this.data.highlightMessageId) !== Number(messageId)) {
+          return
+        }
+        this.setData({ highlightMessageId: 0 })
+      }, this.MESSAGE_HIGHLIGHT_MS)
+    })
+  },
+
+  canRecallMessage(dataset) {
+    const data = dataset || {}
+    if (!Number(data.messageId) || Number(data.isSelf) !== 1 || Number(data.recalled) === 1) {
+      return false
+    }
+    const createTime = time.parseDateTime(data.createTime)
+    if (!createTime) {
+      return false
+    }
+    const elapsed = Date.now() - createTime.getTime()
+    if (!Number.isFinite(elapsed)) {
+      return false
+    }
+    return elapsed <= this.RECALL_WINDOW_MS
+  },
+
+  async recallMessage(dataset) {
+    const messageId = Number(dataset && dataset.messageId)
+    if (!messageId || this.data.sending) {
+      return
+    }
+    this.setData({ sending: true })
+    try {
+      await this.sendWsMessageWithAck({
+        type: 'LOBBY_RECALL',
+        messageId
+      })
+    } catch (error) {
+      toastError(error, '撤回失败')
+    } finally {
+      if (!this.pageUnloaded) {
+        this.setData({ sending: false })
+      }
+    }
   },
 
   buildMessageBlocks(messages) {

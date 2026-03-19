@@ -11,6 +11,9 @@ function buildConversationPreview(message) {
   if (message.msgType === 'FILE') {
     return '[文件]'
   }
+  if (message.msgType === 'RECALL') {
+    return '[消息已撤回]'
+  }
   return message.content || ''
 }
 
@@ -76,4 +79,3 @@ module.exports = {
   sortConversationList,
   buildConversationSections
 }
-

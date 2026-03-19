@@ -1,5 +1,7 @@
 package com.wreckloud.wolfchat.chat.lobby.api.vo;
 
+import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -44,6 +46,10 @@ public class LobbyMessageVO {
     @Schema(description = "媒体对象Key")
     private String mediaKey;
 
+    @JsonIgnore
+    @JSONField(serialize = false)
+    private String mediaPosterKey;
+
     @Schema(description = "媒体访问地址")
     private String mediaUrl;
 
@@ -61,6 +67,15 @@ public class LobbyMessageVO {
 
     @Schema(description = "媒体 MIME 类型")
     private String mediaMimeType;
+
+    @Schema(description = "回复目标消息ID")
+    private Long replyToMessageId;
+
+    @Schema(description = "回复目标发送者ID")
+    private Long replyToSenderId;
+
+    @Schema(description = "回复预览")
+    private String replyToPreview;
 
     @Schema(description = "发送时间")
     private LocalDateTime createTime;

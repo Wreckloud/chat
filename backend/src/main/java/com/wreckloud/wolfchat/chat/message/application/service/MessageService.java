@@ -15,10 +15,13 @@ import com.wreckloud.wolfchat.chat.message.infra.mapper.WfMessageMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.follow.application.service.FollowService;
+import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,12 +41,16 @@ public class MessageService {
     private static final int UNDELIVERED_LIMIT = 200;
     private static final int MAX_PAGE_SIZE = 100;
     private static final int STRANGER_SINGLE_SIDE_LIMIT = 3;
+    private static final int RECALL_WINDOW_MINUTES = 5;
+    private static final int CLIENT_MSG_ID_MAX_LENGTH = 64;
+    private static final String RECALL_CONTENT = "该消息已撤回";
 
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
     private final FollowService followService;
     private final ChatMediaService chatMediaService;
     private final MessageMediaService messageMediaService;
+    private final UserNoticeService userNoticeService;
 
     /**
      * 发送消息
@@ -65,6 +72,13 @@ public class MessageService {
         WfConversation conversation = conversationService.getConversation(conversationId);
         Long receiverId = conversationService.getTargetUserId(conversation, userId);
 
+        String clientMsgId = normalizeClientMsgId(command.getClientMsgId());
+        command.setClientMsgId(clientMsgId);
+        WfMessage existingMessage = findExistingMessageByClientMsgId(userId, conversationId, clientMsgId);
+        if (existingMessage != null) {
+            return existingMessage;
+        }
+
         boolean mutualFollow = followService.isMutualFollow(userId, receiverId);
         validateSendPermission(conversationId, userId, receiverId, mutualFollow);
 
@@ -75,10 +89,12 @@ public class MessageService {
         WfMessage message = new WfMessage();
         message.setConversationId(conversationId);
         message.setSenderId(userId);
+        message.setClientMsgId(clientMsgId);
         message.setReceiverId(receiverId);
         message.setContent(normalizedContent);
         message.setMsgType(msgType);
         message.setMediaKey(command.getMediaKey());
+        message.setMediaPosterKey(command.getMediaPosterKey());
         message.setMediaWidth(command.getMediaWidth());
         message.setMediaHeight(command.getMediaHeight());
         message.setMediaSize(command.getMediaSize());
@@ -90,9 +106,17 @@ public class MessageService {
         }
         message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
         message.setCreateTime(LocalDateTime.now());
-        int insertRows = messageMapper.insert(message);
-        if (insertRows != 1) {
-            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        try {
+            int insertRows = messageMapper.insert(message);
+            if (insertRows != 1) {
+                throw new BaseException(ErrorCode.DATABASE_ERROR);
+            }
+        } catch (DuplicateKeyException ex) {
+            WfMessage duplicatedMessage = findExistingMessageByClientMsgId(userId, conversationId, clientMsgId);
+            if (duplicatedMessage != null) {
+                return duplicatedMessage;
+            }
+            throw ex;
         }
         log.debug("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
 
@@ -104,6 +128,13 @@ public class MessageService {
                 message.getCreateTime()
         );
         conversationService.increaseUnreadCount(conversationId, receiverId);
+        if (replyToMessage != null) {
+            userNoticeService.notifyChatMessageReplied(
+                    replyToMessage.getSenderId(),
+                    conversationId,
+                    userId
+            );
+        }
 
         return message;
     }
@@ -129,6 +160,13 @@ public class MessageService {
         Page<WfMessage> result = messageMapper.selectPage(page, queryWrapper);
         log.debug("查询到消息数量: {}, 总数: {}", result.getRecords().size(), result.getTotal());
         return result;
+    }
+
+    public WfMessage getById(Long messageId) {
+        if (messageId == null || messageId <= 0L) {
+            return null;
+        }
+        return messageMapper.selectById(messageId);
     }
 
     /**
@@ -185,6 +223,60 @@ public class MessageService {
         }
     }
 
+    /**
+     * 撤回消息（仅发送者在 5 分钟内可撤回）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public WfMessage recallMessage(Long userId, Long conversationId, Long messageId) {
+        if (messageId == null || messageId <= 0L) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息ID不能为空");
+        }
+        conversationService.validateConversationMember(conversationId, userId);
+
+        WfMessage message = messageMapper.selectById(messageId);
+        if (message == null || !conversationId.equals(message.getConversationId())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息不存在");
+        }
+        if (!userId.equals(message.getSenderId())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "只能撤回自己发送的消息");
+        }
+        if (MessageType.RECALL.equals(message.getMsgType())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息已撤回");
+        }
+
+        LocalDateTime createTime = message.getCreateTime();
+        if (createTime == null || LocalDateTime.now().isAfter(createTime.plusMinutes(RECALL_WINDOW_MINUTES))) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息超过5分钟，无法撤回");
+        }
+
+        message.setMsgType(MessageType.RECALL);
+        message.setContent(RECALL_CONTENT);
+        message.setMediaKey(null);
+        message.setMediaPosterKey(null);
+        message.setMediaWidth(null);
+        message.setMediaHeight(null);
+        message.setMediaSize(null);
+        message.setMediaMimeType(null);
+        message.setReplyToMessageId(null);
+        message.setReplyToSenderId(null);
+        message.setReplyToPreview(null);
+        int updateRows = messageMapper.updateById(message);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+
+        WfConversation conversation = conversationService.getConversation(conversationId);
+        if (messageId.equals(conversation.getLastMessageId())) {
+            conversationService.updateLastMessage(
+                    conversationId,
+                    message.getId(),
+                    messageMediaService.buildConversationPreview(message.getMsgType(), message.getContent()),
+                    message.getCreateTime()
+            );
+        }
+        return messageMapper.selectById(messageId);
+    }
+
     private void validateSendPermission(Long conversationId, Long senderId, Long targetUserId, boolean mutualFollow) {
         if (mutualFollow) {
             return;
@@ -233,6 +325,26 @@ public class MessageService {
             throw new BaseException(ErrorCode.PARAM_ERROR, "回复目标消息不存在");
         }
         return replyToMessage;
+    }
+
+    private String normalizeClientMsgId(String clientMsgId) {
+        if (!StringUtils.hasText(clientMsgId)) {
+            return null;
+        }
+        String normalized = clientMsgId.trim();
+        if (normalized.length() > CLIENT_MSG_ID_MAX_LENGTH) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息标识长度非法");
+        }
+        return normalized;
+    }
+
+    private WfMessage findExistingMessageByClientMsgId(Long senderId, Long conversationId, String clientMsgId) {
+        if (senderId == null || senderId <= 0L
+                || conversationId == null || conversationId <= 0L
+                || !StringUtils.hasText(clientMsgId)) {
+            return null;
+        }
+        return messageMapper.selectBySenderAndConversationAndClientMsgId(senderId, conversationId, clientMsgId);
     }
 
     private static class MessagePolicySnapshot {

@@ -7,6 +7,7 @@
     scroll-into-view="{{scrollIntoView}}"
     upper-threshold="80"
     bindscrolltoupper="onMessageListUpper"
+    bindtap="onTapMessageList"
     enable-back-to-top>
     <view wx:if="{{loading && messages.length === 0}}" class="im-state-text">加载中...</view>
 
@@ -53,7 +54,7 @@
                   [{{blockItem.senderTitleName}}]
                 </view>
                 <view
-                  class="im-name {{blockItem.isSelf ? 'im-name-self' : 'im-name-peer'}}"
+                  class="im-name u-name {{blockItem.isSelf ? 'im-name-self' : 'im-name-peer'}}"
                   data-user-id="{{blockItem.senderId}}"
                   bindtap="onTapUserElement">
                   {{blockItem.senderName}}
@@ -70,15 +71,37 @@
               </view>
             </view>
 
-            <view wx:for="{{blockItem.rows}}" wx:key="key" wx:for-item="lineItem" class="im-line">
-              <view wx:if="{{lineItem.replyToMessageId && lineItem.replyToPreview}}" class="im-reply-quote">
+            <view
+              wx:for="{{blockItem.rows}}"
+              wx:key="key"
+              wx:for-item="lineItem"
+              id="im-msg-{{lineItem.messageId}}"
+              class="im-line {{highlightMessageId == lineItem.messageId ? 'is-highlighted' : ''}}"
+              data-message-id="{{lineItem.messageId}}"
+              data-msg-type="{{lineItem.msgType}}"
+              data-message-content="{{lineItem.content}}"
+              data-sender-id="{{blockItem.senderId}}"
+              data-create-time="{{lineItem.createTime}}"
+              data-is-self="{{blockItem.isSelf ? 1 : 0}}"
+              data-recalled="{{lineItem.recalled ? 1 : 0}}"
+              data-reply-to-message-id="{{lineItem.replyToMessageId}}"
+              data-reply-to-preview="{{lineItem.replyToPreview}}"
+              data-copy="{{lineItem.copyContent}}"
+              bindlongpress="onLongPressMessageRow">
+              <view
+                wx:if="{{lineItem.replyToMessageId && lineItem.replyToPreview}}"
+                class="im-reply-quote {{lineItem.repliedToMe ? 'is-replied-to-me' : ''}}"
+                data-reply-target-id="{{lineItem.replyToMessageId}}"
+                bindtap="onTapReplyQuote">
+                <text class="im-reply-quote-label">{{lineItem.repliedToMe ? '回你' : '回复'}}</text>
                 <text class="im-reply-quote-text">{{lineItem.replyToPreview}}</text>
               </view>
               <image
                 wx:if="{{lineItem.msgType === 'IMAGE' && lineItem.mediaUrl}}"
                 class="im-image"
+                style="{{lineItem.imageRenderStyle}}"
                 src="{{lineItem.mediaUrl}}"
-                mode="widthFix"
+                mode="aspectFill"
                 lazy-load="{{true}}"
                 data-url="{{lineItem.mediaUrl}}"
                 bindtap="previewImage" />
@@ -94,6 +117,8 @@
                   class="im-video-poster"
                   src="{{lineItem.mediaPosterUrl}}"
                   mode="aspectFill"
+                  data-message-id="{{lineItem.messageId}}"
+                  binderror="onVideoPosterError"
                   lazy-load="{{true}}" />
                 <view wx:else class="im-video-poster-fallback">视频</view>
                 <view class="im-video-play-mask">
@@ -105,45 +130,19 @@
                 class="im-text im-file"
                 data-url="{{lineItem.mediaUrl}}"
                 data-name="{{lineItem.content}}"
-                data-message-id="{{lineItem.messageId}}"
-                data-msg-type="{{lineItem.msgType}}"
-                data-message-content="{{lineItem.content}}"
-                data-sender-id="{{blockItem.senderId}}"
-                data-reply-to-message-id="{{lineItem.replyToMessageId}}"
-                data-reply-to-preview="{{lineItem.replyToPreview}}"
-                data-copy="{{lineItem.mediaUrl || lineItem.content || ''}}"
-                bindlongpress="onLongPressMessageRow"
-                bindtap="onTapFile">
-                {{lineItem.fileLabel}}
-              </text>
+                bindtap="onTapFile">{{lineItem.fileLabel}}</text>
               <text
                 wx:elif="{{lineItem.msgType === 'TEXT' && lineItem.linkUrl}}"
                 class="im-text im-link"
                 data-url="{{lineItem.linkUrl}}"
-                data-message-id="{{lineItem.messageId}}"
-                data-msg-type="{{lineItem.msgType}}"
-                data-message-content="{{lineItem.content}}"
-                data-sender-id="{{blockItem.senderId}}"
-                data-reply-to-message-id="{{lineItem.replyToMessageId}}"
-                data-reply-to-preview="{{lineItem.replyToPreview}}"
-                data-copy="{{lineItem.linkUrl}}"
-                bindlongpress="onLongPressMessageRow"
-                bindtap="onTapLink">
-                {{lineItem.content}}
-              </text>
+                bindtap="onTapLink">{{lineItem.content}}</text>
+              <text
+                wx:elif="{{lineItem.msgType === 'RECALL'}}"
+                class="im-text im-recall-text">{{lineItem.content || '该消息已撤回'}}</text>
               <text
                 wx:elif="{{lineItem.msgType === 'TEXT'}}"
                 class="im-text"
-                data-message-id="{{lineItem.messageId}}"
-                data-msg-type="{{lineItem.msgType}}"
-                data-message-content="{{lineItem.content}}"
-                data-sender-id="{{blockItem.senderId}}"
-                data-reply-to-message-id="{{lineItem.replyToMessageId}}"
-                data-reply-to-preview="{{lineItem.replyToPreview}}"
-                data-copy="{{lineItem.content}}"
-                bindlongpress="onLongPressMessageRow">
-                {{lineItem.content}}
-              </text>
+                selectable="{{true}}">{{lineItem.content}}</text>
               <text wx:else class="im-media-missing">[媒体不可用]</text>
             </view>
           </view>

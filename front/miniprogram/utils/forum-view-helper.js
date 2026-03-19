@@ -1,16 +1,5 @@
 const { attachDisplayTitle } = require('./title')
 
-function resolveActiveBoardId(boards, currentBoardId) {
-  if (!Array.isArray(boards) || boards.length === 0) {
-    return null
-  }
-  if (!currentBoardId) {
-    return boards[0].boardId
-  }
-  const exists = boards.some(item => Number(item.boardId) === Number(currentBoardId))
-  return exists ? currentBoardId : boards[0].boardId
-}
-
 function mapThread(rawThread, normalizeUser, time) {
   const viewCount = Number(rawThread.viewCount) || 0
   const replyCount = Number(rawThread.replyCount) || 0
@@ -86,7 +75,6 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
 }
 
 module.exports = {
-  resolveActiveBoardId,
   mapThread,
   mapThreadList,
   mergePagedList,

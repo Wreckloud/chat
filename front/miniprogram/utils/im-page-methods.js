@@ -100,8 +100,22 @@ function buildCommonImPageMethods(options) {
       imPageHelper.onMessageListUpper(this, () => this.loadMessages())
     },
 
+    onTapMessageList() {
+      imPageHelper.onTapMessageList(this)
+    },
+
     previewImage(e) {
       imPageHelper.previewImage(this, e)
+    },
+
+    onVideoPosterError(e) {
+      imPageHelper.onVideoPosterError(this, e)
+    },
+
+    onTapReplyQuote(e) {
+      if (typeof this.handleTapReplyQuote === 'function') {
+        this.handleTapReplyQuote(e)
+      }
     }
   }
 }

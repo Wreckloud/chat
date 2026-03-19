@@ -21,6 +21,9 @@ public class SendMessageDTO {
     @Schema(description = "媒体对象Key")
     private String mediaKey;
 
+    @Schema(description = "视频封面对象Key")
+    private String mediaPosterKey;
+
     @Schema(description = "媒体宽度")
     private Integer mediaWidth;
 

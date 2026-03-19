@@ -38,6 +38,8 @@ public class UserNoticeService {
     private static final String PAGE_ACHIEVEMENT = "/pages/achievement/achievement";
     private static final String PAGE_FOLLOW = "/pages/follow/follow";
     private static final String PAGE_THREAD_DETAIL_PREFIX = "/pages/post-detail/post-detail?threadId=";
+    private static final String PAGE_CHAT_DETAIL_PREFIX = "/pages/chat-detail/chat-detail?conversationId=";
+    private static final String PAGE_LOBBY = "/pages/lobby/lobby";
 
     private final WfUserNoticeMapper wfUserNoticeMapper;
 
@@ -150,6 +152,20 @@ public class UserNoticeService {
         saveNoticeQuietly(replyAuthorId, NoticeType.REPLY_LIKED, "你的回复收到新的点赞", threadId);
     }
 
+    public void notifyChatMessageReplied(Long targetUserId, Long conversationId, Long operatorUserId) {
+        if (isSelfNotice(targetUserId, operatorUserId)) {
+            return;
+        }
+        saveNoticeQuietly(targetUserId, NoticeType.CHAT_MESSAGE_REPLIED, "你的消息收到新的回复", conversationId);
+    }
+
+    public void notifyLobbyMessageReplied(Long targetUserId, Long operatorUserId) {
+        if (isSelfNotice(targetUserId, operatorUserId)) {
+            return;
+        }
+        saveNoticeQuietly(targetUserId, NoticeType.LOBBY_MESSAGE_REPLIED, "你的大厅消息收到新的回复", null);
+    }
+
     private void saveNoticeQuietly(Long userId, NoticeType noticeType, String content, Long bizId) {
         if (userId == null || noticeType == null || !StringUtils.hasText(content)) {
             return;
@@ -260,6 +276,13 @@ public class UserNoticeService {
                     return "";
                 }
                 return PAGE_THREAD_DETAIL_PREFIX + notice.getBizId();
+            case CHAT_MESSAGE_REPLIED:
+                if (notice.getBizId() == null || notice.getBizId() <= 0L) {
+                    return "";
+                }
+                return PAGE_CHAT_DETAIL_PREFIX + notice.getBizId();
+            case LOBBY_MESSAGE_REPLIED:
+                return PAGE_LOBBY;
             default:
                 return "";
         }

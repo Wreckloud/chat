@@ -36,6 +36,11 @@ public class SendMessageCommand {
     private String mediaKey;
 
     /**
+     * 视频封面对象 Key
+     */
+    private String mediaPosterKey;
+
+    /**
      * 媒体宽度
      */
     private Integer mediaWidth;
@@ -59,4 +64,9 @@ public class SendMessageCommand {
      * 回复目标消息ID
      */
     private Long replyToMessageId;
+
+    /**
+     * 客户端消息ID（用于幂等去重）
+     */
+    private String clientMsgId;
 }

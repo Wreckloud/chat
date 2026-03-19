@@ -116,6 +116,21 @@ function resolveLocalFilePath(file) {
   return file.tempFilePath || file.path || ''
 }
 
+function resolveVideoPosterTempFilePath(tempFile) {
+  if (!tempFile) {
+    return ''
+  }
+  const thumbPath = String(tempFile.thumbTempFilePath || '').trim()
+  if (thumbPath) {
+    return thumbPath
+  }
+  const coverPath = String(tempFile.coverTempFilePath || '').trim()
+  if (coverPath) {
+    return coverPath
+  }
+  return ''
+}
+
 async function resolveImageUploadMeta(tempFile) {
   const filePath = resolveLocalFilePath(tempFile)
   if (!filePath) {
@@ -331,8 +346,23 @@ async function uploadChatVideo(tempFile) {
   const policy = await applyUploadPolicy('/media/chat/video/upload-policy', meta)
   await uploadFileToOss(policy, meta.filePath, '视频')
 
+  let mediaPosterKey = ''
+  const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
+  if (posterTempFilePath) {
+    try {
+      const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
+      const posterPolicy = await applyUploadPolicy('/media/chat/image/upload-policy', posterMeta)
+      await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
+      mediaPosterKey = posterPolicy.objectKey
+    } catch (error) {
+      // 封面上传失败不阻断视频消息发送，客户端会退回无封面样式。
+      mediaPosterKey = ''
+    }
+  }
+
   return {
     mediaKey: policy.objectKey,
+    mediaPosterKey,
     mediaWidth: meta.width || null,
     mediaHeight: meta.height || null,
     mediaSize: meta.size,
