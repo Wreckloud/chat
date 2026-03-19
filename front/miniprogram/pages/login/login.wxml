@@ -78,6 +78,7 @@
             size="large"
             block
             loading="{{loading}}"
+            disabled="{{loading || !canRegisterSubmit}}"
             bindtap="handleRegister"
             class="register-btn">
             {{copy.register.submitButton}}
@@ -122,6 +123,7 @@
           size="large"
           block
           loading="{{loading}}"
+          disabled="{{loading || !canLoginSubmit}}"
           bindtap="handleLogin"
           class="login-btn">
           {{copy.login.submitButton}}

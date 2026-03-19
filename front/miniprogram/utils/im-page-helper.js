@@ -233,7 +233,10 @@ function onSendButtonTap(page, sendFn) {
   }
 }
 
-async function sendComposerText(page, sendTextFn) {
+async function sendComposerText(page, sendTextFn, options = {}) {
+  const onError = typeof options.onError === 'function'
+    ? options.onError
+    : null
   const content = String(page.data.inputMessage || '').trim()
   if (!content) {
     page.keepComposerOpenAfterSend = false
@@ -258,6 +261,9 @@ async function sendComposerText(page, sendTextFn) {
     if (page.pageUnloaded) {
       return
     }
+    if (onError) {
+      onError(error)
+    }
   } finally {
     page.keepComposerOpenUntilSendFinish = false
     page.setData({ sending: false })
@@ -274,6 +280,9 @@ async function sendComposerTextMessage(page, imSendHelper, options = {}) {
   const onSuccess = typeof options.onSuccess === 'function'
     ? options.onSuccess
     : null
+  const onError = typeof options.onError === 'function'
+    ? options.onError
+    : null
   return sendComposerText(
     page,
     async (content) => {
@@ -285,7 +294,8 @@ async function sendComposerTextMessage(page, imSendHelper, options = {}) {
       if (onSuccess) {
         onSuccess(content)
       }
-    }
+    },
+    { onError }
   )
 }
 

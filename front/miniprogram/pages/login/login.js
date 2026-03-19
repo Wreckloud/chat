@@ -3,7 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { LOGIN_PAGE_COPY } = require('../../constants/copy')
 const { normalizeText, normalizeEmail, isValidEmail } = require('../../utils/account')
@@ -43,6 +43,8 @@ Page({
     showResult: false,
     registeredWolfNo: '',
     loading: false,
+    canRegisterSubmit: false,
+    canLoginSubmit: false,
     themeClass: 'theme-retro-blue',
     copy: LOGIN_PAGE_COPY
   },
@@ -63,8 +65,12 @@ Page({
       nextData.account = decodeURIComponent(options.account)
     }
     if (Object.keys(nextData).length > 0) {
-      this.setData(nextData)
+      this.setData(nextData, () => {
+        this.syncLoginSubmitState()
+      })
+      return
     }
+    this.syncLoginSubmitState()
   },
 
   onShow() {
@@ -76,7 +82,8 @@ Page({
       mode: 'login',
       ...EMPTY_LOGIN_FORM,
       showResult: false,
-      registeredWolfNo: ''
+      registeredWolfNo: '',
+      canLoginSubmit: false
     })
   },
 
@@ -85,13 +92,16 @@ Page({
       mode: 'register',
       ...EMPTY_REGISTER_FORM,
       showResult: false,
-      registeredWolfNo: ''
+      registeredWolfNo: '',
+      canRegisterSubmit: false
     })
   },
 
   onNicknameInput(e) {
     this.setData({
       nickname: e.detail.value || ''
+    }, () => {
+      this.syncRegisterSubmitState()
     })
   },
 
@@ -102,12 +112,16 @@ Page({
       password,
       passwordStrengthLevel: strength.level,
       passwordStrengthInlineText: getPasswordStrengthInlineText(strength.level)
+    }, () => {
+      this.syncRegisterSubmitState()
     })
   },
 
   onConfirmPasswordInput(e) {
     this.setData({
       confirmPassword: e.detail.value || ''
+    }, () => {
+      this.syncRegisterSubmitState()
     })
   },
 
@@ -120,12 +134,16 @@ Page({
   onAccountInput(e) {
     this.setData({
       account: e.detail.value || ''
+    }, () => {
+      this.syncLoginSubmitState()
     })
   },
 
   onLoginKeyInput(e) {
     this.setData({
       loginKey: e.detail.value || ''
+    }, () => {
+      this.syncLoginSubmitState()
     })
   },
 
@@ -139,7 +157,7 @@ Page({
   },
 
   async handleRegister() {
-    if (this.data.loading) return
+    if (this.data.loading || !this.data.canRegisterSubmit) return
 
     const copy = this.data.copy
     const normalizedNickname = normalizeText(this.data.nickname)
@@ -147,23 +165,13 @@ Page({
     const normalizedConfirmPassword = normalizeText(this.data.confirmPassword)
     const normalizedEmail = normalizeEmail(this.data.email)
 
-    if (!normalizedNickname) {
-      toastError(copy.validation.nicknameRequired)
-      return
-    }
-
     if (normalizedNickname.length > NICKNAME_MAX_LEN) {
       toastError(`称谓最多 ${NICKNAME_MAX_LEN} 个字符`)
       return
     }
 
-    if (!normalizedPassword || normalizedPassword.length < 6) {
+    if (normalizedPassword.length < 6) {
       toastError(copy.validation.passwordMinLength)
-      return
-    }
-
-    if (!normalizedConfirmPassword) {
-      toastError(copy.validation.confirmPasswordRequired)
       return
     }
 
@@ -193,7 +201,6 @@ Page({
         showResult: true,
         registeredWolfNo: res.data.userInfo.wolfNo || ''
       })
-      toastSuccess(copy.toast.registerSuccess)
     } catch (error) {
       toastError(error, copy.toast.registerFail)
     } finally {
@@ -202,21 +209,11 @@ Page({
   },
 
   async handleLogin() {
-    if (this.data.loading) return
+    if (this.data.loading || !this.data.canLoginSubmit) return
 
     const copy = this.data.copy
     const normalizedAccount = normalizeText(this.data.account)
     const normalizedLoginKey = normalizeText(this.data.loginKey)
-
-    if (!normalizedAccount) {
-      toastError(copy.validation.accountRequired)
-      return
-    }
-
-    if (!normalizedLoginKey) {
-      toastError(copy.validation.loginPasswordRequired)
-      return
-    }
 
     this.setData({ loading: true })
 
@@ -226,14 +223,13 @@ Page({
         loginKey: normalizedLoginKey
       })
       this.saveAuthSession(res.data)
-      toastSuccess(copy.toast.loginSuccess)
       setTimeout(() => {
         wx.switchTab({
           url: '/pages/chat/chat'
         })
       }, 800)
     } catch (error) {
-      toastError(error, copy.toast.loginFail)
+      toastError(error, copy.toast.loginFail, { scene: 'login' })
     } finally {
       this.setData({ loading: false })
     }
@@ -256,5 +252,28 @@ Page({
 
   applyTheme() {
     applyPageTheme(this)
+  },
+
+  syncRegisterSubmitState() {
+    const canRegisterSubmit = Boolean(
+      normalizeText(this.data.nickname)
+      && normalizeText(this.data.password)
+      && normalizeText(this.data.confirmPassword)
+    )
+    if (canRegisterSubmit === this.data.canRegisterSubmit) {
+      return
+    }
+    this.setData({ canRegisterSubmit })
+  },
+
+  syncLoginSubmitState() {
+    const canLoginSubmit = Boolean(
+      normalizeText(this.data.account)
+      && normalizeText(this.data.loginKey)
+    )
+    if (canLoginSubmit === this.data.canLoginSubmit) {
+      return
+    }
+    this.setData({ canLoginSubmit })
   }
 })

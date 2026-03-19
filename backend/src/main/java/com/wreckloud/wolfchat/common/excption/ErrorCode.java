@@ -20,7 +20,7 @@ public enum ErrorCode {
     // 认证相关错误码 2000-2999
     UNAUTHORIZED(2001, "请先登录"),
     TOKEN_INVALID(2002, "token 无效"),
-    LOGIN_FAILED(2004, "登录失败"),
+    LOGIN_FAILED(2004, "账号或密码错误"),
     WOLF_NO_NOT_FOUND(2005, "狼藉号不存在"),
     LOGIN_KEY_ERROR(2006, "密码错误"),
     USER_DISABLED(2007, "行者账号已禁用"),

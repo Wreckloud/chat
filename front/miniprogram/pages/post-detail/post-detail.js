@@ -400,6 +400,7 @@ Page({
         this.loadReplies({ reset: true, notifyError: false })
       ])
     } catch (error) {
+      toastError(error, '回复失败')
     } finally {
       this.keepReplyFocusAfterSend = false
       this.setData({

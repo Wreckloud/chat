@@ -55,16 +55,8 @@ public class AuthController {
     @Operation(summary = "登录", description = "使用账号（狼藉号或邮箱）+密码登录")
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody @Validated LoginDTO dto, HttpServletRequest request) {
-        try {
-            LoginVO loginVO = authService.login(dto.getAccount(), dto.getLoginKey(), request);
-            return Result.success("登录成功", loginVO);
-        } catch (BaseException e) {
-            log.debug("登录失败: code={}", e.getCode());
-            return Result.error(ErrorCode.LOGIN_FAILED);
-        } catch (Exception e) {
-            log.error("登录异常", e);
-            return Result.error(ErrorCode.LOGIN_FAILED);
-        }
+        LoginVO loginVO = authService.login(dto.getAccount(), dto.getLoginKey(), request);
+        return Result.success("登录成功", loginVO);
     }
 
     /**

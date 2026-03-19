@@ -1,5 +1,6 @@
 package com.wreckloud.wolfchat.account.application.service;
 
+import com.wreckloud.wolfchat.account.application.support.AccountMaskingSupport;
 import com.wreckloud.wolfchat.account.domain.entity.WfLoginRecord;
 import com.wreckloud.wolfchat.account.domain.enums.LoginMethod;
 import com.wreckloud.wolfchat.account.domain.enums.LoginResult;
@@ -47,7 +48,7 @@ public class LoginRecordService {
         record.setLoginMethod(loginMethod);
         record.setLoginResult(loginResult);
         record.setFailCode(failCode);
-        record.setAccountMask(limitLength(maskAccount(account), ACCOUNT_MASK_MAX_LENGTH));
+        record.setAccountMask(limitLength(AccountMaskingSupport.maskAccount(account), ACCOUNT_MASK_MAX_LENGTH));
         record.setIp(limitLength(resolveClientIp(request), IP_MAX_LENGTH));
         record.setUserAgent(limitLength(resolveHeader(request, USER_AGENT_HEADER), USER_AGENT_MAX_LENGTH));
         record.setClientType(limitLength(resolveClientType(request), CLIENT_TYPE_MAX_LENGTH));
@@ -104,38 +105,4 @@ public class LoginRecordService {
         return value.substring(0, maxLength);
     }
 
-    private String maskAccount(String account) {
-        if (!StringUtils.hasText(account)) {
-            return null;
-        }
-        String normalizedAccount = account.trim();
-        if (normalizedAccount.contains("@")) {
-            return maskEmail(normalizedAccount);
-        }
-        return maskWolfNo(normalizedAccount);
-    }
-
-    private String maskEmail(String email) {
-        int atIndex = email.indexOf('@');
-        if (atIndex <= 0) {
-            return "***";
-        }
-        String localPart = email.substring(0, atIndex);
-        String domainPart = email.substring(atIndex);
-        if (localPart.length() <= 2) {
-            return localPart.charAt(0) + "***" + domainPart;
-        }
-        String start = localPart.substring(0, 1);
-        String end = localPart.substring(localPart.length() - 1);
-        return start + "***" + end + domainPart;
-    }
-
-    private String maskWolfNo(String wolfNo) {
-        if (wolfNo.length() <= 4) {
-            return "***";
-        }
-        String start = wolfNo.substring(0, 2);
-        String end = wolfNo.substring(wolfNo.length() - 2);
-        return start + "****" + end;
-    }
 }

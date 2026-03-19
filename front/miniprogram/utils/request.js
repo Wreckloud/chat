@@ -5,6 +5,14 @@ const config = require('./config')
 const auth = require('./auth')
 const AUTH_ERROR_CODES = [2001, 2002, 2003]
 
+function createRequestError(message, extra = {}) {
+  const error = new Error(message)
+  Object.keys(extra).forEach(key => {
+    error[key] = extra[key]
+  })
+  return error
+}
+
 /**
  * 发起请求
  */
@@ -44,15 +52,26 @@ function request(options) {
             if (AUTH_ERROR_CODES.includes(code)) {
               auth.handleAuthExpired()
             }
-            reject(new Error(responseData.message || '请求失败'))
+            reject(createRequestError(responseData.message || '请求失败', {
+              code: Number(code) || 0,
+              kind: 'business',
+              raw: responseData
+            }))
           }
         } else {
           // HTTP 错误
-          reject(new Error('网络请求失败，请稍后重试'))
+          reject(createRequestError('网络请求失败，请稍后重试', {
+            kind: 'http',
+            statusCode: res.statusCode,
+            raw: res
+          }))
         }
       },
       fail(err) {
-        reject(err)
+        reject(createRequestError('网络异常，请稍后重试', {
+          kind: 'network',
+          raw: err
+        }))
       }
     })
   })

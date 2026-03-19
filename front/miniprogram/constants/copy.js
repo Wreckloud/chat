@@ -45,7 +45,7 @@ const LOGIN_PAGE_COPY = {
     registerSuccess: '注册成功',
     registerFail: '注册失败',
     loginSuccess: '登录成功',
-    loginFail: '登录失败'
+    loginFail: '账号或密码错误'
   }
 }
 

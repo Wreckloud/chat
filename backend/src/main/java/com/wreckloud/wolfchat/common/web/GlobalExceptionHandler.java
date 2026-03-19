@@ -27,8 +27,11 @@ public class GlobalExceptionHandler {
      * 处理自定义业务异常
      */
     @ExceptionHandler(BaseException.class)
-    public Result<?> handleBaseException(BaseException e) {
-        log.debug("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+    public Result<?> handleBaseException(BaseException e, HttpServletRequest request) {
+        if (isLoginRequest(request)) {
+            return Result.error(ErrorCode.LOGIN_FAILED);
+        }
+        log.warn("业务异常: code={}, message={}, uri={}", e.getCode(), e.getMessage(), resolveRequestUri(request));
         return Result.error(e.getCode(), e.getMessage());
     }
 
@@ -39,10 +42,10 @@ public class GlobalExceptionHandler {
     public Result<?> handleParamException(Exception e, HttpServletRequest request) {
         String message = resolveParamErrorMessage(e);
         if (isLoginRequest(request)) {
-            log.debug("登录参数异常: {}", message);
+            log.info("登录参数异常: uri={}, message={}", resolveRequestUri(request), message);
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.debug("参数异常: {}", message);
+        log.warn("参数异常: uri={}, message={}", resolveRequestUri(request), message);
         return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
     }
 
@@ -52,10 +55,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request) {
         if (isLoginRequest(request)) {
-            log.debug("登录请求体异常: {}", e.getMessage());
+            log.info("登录请求体异常: uri={}, message={}", resolveRequestUri(request), e.getMessage());
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.debug("请求体异常: {}", e.getMessage());
+        log.warn("请求体异常: uri={}, message={}", resolveRequestUri(request), e.getMessage());
         return Result.error(ErrorCode.PARAM_ERROR);
     }
 
@@ -72,7 +75,11 @@ public class GlobalExceptionHandler {
      * 处理其他异常
      */
     @ExceptionHandler(Exception.class)
-    public Result<?> handleException(Exception e) {
+    public Result<?> handleException(Exception e, HttpServletRequest request) {
+        if (isLoginRequest(request)) {
+            log.warn("登录系统异常: uri={}, message={}", resolveRequestUri(request), e.getMessage());
+            return Result.error(ErrorCode.LOGIN_FAILED);
+        }
         log.error("系统异常", e);
         return Result.error(ErrorCode.SYSTEM_ERROR);
     }
@@ -113,5 +120,12 @@ public class GlobalExceptionHandler {
         String requestUri = request.getRequestURI();
         String loginRequestUri = (contextPath == null ? "" : contextPath) + LOGIN_PATH;
         return loginRequestUri.equals(requestUri);
+    }
+
+    private String resolveRequestUri(HttpServletRequest request) {
+        if (request == null) {
+            return "";
+        }
+        return request.getRequestURI();
     }
 }

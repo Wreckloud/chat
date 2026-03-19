@@ -31,7 +31,13 @@ function buildCommonImPageMethods(options) {
     },
 
     async sendMessage() {
-      return imPageHelper.sendComposerTextMessage(this, imSendHelper)
+      return imPageHelper.sendComposerTextMessage(this, imSendHelper, {
+        onError: (error) => {
+          if (typeof toastError === 'function') {
+            toastError(error, '发送失败')
+          }
+        }
+      })
     },
 
     setMorePanelVisible(visible) {

@@ -6,7 +6,7 @@ const request = require('../../utils/request')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
 const { DEFAULT_AVATAR } = require('../../utils/user')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
 const { getSwipeActionStyles } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
 const imPageHelper = require('../../utils/im-page-helper')
@@ -315,7 +315,6 @@ Page({
         })
         this.setData(this.buildConversationViewData(nextList))
         this.syncChatUnreadBadge(nextList)
-        toastSuccess(readTogglePlan.markRead ? '已标为已读' : '已标为未读')
       })
       .catch(err => {
         toastError(err, '操作失败')
@@ -339,7 +338,6 @@ Page({
     })
 
     this.setData(this.buildConversationViewData(list))
-    toastSuccess(toggleResult.nextPinned ? '置顶成功' : '已取消置顶')
   },
 
   formatConversationItem(item) {

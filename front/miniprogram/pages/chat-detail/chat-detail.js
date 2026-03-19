@@ -203,6 +203,9 @@ Page({
   async sendMessage() {
     return imPageHelper.sendComposerTextMessage(this, imSendHelper, {
       buildExtraPayload: () => this.buildReplyPayload(),
+      onError: (error) => {
+        toastError(error, '发送失败')
+      },
       onSuccess: () => {
         this.clearReplyDraft()
         if (!this.data.messagePolicy || !this.data.messagePolicy.canSendFreely) {

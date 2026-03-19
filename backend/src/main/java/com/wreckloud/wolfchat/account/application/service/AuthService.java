@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.account.application.service;
 import com.wreckloud.wolfchat.account.api.converter.UserConverter;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
 import com.wreckloud.wolfchat.account.api.vo.UserVO;
+import com.wreckloud.wolfchat.account.application.support.AccountMaskingSupport;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.domain.entity.WfUserAuth;
 import com.wreckloud.wolfchat.account.domain.enums.LoginMethod;
@@ -110,6 +111,7 @@ public class AuthService {
         WfUser user = null;
         WfUserAuth auth = null;
         String normalizedAccount = normalizeAccount(account);
+        String maskedAccount = AccountMaskingSupport.maskAccount(normalizedAccount);
         LoginMethod loginMethod = resolveLoginMethod(normalizedAccount);
         try {
             String normalizedLoginKey = normalizeLoginKey(loginKey);
@@ -135,9 +137,21 @@ public class AuthService {
             log.info("行者登录成功: method={}, userId={}", loginMethod.getValue(), user.getId());
             return buildLoginVO(user);
         } catch (BaseException e) {
+            log.info(
+                    "行者登录失败: method={}, code={}, account={}",
+                    loginMethod.getValue(),
+                    e.getCode(),
+                    maskedAccount
+            );
             recordLoginSafely(user == null ? null : user.getId(), loginMethod, LoginResult.FAIL, e.getCode(), normalizedAccount, request);
             throw e;
         } catch (Exception e) {
+            log.error(
+                    "行者登录异常: method={}, account={}",
+                    loginMethod.getValue(),
+                    maskedAccount,
+                    e
+            );
             recordLoginSafely(
                     user == null ? null : user.getId(),
                     loginMethod,
