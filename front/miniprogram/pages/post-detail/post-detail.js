@@ -11,6 +11,7 @@ const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
 const imHelper = require('../../utils/im-helper')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
+const postReplyLayoutHelper = require('../../utils/post-reply-layout-helper')
 
 const EMPTY_QUOTE_DATA = {
   quoteReplyId: null,
@@ -51,14 +52,6 @@ function normalizeImageTempFile(file) {
     width: Number(file.width) || 0,
     height: Number(file.height) || 0
   }
-}
-
-function resolveKeyboardHeight(event) {
-  const height = Number(event && event.detail ? event.detail.height : 0)
-  if (!Number.isFinite(height) || height <= 0) {
-    return 0
-  }
-  return Math.floor(height)
 }
 
 function resolveThreadPermission(thread, currentUserId) {
@@ -124,25 +117,18 @@ Page({
     pageLifecycleHelper.handleProtectedPageShow(auth, {
       afterShow: () => {
         this.applyTheme()
-        this.measureReplyDockHeight()
+        postReplyLayoutHelper.measureReplyDockHeight(this)
       }
     })
   },
 
   onReady() {
-    this.measureReplyDockHeight()
+    postReplyLayoutHelper.measureReplyDockHeight(this)
   },
 
   onUnload() {
     this.pageUnloaded = true
-    if (this.replyScrollResetTimer) {
-      clearTimeout(this.replyScrollResetTimer)
-      this.replyScrollResetTimer = null
-    }
-    if (this.replyRefocusTimer) {
-      clearTimeout(this.replyRefocusTimer)
-      this.replyRefocusTimer = null
-    }
+    postReplyLayoutHelper.cleanupReplyLayout(this)
   },
 
   async loadPage() {
@@ -250,13 +236,13 @@ Page({
       quoteReplyId: reply.replyId,
       quoteHint: buildQuoteHint(reply)
     }, () => {
-      this.measureReplyDockHeight()
+      postReplyLayoutHelper.measureReplyDockHeight(this)
     })
   },
 
   clearQuote() {
     this.setData(EMPTY_QUOTE_DATA, () => {
-      this.measureReplyDockHeight()
+      postReplyLayoutHelper.measureReplyDockHeight(this)
     })
   },
 
@@ -308,64 +294,15 @@ Page({
   },
 
   onReplyKeyboardHeightChange(e) {
-    const nextHeight = resolveKeyboardHeight(e)
-    if (nextHeight > 0) {
-      this.lastReplyKeyboardHeightPx = nextHeight
-    }
-    if (nextHeight === 0 && this.keepReplyFocusAfterSend) {
-      return
-    }
-    const nextBottom = this.data.replyDockHeightPx + nextHeight
-    if (nextHeight === this.data.keyboardHeightPx && nextBottom === this.data.replyListBottomPx) {
-      return
-    }
-    this.setData({
-      keyboardHeightPx: nextHeight,
-      replyListBottomPx: nextBottom
-    }, () => {
-      if (nextHeight > 0) {
-        this.scrollReplyListToBottom()
-      }
-    })
+    postReplyLayoutHelper.onReplyKeyboardHeightChange(this, e)
   },
 
   onReplyFocus(e) {
-    const focusHeight = resolveKeyboardHeight(e) || Number(this.lastReplyKeyboardHeightPx || 0)
-    if (focusHeight > 0) {
-      this.lastReplyKeyboardHeightPx = focusHeight
-    }
-    const nextBottom = this.data.replyDockHeightPx + focusHeight
-    const updates = {}
-    if (!this.data.replyFocused) {
-      updates.replyFocused = true
-    }
-    if (focusHeight !== this.data.keyboardHeightPx || nextBottom !== this.data.replyListBottomPx) {
-      updates.keyboardHeightPx = focusHeight
-      updates.replyListBottomPx = nextBottom
-    }
-    if (Object.keys(updates).length > 0) {
-      this.setData(updates, () => {
-        this.scrollReplyListToBottom()
-      })
-      return
-    }
-    this.scrollReplyListToBottom()
+    postReplyLayoutHelper.onReplyFocus(this, e)
   },
 
   onReplyBlur() {
-    if (this.keepReplyFocusAfterSend) {
-      this.refocusReplyInput()
-      return
-    }
-    this.setData({ replyFocused: false })
-    setTimeout(() => {
-      if (!this.data.replyFocused && !this.keepReplyFocusAfterSend) {
-        this.setData({
-          keyboardHeightPx: 0,
-          replyListBottomPx: this.data.replyDockHeightPx
-        })
-      }
-    }, 90)
+    postReplyLayoutHelper.onReplyBlur(this)
   },
 
   onReplySubmitTap() {
@@ -391,7 +328,7 @@ Page({
       this.setData({
         replyImage: normalized
       }, () => {
-        this.measureReplyDockHeight()
+        postReplyLayoutHelper.measureReplyDockHeight(this)
         this.syncReplySubmitState()
       })
     } catch (error) {
@@ -409,7 +346,7 @@ Page({
     this.setData({
       replyImage: null
     }, () => {
-      this.measureReplyDockHeight()
+      postReplyLayoutHelper.measureReplyDockHeight(this)
       this.syncReplySubmitState()
     })
   },
@@ -456,7 +393,7 @@ Page({
         replyImage: null,
         ...EMPTY_QUOTE_DATA
       }, () => {
-        this.measureReplyDockHeight()
+        postReplyLayoutHelper.measureReplyDockHeight(this)
       })
       await Promise.all([
         this.loadThreadDetail(),
@@ -645,62 +582,15 @@ Page({
   },
 
   refocusReplyInput() {
-    if (this.pageUnloaded) {
-      return
-    }
-    if (this.replyRefocusTimer) {
-      clearTimeout(this.replyRefocusTimer)
-      this.replyRefocusTimer = null
-    }
-    this.setData({ replyFocused: false }, () => {
-      this.replyRefocusTimer = setTimeout(() => {
-        this.replyRefocusTimer = null
-        if (this.pageUnloaded) {
-          return
-        }
-        this.setData({ replyFocused: true })
-      }, 24)
-    })
+    postReplyLayoutHelper.refocusReplyInput(this)
   },
 
   scrollReplyListToBottom() {
-    if (this.replyScrollResetTimer) {
-      clearTimeout(this.replyScrollResetTimer)
-      this.replyScrollResetTimer = null
-    }
-    if (this.data.replyScrollIntoView) {
-      this.setData({ replyScrollIntoView: '' }, () => {
-        this.scrollReplyListToBottom()
-      })
-      return
-    }
-    this.setData({ replyScrollIntoView: 'reply-bottom-anchor' })
-    this.replyScrollResetTimer = setTimeout(() => {
-      this.replyScrollResetTimer = null
-      if (this.data.replyScrollIntoView) {
-        this.setData({ replyScrollIntoView: '' })
-      }
-    }, 120)
+    postReplyLayoutHelper.scrollReplyListToBottom(this)
   },
 
   measureReplyDockHeight() {
-    wx.nextTick(() => {
-      const query = wx.createSelectorQuery().in(this)
-      query.select('#reply-dock').boundingClientRect(rect => {
-        if (!rect || !rect.height) {
-          return
-        }
-        const nextDockHeight = Math.ceil(rect.height)
-        const nextBottom = nextDockHeight + this.data.keyboardHeightPx
-        if (nextDockHeight === this.data.replyDockHeightPx && nextBottom === this.data.replyListBottomPx) {
-          return
-        }
-        this.setData({
-          replyDockHeightPx: nextDockHeight,
-          replyListBottomPx: nextBottom
-        })
-      }).exec()
-    })
+    postReplyLayoutHelper.measureReplyDockHeight(this)
   },
 
   applyTheme() {
