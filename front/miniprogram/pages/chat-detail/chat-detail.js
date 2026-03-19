@@ -12,6 +12,7 @@ const imUserHelper = require('../../utils/im-user-helper')
 const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
 const imConfig = require('../../utils/im-config')
+const chatPolicyHelper = require('../../utils/chat-policy-helper')
 const { resolveDisplayName, attachDisplayTitle } = require('../../utils/title')
 const { refreshChatUnreadBadge } = require('../../utils/tab-badge')
 const buildCommonImPageMethods = require('../../utils/im-page-methods')
@@ -46,7 +47,10 @@ Page({
     targetUser: {},
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
-    moreActions: imSendHelper.DEFAULT_MORE_ACTIONS
+    moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
+    messagePolicy: null,
+    systemNoticeBlocks: [],
+    replyDraft: null
   },
 
   SEND_TIMEOUT_MS: imConfig.SEND_TIMEOUT_MS,
@@ -74,9 +78,11 @@ Page({
         imUserHelper.initCurrentUserContext(this, auth, normalizeUser, {
           enableLoadingUserGuard: true
         })
+        this.applyMessagePolicy(null)
         this.markConversationRead(true)
         this.loadCurrentUserProfile()
         this.loadConversation()
+        this.loadMessagePolicy()
         this.loadMessages()
         this.initSocket()
       }
@@ -171,7 +177,40 @@ Page({
     })
   },
 
+  loadMessagePolicy() {
+    if (!this.data.conversationId) {
+      return Promise.resolve()
+    }
+    return request.get(`/conversations/${this.data.conversationId}/messages/policy`)
+      .then(res => {
+        this.applyMessagePolicy(res.data || null)
+      })
+      .catch(() => {})
+  },
+
+  applyMessagePolicy(policy) {
+    const systemNoticeBlocks = this.buildSystemNoticeBlocks(policy)
+    const messageBlocks = this.buildMessageBlocks(this.data.messages, systemNoticeBlocks)
+    this.setData({
+      messagePolicy: policy,
+      systemNoticeBlocks,
+      messageBlocks
+    })
+  },
+
   ...commonImPageMethods,
+
+  async sendMessage() {
+    return imPageHelper.sendComposerTextMessage(this, imSendHelper, {
+      buildExtraPayload: () => this.buildReplyPayload(),
+      onSuccess: () => {
+        this.clearReplyDraft()
+        if (!this.data.messagePolicy || !this.data.messagePolicy.canSendFreely) {
+          this.loadMessagePolicy()
+        }
+      }
+    })
+  },
 
   handleWsMessage(payload) {
     const commonHandled = imWsHelper.handleCommonPayload(this, payload, {
@@ -188,6 +227,9 @@ Page({
       this.appendMessage(payload.data)
       if (payload.data && Number(payload.data.senderId) !== Number(this.currentUserId)) {
         this.markConversationRead()
+        if (!this.data.messagePolicy || !this.data.messagePolicy.canSendFreely) {
+          this.loadMessagePolicy()
+        }
       }
     }
   },
@@ -214,17 +256,96 @@ Page({
     imUserHelper.openUserProfileByTapEvent(e, openUserProfile)
   },
 
-  buildMessageBlocks(messages) {
-    return imHelper.buildMessageBlocks(messages, {
+  handleLongPressUserMeta(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const isSelf = Number(dataset.isSelf) === 1
+    if (isSelf) {
+      return
+    }
+    const userName = String(dataset.userName || '').trim()
+    if (!userName) {
+      return
+    }
+    const origin = String(this.data.inputMessage || '')
+    const separator = origin && !/\s$/.test(origin) ? ' ' : ''
+    const nextInput = `${origin}${separator}@${userName} `
+    this.setData({
+      inputMessage: nextInput,
+      canSendText: nextInput.trim().length > 0,
+      composerFocused: true
+    })
+    if (this.data.morePanelVisible) {
+      this.setMorePanelVisible(false)
+    }
+    imHelper.refocusComposerInput(this)
+  },
+
+  handleLongPressMessageRow(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const messageId = Number(dataset.messageId)
+    if (!messageId) {
+      imPageHelper.onLongPressMessage(this, e)
+      return
+    }
+
+    const copyContent = String(dataset.copy || '').trim()
+    const actionList = copyContent
+      ? ['回复该消息', '复制内容']
+      : ['回复该消息']
+
+    wx.showActionSheet({
+      itemList: actionList,
+      success: ({ tapIndex }) => {
+        if (tapIndex === 0) {
+          this.startReplyDraft(dataset)
+          return
+        }
+        if (tapIndex === 1 && copyContent) {
+          wx.setClipboardData({ data: copyContent })
+        }
+      }
+    })
+  },
+
+  startReplyDraft(dataset) {
+    const replyDraft = chatPolicyHelper.buildReplyDraft(dataset)
+    if (!replyDraft) {
+      return
+    }
+    this.setData({
+      replyDraft,
+      composerFocused: true
+    })
+    if (this.data.morePanelVisible) {
+      this.setMorePanelVisible(false)
+    }
+    imHelper.refocusComposerInput(this)
+  },
+
+  clearReplyDraft() {
+    if (!this.data.replyDraft) {
+      return
+    }
+    this.setData({ replyDraft: null })
+  },
+
+  buildReplyPayload() {
+    return chatPolicyHelper.buildReplyPayload(this.data.replyDraft)
+  },
+
+  buildMessageBlocks(messages, systemNoticeBlocks = this.data.systemNoticeBlocks) {
+    const messageBlocks = imHelper.buildMessageBlocks(messages, {
       currentUserId: this.currentUserId,
       messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
       cacheUserProfile: (user) => this.cacheUserProfile(user),
       resolveSenderProfile: (senderId, isSelf) => this.resolveSenderProfile(senderId, isSelf)
     })
+    return this.prependSystemNoticeBlocks(messageBlocks, systemNoticeBlocks)
   },
 
   appendMessageBlock({ messageBlocks, message, previousMessage, messageIndex }) {
-    return imHelper.appendMessageBlock(messageBlocks, message, {
+    const pureBlocks = this.stripSystemNoticeBlocks(messageBlocks)
+    const nextBlocks = imHelper.appendMessageBlock(pureBlocks, message, {
       currentUserId: this.currentUserId,
       messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
       cacheUserProfile: (user) => this.cacheUserProfile(user),
@@ -232,6 +353,19 @@ Page({
       previousMessage,
       messageIndex
     })
+    return this.prependSystemNoticeBlocks(nextBlocks)
+  },
+
+  buildSystemNoticeBlocks(policy) {
+    return chatPolicyHelper.buildSystemNoticeBlocks(policy)
+  },
+
+  prependSystemNoticeBlocks(messageBlocks, systemNoticeBlocks = this.data.systemNoticeBlocks) {
+    return chatPolicyHelper.prependSystemNoticeBlocks(systemNoticeBlocks, messageBlocks)
+  },
+
+  stripSystemNoticeBlocks(messageBlocks) {
+    return chatPolicyHelper.stripSystemNoticeBlocks(messageBlocks)
   },
 
   resolveSenderProfile(senderId, isSelf) {

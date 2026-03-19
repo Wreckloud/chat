@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.chat.message.api.converter.MessageConverter;
 import com.wreckloud.wolfchat.chat.message.api.dto.SendMessageDTO;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
+import com.wreckloud.wolfchat.chat.message.api.vo.MessagePolicyVO;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
@@ -77,6 +78,13 @@ public class MessageController {
         return Result.success(result);
     }
 
+    @Operation(summary = "消息策略", description = "查询当前用户在会话中的发送策略")
+    @GetMapping("/policy")
+    public Result<MessagePolicyVO> getMessagePolicy(@PathVariable Long conversationId) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(messageService.getMessagePolicy(userId, conversationId));
+    }
+
     private SendMessageCommand buildSendCommand(Long userId, Long conversationId, SendMessageDTO dto) {
         SendMessageCommand command = new SendMessageCommand();
         command.setUserId(userId);
@@ -88,6 +96,7 @@ public class MessageController {
         command.setMediaHeight(dto.getMediaHeight());
         command.setMediaSize(dto.getMediaSize());
         command.setMediaMimeType(dto.getMediaMimeType());
+        command.setReplyToMessageId(dto.getReplyToMessageId());
         return command;
     }
 }

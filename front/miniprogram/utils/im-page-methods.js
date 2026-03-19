@@ -66,6 +66,26 @@ function buildCommonImPageMethods(options) {
       imPageHelper.onLongPressMessage(this, e)
     },
 
+    onLongPressMessageRow(e) {
+      if (typeof this.handleLongPressMessageRow === 'function') {
+        this.handleLongPressMessageRow(e)
+        return
+      }
+      imPageHelper.onLongPressMessage(this, e)
+    },
+
+    onLongPressUserMeta(e) {
+      if (typeof this.handleLongPressUserMeta === 'function') {
+        this.handleLongPressUserMeta(e)
+      }
+    },
+
+    onClearReplyDraft() {
+      if (typeof this.clearReplyDraft === 'function') {
+        this.clearReplyDraft()
+      }
+    },
+
     scrollToBottom() {
       imHelper.scrollToBottom(this)
     },

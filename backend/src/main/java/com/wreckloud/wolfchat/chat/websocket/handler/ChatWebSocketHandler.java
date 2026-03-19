@@ -322,6 +322,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         command.setMediaHeight(request.getMediaHeight());
         command.setMediaSize(request.getMediaSize());
         command.setMediaMimeType(request.getMediaMimeType());
+        command.setReplyToMessageId(request.getReplyToMessageId());
         return command;
     }
 

@@ -251,7 +251,8 @@ public class ForumQueryService {
         queryWrapper.eq(WfForumThreadLike::getUserId, userId)
                 .eq(WfForumThreadLike::getThreadId, threadId)
                 .last("LIMIT 1");
-        return wfForumThreadLikeMapper.selectOne(queryWrapper) != null;
+        Long count = wfForumThreadLikeMapper.selectCount(queryWrapper);
+        return count != null && count > 0;
     }
 
     public boolean isReplyLikedByUser(Long userId, Long replyId) {
@@ -262,12 +263,13 @@ public class ForumQueryService {
         queryWrapper.eq(WfForumReplyLike::getUserId, userId)
                 .eq(WfForumReplyLike::getReplyId, replyId)
                 .last("LIMIT 1");
-        return wfForumReplyLikeMapper.selectOne(queryWrapper) != null;
+        Long count = wfForumReplyLikeMapper.selectCount(queryWrapper);
+        return count != null && count > 0;
     }
 
     private void validatePageParams(long page, long size) {
         if (page < MIN_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("分页参数不合法，page>=1 且 size 在1-50之间");
+            throw new BaseException(ErrorCode.PARAM_ERROR, "分页参数不合法，page>=1 且 size 在1-50之间");
         }
     }
 
@@ -279,7 +281,7 @@ public class ForumQueryService {
         if (TAB_ALL.equals(normalizedTab) || TAB_STICKY.equals(normalizedTab) || TAB_ESSENCE.equals(normalizedTab)) {
             return normalizedTab;
         }
-        throw new IllegalArgumentException("tab 参数不合法，仅支持 all/sticky/essence");
+        throw new BaseException(ErrorCode.PARAM_ERROR, "tab 参数不合法，仅支持 all/sticky/essence");
     }
 
     private void applyThreadTabFilter(String tab, LambdaQueryWrapper<WfForumThread> queryWrapper) {

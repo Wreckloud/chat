@@ -28,7 +28,7 @@ import java.util.List;
 public class ConversationController {
     private final ConversationService conversationService;
 
-    @Operation(summary = "获取或创建会话", description = "与指定行者创建会话，仅互相关注可创建")
+    @Operation(summary = "获取或创建会话", description = "与指定行者创建会话")
     @PostMapping("/{targetUserId}")
     public Result<Long> getOrCreateConversation(@PathVariable Long targetUserId) {
         Long userId = UserContext.getRequiredUserId();

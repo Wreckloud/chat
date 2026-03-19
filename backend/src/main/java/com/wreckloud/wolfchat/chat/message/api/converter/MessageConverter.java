@@ -41,6 +41,9 @@ public final class MessageConverter {
         vo.setMediaHeight(message.getMediaHeight());
         vo.setMediaSize(message.getMediaSize());
         vo.setMediaMimeType(message.getMediaMimeType());
+        vo.setReplyToMessageId(message.getReplyToMessageId());
+        vo.setReplyToSenderId(message.getReplyToSenderId());
+        vo.setReplyToPreview(message.getReplyToPreview());
         vo.setCreateTime(message.getCreateTime());
         return vo;
     }

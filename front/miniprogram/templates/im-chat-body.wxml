@@ -20,6 +20,10 @@
           <view class="im-divider-line"></view>
         </view>
 
+        <view wx:elif="{{blockItem.type === 'system-notice'}}" class="im-system-notice">
+          <text class="im-system-notice-text">{{blockItem.text}}</text>
+        </view>
+
         <view wx:elif="{{blockItem.type === 'cluster'}}" class="im-cluster {{blockItem.isSelf ? 'im-cluster-self' : ''}}">
           <retro-avatar
             class="im-avatar u-avatar-top"
@@ -27,12 +31,20 @@
             shape="square"
             image="{{blockItem.senderAvatar}}"
             data-user-id="{{blockItem.senderId}}"
+            data-user-name="{{blockItem.senderName}}"
+            data-is-self="{{blockItem.isSelf ? 1 : 0}}"
+            bindlongpress="onLongPressUserMeta"
             bindtap="onTapUserElement">
             {{blockItem.senderInitial}}
           </retro-avatar>
 
           <view class="im-message-col">
-            <view class="im-meta-col">
+            <view
+              class="im-meta-col"
+              data-user-id="{{blockItem.senderId}}"
+              data-user-name="{{blockItem.senderName}}"
+              data-is-self="{{blockItem.isSelf ? 1 : 0}}"
+              bindlongpress="onLongPressUserMeta">
               <view class="im-name-line">
                 <view
                   wx:if="{{blockItem.isSelf && blockItem.senderTitleName}}"
@@ -59,6 +71,9 @@
             </view>
 
             <view wx:for="{{blockItem.rows}}" wx:key="key" wx:for-item="lineItem" class="im-line">
+              <view wx:if="{{lineItem.replyToMessageId && lineItem.replyToPreview}}" class="im-reply-quote">
+                <text class="im-reply-quote-text">{{lineItem.replyToPreview}}</text>
+              </view>
               <image
                 wx:if="{{lineItem.msgType === 'IMAGE' && lineItem.mediaUrl}}"
                 class="im-image"
@@ -90,8 +105,14 @@
                 class="im-text im-file"
                 data-url="{{lineItem.mediaUrl}}"
                 data-name="{{lineItem.content}}"
+                data-message-id="{{lineItem.messageId}}"
+                data-msg-type="{{lineItem.msgType}}"
+                data-message-content="{{lineItem.content}}"
+                data-sender-id="{{blockItem.senderId}}"
+                data-reply-to-message-id="{{lineItem.replyToMessageId}}"
+                data-reply-to-preview="{{lineItem.replyToPreview}}"
                 data-copy="{{lineItem.mediaUrl || lineItem.content || ''}}"
-                bindlongpress="onLongPressMessage"
+                bindlongpress="onLongPressMessageRow"
                 bindtap="onTapFile">
                 {{lineItem.fileLabel}}
               </text>
@@ -99,16 +120,28 @@
                 wx:elif="{{lineItem.msgType === 'TEXT' && lineItem.linkUrl}}"
                 class="im-text im-link"
                 data-url="{{lineItem.linkUrl}}"
+                data-message-id="{{lineItem.messageId}}"
+                data-msg-type="{{lineItem.msgType}}"
+                data-message-content="{{lineItem.content}}"
+                data-sender-id="{{blockItem.senderId}}"
+                data-reply-to-message-id="{{lineItem.replyToMessageId}}"
+                data-reply-to-preview="{{lineItem.replyToPreview}}"
                 data-copy="{{lineItem.linkUrl}}"
-                bindlongpress="onLongPressMessage"
+                bindlongpress="onLongPressMessageRow"
                 bindtap="onTapLink">
                 {{lineItem.content}}
               </text>
               <text
                 wx:elif="{{lineItem.msgType === 'TEXT'}}"
                 class="im-text"
+                data-message-id="{{lineItem.messageId}}"
+                data-msg-type="{{lineItem.msgType}}"
+                data-message-content="{{lineItem.content}}"
+                data-sender-id="{{blockItem.senderId}}"
+                data-reply-to-message-id="{{lineItem.replyToMessageId}}"
+                data-reply-to-preview="{{lineItem.replyToPreview}}"
                 data-copy="{{lineItem.content}}"
-                bindlongpress="onLongPressMessage">
+                bindlongpress="onLongPressMessageRow">
                 {{lineItem.content}}
               </text>
               <text wx:else class="im-media-missing">[媒体不可用]</text>
@@ -122,42 +155,49 @@
 
   <view id="im-dock" class="im-dock" style="bottom: {{keyboardHeightPx}}px;">
     <view id="im-composer" class="im-composer {{morePanelVisible ? 'is-panel-open' : ''}} {{keyboardHeightPx > 0 ? 'is-keyboard-open' : ''}}">
-      <input
-        class="im-composer-input"
-        type="text"
-        placeholder="{{inputPlaceholder}}"
-        placeholder-class="im-composer-input-placeholder"
-        value="{{inputMessage}}"
-        focus="{{composerFocused}}"
-        adjust-position="{{false}}"
-        hold-keyboard="{{true}}"
-        confirm-hold="{{true}}"
-        bindkeyboardheightchange="onKeyboardHeightChange"
-        bindfocus="onComposerFocus"
-        bindblur="onComposerBlur"
-        bindinput="onMessageInput"
-        confirm-type="send"
-        bindconfirm="sendMessage"
-      />
+      <view wx:if="{{replyDraft && replyDraft.messageId}}" class="im-reply-draft">
+        <text class="im-reply-draft-label">回复</text>
+        <text class="im-reply-draft-content">{{replyDraft.preview || '[消息]'}}</text>
+        <text class="im-reply-draft-close" bindtap="onClearReplyDraft">×</text>
+      </view>
+      <view class="im-composer-main-row">
+        <input
+          class="im-composer-input"
+          type="text"
+          placeholder="{{inputPlaceholder}}"
+          placeholder-class="im-composer-input-placeholder"
+          value="{{inputMessage}}"
+          focus="{{composerFocused}}"
+          adjust-position="{{false}}"
+          hold-keyboard="{{true}}"
+          confirm-hold="{{true}}"
+          bindkeyboardheightchange="onKeyboardHeightChange"
+          bindfocus="onComposerFocus"
+          bindblur="onComposerBlur"
+          bindinput="onMessageInput"
+          confirm-type="send"
+          bindconfirm="sendMessage"
+        />
 
-      <view class="im-composer-actions">
-        <retro-button
-          class="im-more-btn"
-          size="medium"
-          theme="default"
-          disabled="{{sending}}"
-          bindtap="onClickMore">
-          更多
-        </retro-button>
-        <retro-button
-          class="im-send-btn"
-          size="medium"
-          theme="primary"
-          disabled="{{sending || !canSendText}}"
-          loading="{{sending}}"
-          bindtap="onSendButtonTap">
-          发送
-        </retro-button>
+        <view class="im-composer-actions">
+          <retro-button
+            class="im-more-btn"
+            size="medium"
+            theme="default"
+            disabled="{{sending}}"
+            bindtap="onClickMore">
+            更多
+          </retro-button>
+          <retro-button
+            class="im-send-btn"
+            size="medium"
+            theme="primary"
+            disabled="{{sending || !canSendText}}"
+            loading="{{sending}}"
+            bindtap="onSendButtonTap">
+            发送
+          </retro-button>
+        </view>
       </view>
     </view>
 

@@ -53,6 +53,20 @@ page {
   color: var(--retro-muted-text);
 }
 
+.im-system-notice {
+  margin: 12rpx 0;
+  padding: 8rpx 10rpx;
+  border: 1rpx solid var(--retro-divider-border);
+  background: var(--retro-divider-bg);
+  text-align: center;
+}
+
+.im-system-notice-text {
+  font-size: 20rpx;
+  line-height: 1.45;
+  color: var(--retro-divider-text);
+}
+
 .im-cluster {
   display: flex;
   align-items: flex-start;
@@ -166,6 +180,25 @@ page {
   justify-content: flex-end;
 }
 
+.im-reply-quote {
+  margin-bottom: 4rpx;
+  padding: 4rpx 8rpx;
+  border-left: 4rpx solid var(--retro-record-peer-line);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.im-cluster-self .im-reply-quote {
+  border-left: 0;
+  border-right: 4rpx solid var(--retro-record-self-line);
+}
+
+.im-reply-quote-text {
+  font-size: 21rpx;
+  line-height: 1.35;
+  color: var(--retro-muted-text);
+  word-break: break-all;
+}
+
 .im-text {
   display: block;
   max-width: 500rpx;
@@ -273,7 +306,8 @@ page {
 
 .im-composer {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--retro-chat-row-gap);
   padding: 10rpx 12rpx calc(10rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid var(--retro-composer-border);
@@ -287,6 +321,46 @@ page {
 
 .im-composer.is-keyboard-open {
   padding-bottom: 10rpx;
+}
+
+.im-composer-main-row {
+  display: flex;
+  align-items: center;
+  gap: var(--retro-chat-row-gap);
+}
+
+.im-reply-draft {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+  padding: 6rpx 10rpx;
+  border: 1rpx solid var(--retro-divider-border);
+  background: var(--retro-divider-bg);
+}
+
+.im-reply-draft-label {
+  flex-shrink: 0;
+  font-size: 21rpx;
+  line-height: 1.3;
+  color: var(--retro-link-text);
+}
+
+.im-reply-draft-content {
+  flex: 1;
+  min-width: 0;
+  font-size: 21rpx;
+  line-height: 1.3;
+  color: var(--retro-body-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.im-reply-draft-close {
+  flex-shrink: 0;
+  font-size: 23rpx;
+  line-height: 1.2;
+  color: var(--retro-muted-text-2);
 }
 
 .im-composer-input {

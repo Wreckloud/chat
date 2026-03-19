@@ -32,5 +32,8 @@ public class SendMessageDTO {
 
     @Schema(description = "媒体 MIME 类型")
     private String mediaMimeType;
+
+    @Schema(description = "回复目标消息ID")
+    private Long replyToMessageId;
 }
 

@@ -1,4 +1,5 @@
 const imHelper = require('./im-helper')
+const imBatchSendHelper = require('./im-batch-send-helper')
 
 const DEFAULT_MORE_ACTIONS = [
   { key: 'image', label: '多图', icon: '图', subLabel: '相册' },
@@ -35,60 +36,10 @@ function endSending(page) {
   page.setData({ sending: false })
 }
 
-function showBatchFailureToast(failCount, totalCount) {
-  if (!Number.isFinite(failCount) || failCount <= 0) {
-    return
-  }
-  if (!Number.isFinite(totalCount) || totalCount <= 1) {
-    wx.showToast({
-      title: '发送失败',
-      icon: 'none'
-    })
-    return
-  }
-  wx.showToast({
-    title: `发送失败 ${failCount}/${totalCount}`,
-    icon: 'none'
-  })
-}
-
-async function sendUploadedMediaBatch(page, files, options) {
-  const upload = options && typeof options.upload === 'function' ? options.upload : null
-  const buildPayload = options && typeof options.buildPayload === 'function' ? options.buildPayload : null
-  if (!upload || !buildPayload) {
-    return { successCount: 0, failCount: 0, totalCount: 0 }
-  }
-
-  const safeFiles = Array.isArray(files) ? files.filter(Boolean) : []
-  if (safeFiles.length === 0) {
-    return { successCount: 0, failCount: 0, totalCount: 0 }
-  }
-
-  let successCount = 0
-  let failCount = 0
-  for (let index = 0; index < safeFiles.length; index++) {
-    const file = safeFiles[index]
-    try {
-      const media = await upload(file)
-      await page.sendWsMessageWithAck(buildPayload(media))
-      successCount += 1
-    } catch (error) {
-      if (page.pageUnloaded) {
-        break
-      }
-      failCount += 1
-    }
-  }
-  return {
-    successCount,
-    failCount,
-    totalCount: safeFiles.length
-  }
-}
-
 async function sendTextMessage(page, content, options = {}) {
+  const extraPayload = options && options.extraPayload ? options.extraPayload : {}
   return page.sendWsMessageWithAck(
-    buildBaseSendPayload(page, 'TEXT', { content }),
+    buildBaseSendPayload(page, 'TEXT', { content, ...extraPayload }),
     options
   )
 }
@@ -114,7 +65,7 @@ async function chooseImageFromAlbum(page, deps) {
       return
     }
     didBeginSending = true
-    const batchResult = await sendUploadedMediaBatch(page, tempFiles, {
+    const batchResult = await imBatchSendHelper.sendUploadedMediaBatch(page, tempFiles, {
       upload: deps.uploadImage,
       buildPayload: (media) => buildBaseSendPayload(page, 'IMAGE', {
         mediaKey: media.mediaKey,
@@ -125,7 +76,7 @@ async function chooseImageFromAlbum(page, deps) {
       })
     })
     if (!page.pageUnloaded) {
-      showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
+      imBatchSendHelper.showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
     }
   } catch (error) {
     if (page.pageUnloaded) {
@@ -134,7 +85,7 @@ async function chooseImageFromAlbum(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
-    showBatchFailureToast(1, 1)
+    imBatchSendHelper.showBatchFailureToast(1, 1)
   } finally {
     if (didBeginSending) {
       endSending(page)
@@ -163,7 +114,7 @@ async function chooseVideoFromAlbum(page, deps) {
       return
     }
     didBeginSending = true
-    const batchResult = await sendUploadedMediaBatch(page, [tempFile], {
+    const batchResult = await imBatchSendHelper.sendUploadedMediaBatch(page, [tempFile], {
       upload: deps.uploadVideo,
       buildPayload: (media) => buildBaseSendPayload(page, 'VIDEO', {
         mediaKey: media.mediaKey,
@@ -174,7 +125,7 @@ async function chooseVideoFromAlbum(page, deps) {
       })
     })
     if (!page.pageUnloaded) {
-      showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
+      imBatchSendHelper.showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
     }
   } catch (error) {
     if (page.pageUnloaded) {
@@ -183,7 +134,7 @@ async function chooseVideoFromAlbum(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
-    showBatchFailureToast(1, 1)
+    imBatchSendHelper.showBatchFailureToast(1, 1)
   } finally {
     if (didBeginSending) {
       endSending(page)
@@ -213,7 +164,7 @@ async function chooseFileForShare(page, deps) {
       return
     }
     didBeginSending = true
-    const batchResult = await sendUploadedMediaBatch(page, selectedFiles, {
+    const batchResult = await imBatchSendHelper.sendUploadedMediaBatch(page, selectedFiles, {
       upload: deps.uploadFile,
       buildPayload: (media) => buildBaseSendPayload(page, 'FILE', {
         content: imHelper.normalizeFileNameForMessage(media.fileName),
@@ -223,7 +174,7 @@ async function chooseFileForShare(page, deps) {
       })
     })
     if (!page.pageUnloaded) {
-      showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
+      imBatchSendHelper.showBatchFailureToast(batchResult.failCount, batchResult.totalCount)
     }
   } catch (error) {
     if (page.pageUnloaded) {
@@ -232,7 +183,7 @@ async function chooseFileForShare(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
-    showBatchFailureToast(1, 1)
+    imBatchSendHelper.showBatchFailureToast(1, 1)
   } finally {
     if (didBeginSending) {
       endSending(page)
@@ -268,7 +219,7 @@ async function shareLinkAsText(page) {
     if (page.pageUnloaded) {
       return
     }
-    showBatchFailureToast(1, 1)
+    imBatchSendHelper.showBatchFailureToast(1, 1)
   } finally {
     if (didBeginSending) {
       endSending(page)

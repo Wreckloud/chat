@@ -40,13 +40,13 @@
         <retro-button
           size="small"
           theme="primary"
-          disabled="{{chatLoading || !isMutual}}"
+          disabled="{{chatLoading}}"
           loading="{{chatLoading}}"
           bindtap="goChat">
           私聊
         </retro-button>
       </view>
-      <view wx:if="{{!isSelf && !isMutual}}" class="mutual-hint">互相关注后可发起私聊</view>
+      <view wx:if="{{!isSelf && !isMutual}}" class="mutual-hint">未互关时单向最多发送 3 条消息，收到对方回复后解除限制</view>
     </view>
 
     <view class="core-stats-card">

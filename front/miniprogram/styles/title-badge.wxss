@@ -3,7 +3,7 @@
   margin-left: 0;
   display: inline-block;
   vertical-align: top;
-  line-height: 1;
+  line-height: 1.15;
   color: var(--retro-accent-text);
   white-space: nowrap;
   overflow: hidden;
@@ -28,5 +28,5 @@
 .retro-title-badge-xl {
   max-width: 180rpx;
   font-size: 21rpx;
-  line-height: 1;
+  line-height: 1.15;
 }

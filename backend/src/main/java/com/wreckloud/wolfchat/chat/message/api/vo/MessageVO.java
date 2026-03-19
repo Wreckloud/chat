@@ -68,6 +68,15 @@ public class MessageVO {
     @Schema(description = "媒体 MIME 类型")
     private String mediaMimeType;
 
+    @Schema(description = "回复目标消息ID")
+    private Long replyToMessageId;
+
+    @Schema(description = "回复目标发送者ID")
+    private Long replyToSenderId;
+
+    @Schema(description = "回复预览")
+    private String replyToPreview;
+
     @Schema(description = "发送时间")
     private LocalDateTime createTime;
 }

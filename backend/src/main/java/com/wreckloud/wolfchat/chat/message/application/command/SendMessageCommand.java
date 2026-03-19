@@ -54,4 +54,9 @@ public class SendMessageCommand {
      * 媒体 MIME 类型
      */
     private String mediaMimeType;
+
+    /**
+     * 回复目标消息ID
+     */
+    private Long replyToMessageId;
 }

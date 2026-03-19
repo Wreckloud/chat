@@ -10,7 +10,6 @@ import com.wreckloud.wolfchat.chat.conversation.infra.mapper.WfConversationMappe
 import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.follow.application.service.FollowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -37,7 +36,6 @@ public class ConversationService {
 
     private final WfConversationMapper conversationMapper;
     private final UserService userService;
-    private final FollowService followService;
     private final UserPresenceService userPresenceService;
 
     /**
@@ -46,12 +44,11 @@ public class ConversationService {
     @Transactional(rollbackFor = Exception.class)
     public Long getOrCreateConversation(Long userId, Long targetUserId) {
         log.debug("获取或创建会话: userId={}, targetUserId={}", userId, targetUserId);
-        
-        // 校验互相关注
-        if (!followService.isMutualFollow(userId, targetUserId)) {
-            log.warn("用户未互相关注: userId={}, targetUserId={}", userId, targetUserId);
-            throw new BaseException(ErrorCode.NOT_MUTUAL_FOLLOW);
+
+        if (userId.equals(targetUserId)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "不能与自己发起聊天");
         }
+        userService.getEnabledByIdOrThrow(targetUserId);
 
         // 确保 userAId < userBId
         Long userAId = Math.min(userId, targetUserId);

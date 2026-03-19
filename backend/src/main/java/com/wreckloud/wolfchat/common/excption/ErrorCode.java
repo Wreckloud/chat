@@ -44,7 +44,6 @@ public enum ErrorCode {
     FOLLOW_ALREADY(3005, "已关注该行者"),
     FOLLOW_NOT_FOUND(3006, "关注关系不存在"),
     FORUM_BOARD_NOT_FOUND(3007, "版块不存在"),
-    NOT_MUTUAL_FOLLOW(3009, "仅互相关注的行者可以聊天"),
     CONVERSATION_NOT_FOUND(3010, "会话不存在"),
     NOT_CONVERSATION_MEMBER(3011, "您不是该会话的参与者"),
     MESSAGE_CONTENT_EMPTY(3012, "消息内容不能为空"),
@@ -58,7 +57,8 @@ public enum ErrorCode {
     FORUM_OPERATION_FORBIDDEN(3020, "无权限执行该操作"),
     ACHIEVEMENT_NOT_FOUND(3021, "成就不存在"),
     ACHIEVEMENT_NOT_UNLOCKED(3022, "成就尚未解锁"),
-    NOTICE_NOT_FOUND(3023, "通知不存在");
+    NOTICE_NOT_FOUND(3023, "通知不存在"),
+    CHAT_STRANGER_MESSAGE_LIMIT(3024, "未互相关注时可发送条数已达上限，请等待对方回复");
 
     /**
      * 错误码

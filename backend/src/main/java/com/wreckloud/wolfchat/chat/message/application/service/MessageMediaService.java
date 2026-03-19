@@ -21,6 +21,7 @@ public class MessageMediaService {
     private static final String VIDEO_PREVIEW_TEXT = "[视频]";
     private static final String FILE_PREVIEW_TEXT = "[文件]";
     private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
+    private static final int REPLY_PREVIEW_MAX_LENGTH = 80;
 
     private final OssStorageService ossStorageService;
 
@@ -41,6 +42,19 @@ public class MessageMediaService {
             return "";
         }
         return content.length() > 100 ? content.substring(0, 100) : content;
+    }
+
+    /**
+     * 生成引用回复的预览文案
+     */
+    public String buildReplyPreview(MessageType msgType, String content) {
+        String preview = buildConversationPreview(msgType, content);
+        if (!StringUtils.hasText(preview)) {
+            return "";
+        }
+        return preview.length() > REPLY_PREVIEW_MAX_LENGTH
+                ? preview.substring(0, REPLY_PREVIEW_MAX_LENGTH)
+                : preview;
     }
 
     /**

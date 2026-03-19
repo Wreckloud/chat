@@ -1,4 +1,6 @@
 const time = require('./time')
+const imLayoutHelper = require('./im-layout-helper')
+const imRequestHelper = require('./im-request-helper')
 
 const DEFAULT_MESSAGE_MERGE_GAP_MS = 5 * 60 * 1000
 const VIDEO_MAX_WIDTH_RPX = 420
@@ -6,9 +8,6 @@ const VIDEO_MAX_HEIGHT_RPX = 520
 const VIDEO_MIN_WIDTH_RPX = 220
 const VIDEO_MIN_HEIGHT_RPX = 180
 const FILE_NAME_MAX_LENGTH = 120
-const BLUR_RESET_DELAY_MS = 90
-const REFOCUS_DELAY_MS = 24
-const ECHO_MATCH_TOLERANCE_MS = 2 * 60 * 1000
 
 function normalizeSharedLink(value) {
   const raw = String(value || '').trim()
@@ -121,14 +120,6 @@ function normalizeFileNameForMessage(fileName) {
   return raw.slice(0, FILE_NAME_MAX_LENGTH)
 }
 
-function resolveKeyboardHeight(event) {
-  const rawHeight = event && event.detail ? Number(event.detail.height) : 0
-  if (!Number.isFinite(rawHeight) || rawHeight <= 0) {
-    return 0
-  }
-  return Math.floor(rawHeight)
-}
-
 function isMessageMergeGapExceeded(previousMessage, currentMessage, gapMs = DEFAULT_MESSAGE_MERGE_GAP_MS) {
   if (!previousMessage || !currentMessage) {
     return false
@@ -151,349 +142,6 @@ function isMessageMergeGapExceeded(previousMessage, currentMessage, gapMs = DEFA
     return true
   }
   return diff >= gapMs
-}
-
-function createClientMsgId(prefix) {
-  const idPrefix = String(prefix || 'm').trim() || 'm'
-  return `${idPrefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-}
-
-function buildEchoMatcher(page, payload) {
-  const msgType = String(payload && payload.msgType ? payload.msgType : '').toUpperCase()
-  const conversationId = payload && payload.conversationId != null
-    ? Number(payload.conversationId)
-    : 0
-  return {
-    senderId: Number(page && page.currentUserId ? page.currentUserId : 0),
-    conversationId: Number.isFinite(conversationId) && conversationId > 0 ? conversationId : 0,
-    msgType,
-    content: String(payload && payload.content ? payload.content : '').trim(),
-    sentAt: Date.now()
-  }
-}
-
-function isEchoMessageMatched(pendingRequest, message) {
-  if (!pendingRequest || !pendingRequest.echoMatcher || !message) {
-    return false
-  }
-  const matcher = pendingRequest.echoMatcher
-  const senderId = Number(message.senderId)
-  if (!senderId || senderId !== matcher.senderId) {
-    return false
-  }
-
-  const incomingType = String(message.msgType || '').toUpperCase()
-  if (matcher.msgType && matcher.msgType !== incomingType) {
-    return false
-  }
-
-  if (matcher.conversationId > 0) {
-    const incomingConversationId = Number(message.conversationId)
-    if (!incomingConversationId || incomingConversationId !== matcher.conversationId) {
-      return false
-    }
-  }
-
-  if (matcher.msgType === 'TEXT' || matcher.msgType === 'FILE') {
-    const incomingContent = String(message.content || '').trim()
-    if (matcher.content !== incomingContent) {
-      return false
-    }
-  }
-
-  const messageTime = time.parseDateTime(message.createTime)
-  if (messageTime) {
-    const diff = Math.abs(messageTime.getTime() - matcher.sentAt)
-    if (diff > ECHO_MATCH_TOLERANCE_MS) {
-      return false
-    }
-  }
-
-  return true
-}
-
-function clearPendingTimer(page) {
-  if (!page || !page.pendingTimer) {
-    return
-  }
-  clearTimeout(page.pendingTimer)
-  page.pendingTimer = null
-}
-
-function resolvePendingRequest(page, clientMsgId) {
-  const pending = page ? page.pendingRequest : null
-  if (!pending) {
-    return false
-  }
-  const expectedClientMsgId = pending.clientMsgId ? String(pending.clientMsgId) : ''
-  const actualClientMsgId = clientMsgId ? String(clientMsgId) : ''
-  if (actualClientMsgId && expectedClientMsgId !== actualClientMsgId) {
-    return false
-  }
-
-  clearPendingTimer(page)
-  page.pendingRequest = null
-  if (pending.clearInputOnSuccess) {
-    const nextData = {
-      inputMessage: ''
-    }
-    if (page.data && Object.prototype.hasOwnProperty.call(page.data, 'canSendText')) {
-      nextData.canSendText = false
-    }
-    page.setData(nextData)
-  }
-  pending.resolve()
-  return true
-}
-
-function rejectPendingRequest(page, error, clientMsgId) {
-  const pending = page ? page.pendingRequest : null
-  if (!pending) {
-    return false
-  }
-  const expectedClientMsgId = pending.clientMsgId ? String(pending.clientMsgId) : ''
-  const actualClientMsgId = clientMsgId ? String(clientMsgId) : ''
-  if (actualClientMsgId && expectedClientMsgId !== actualClientMsgId) {
-    return false
-  }
-
-  clearPendingTimer(page)
-  page.pendingRequest = null
-  pending.reject(error || new Error('发送失败'))
-  return true
-}
-
-function resolvePendingByEchoMessage(page, message) {
-  const pending = page ? page.pendingRequest : null
-  if (!pending || !isEchoMessageMatched(pending, message)) {
-    return false
-  }
-  return resolvePendingRequest(page, '')
-}
-
-function startPendingTimer(page, clientMsgId, timeoutMs) {
-  clearPendingTimer(page)
-  page.pendingTimer = setTimeout(() => {
-    rejectPendingRequest(page, new Error('消息发送超时，请重试'), clientMsgId)
-  }, timeoutMs)
-}
-
-async function sendWsMessageWithAck(page, ws, payload, options = {}) {
-  if (page.pendingRequest) {
-    throw new Error('存在未完成的发送请求，请稍后重试')
-  }
-
-  await ws.waitUntilReady(page.WS_READY_TIMEOUT_MS)
-
-  const clientMsgId = createClientMsgId(page.CLIENT_MSG_ID_PREFIX)
-  const messagePayload = {
-    ...payload,
-    clientMsgId
-  }
-
-  return new Promise((resolve, reject) => {
-    page.pendingRequest = {
-      clientMsgId,
-      resolve,
-      reject,
-      clearInputOnSuccess: Boolean(options.clearInputOnSuccess),
-      echoMatcher: buildEchoMatcher(page, messagePayload)
-    }
-    startPendingTimer(page, clientMsgId, page.SEND_TIMEOUT_MS)
-    ws.send(messagePayload)
-  })
-}
-
-function clearScrollToBottomTimer(page) {
-  if (!page || !page.scrollToBottomTimer) {
-    return
-  }
-  clearTimeout(page.scrollToBottomTimer)
-  page.scrollToBottomTimer = null
-}
-
-function scrollToBottom(page) {
-  clearScrollToBottomTimer(page)
-  const scrollToAnchor = () => {
-    page.setData({ scrollIntoView: 'im-bottom-anchor' })
-    page.scrollToBottomTimer = setTimeout(() => {
-      if (page.data.scrollIntoView) {
-        page.setData({ scrollIntoView: '' })
-      }
-      page.scrollToBottomTimer = null
-    }, 120)
-  }
-
-  if (page.data.scrollIntoView) {
-    page.setData({ scrollIntoView: '' }, scrollToAnchor)
-    return
-  }
-  scrollToAnchor()
-}
-
-function clearRefocusComposerTimer(page) {
-  if (!page || !page.refocusComposerTimer) {
-    return
-  }
-  clearTimeout(page.refocusComposerTimer)
-  page.refocusComposerTimer = null
-}
-
-function updateKeyboardLayout(page, keyboardHeight, options = {}) {
-  if (!page || !page.data) {
-    return false
-  }
-  const prevHeight = Number(page.data.keyboardHeightPx) || 0
-  const nextHeight = Number.isFinite(keyboardHeight) && keyboardHeight > 0
-    ? Math.floor(keyboardHeight)
-    : 0
-  const dockHeight = Number(page.data.dockHeightPx) || 0
-  const nextBottom = dockHeight + nextHeight
-  if (nextHeight === prevHeight && nextBottom === page.data.messageListBottomPx) {
-    return false
-  }
-
-  page.setData({
-    keyboardHeightPx: nextHeight,
-    messageListBottomPx: nextBottom
-  }, () => {
-    if (options.scrollOnKeyboardOpen && prevHeight === 0 && nextHeight > 0) {
-      scrollToBottom(page)
-    }
-  })
-  return true
-}
-
-function resetKeyboardHeight(page) {
-  if (!page || !page.data) {
-    return
-  }
-  updateKeyboardLayout(page, 0)
-}
-
-function handleKeyboardHeightChange(page, event, closeMorePanel) {
-  if (!page || !page.data) {
-    return
-  }
-  const nextHeight = resolveKeyboardHeight(event)
-  if (nextHeight > 0) {
-    page.lastKeyboardOpenedAt = Date.now()
-    page.lastKeyboardHeightPx = nextHeight
-  }
-  if (nextHeight > 0 && page.data.morePanelVisible && typeof closeMorePanel === 'function') {
-    closeMorePanel()
-  }
-
-  // 发送按钮点击会触发短暂 blur，忽略这一帧的 0 高度避免输入栏下坠。
-  if (nextHeight === 0 && page.keepComposerOpenUntilSendFinish) {
-    return
-  }
-
-  updateKeyboardLayout(page, nextHeight, {
-    scrollOnKeyboardOpen: true
-  })
-}
-
-function handleComposerFocus(page, event, closeMorePanel) {
-  if (!page || !page.data) {
-    return
-  }
-  if (!page.data.composerFocused) {
-    page.setData({ composerFocused: true })
-  }
-  const focusHeight = resolveKeyboardHeight(event) || Number(page.lastKeyboardHeightPx || 0)
-  if (focusHeight > 0) {
-    page.lastKeyboardOpenedAt = Date.now()
-    const changed = updateKeyboardLayout(page, focusHeight)
-    if (!changed) {
-      scrollToBottom(page)
-    }
-  }
-
-  if (!page.data.morePanelVisible || typeof closeMorePanel !== 'function') {
-    return
-  }
-  closeMorePanel()
-}
-
-function handleComposerBlur(page) {
-  if (!page) {
-    return
-  }
-  if (page.keepComposerOpenUntilSendFinish) {
-    refocusComposerInput(page)
-    return
-  }
-  page.setData({ composerFocused: false })
-  setTimeout(() => {
-    if (page.pageUnloaded || !page.data || page.data.composerFocused) {
-      return
-    }
-    if (page.data.keyboardHeightPx > 0) {
-      resetKeyboardHeight(page)
-    }
-  }, BLUR_RESET_DELAY_MS)
-}
-
-function measureDockHeight(page) {
-  if (!page || typeof wx === 'undefined') {
-    return
-  }
-  wx.nextTick(() => {
-    const query = wx.createSelectorQuery().in(page)
-    query.select('#im-dock').boundingClientRect(rect => {
-      if (!rect || !rect.height || !page.data) {
-        return
-      }
-      const nextDockHeight = Math.ceil(rect.height)
-      const nextBottom = nextDockHeight + page.data.keyboardHeightPx
-      if (nextDockHeight === page.data.dockHeightPx && nextBottom === page.data.messageListBottomPx) {
-        return
-      }
-      page.setData({
-        dockHeightPx: nextDockHeight,
-        messageListBottomPx: nextBottom
-      })
-    }).exec()
-  })
-}
-
-function shouldKeepComposerAfterSend(page) {
-  if (!page || !page.data) {
-    return false
-  }
-  if (page.data.morePanelVisible) {
-    return false
-  }
-  if (page.data.keyboardHeightPx > 0 || page.data.composerFocused) {
-    return true
-  }
-
-  const lastKeyboardOpenedAt = Number(page.lastKeyboardOpenedAt || 0)
-  if (lastKeyboardOpenedAt <= 0) {
-    return false
-  }
-  return Date.now() - lastKeyboardOpenedAt <= 1200
-}
-
-function refocusComposerInput(page) {
-  if (!page || page.pageUnloaded || !page.data || page.data.morePanelVisible) {
-    return
-  }
-  if (page.data.composerFocused && page.data.keyboardHeightPx > 0) {
-    return
-  }
-
-  clearRefocusComposerTimer(page)
-  page.setData({ composerFocused: false }, () => {
-    page.refocusComposerTimer = setTimeout(() => {
-      page.refocusComposerTimer = null
-      if (page.pageUnloaded || !page.data || page.data.morePanelVisible) {
-        return
-      }
-      page.setData({ composerFocused: true })
-    }, REFOCUS_DELAY_MS)
-  })
 }
 
 function chooseMedia(options) {
@@ -591,6 +239,9 @@ function createMessageRow(message, indexToken) {
     mediaHeight: message.mediaHeight || 0,
     mediaSize: Number(message.mediaSize) || 0,
     mediaMimeType: message.mediaMimeType || '',
+    replyToMessageId: Number(message.replyToMessageId) || 0,
+    replyToSenderId: Number(message.replyToSenderId) || 0,
+    replyToPreview: String(message.replyToPreview || '').trim(),
     videoRenderStyle: buildVideoRenderStyle(message.mediaWidth, message.mediaHeight),
     fileLabel: buildFileLabel(message.content || '', message.mediaSize)
   }
@@ -715,21 +366,21 @@ function buildMessageBlocks(messages, context) {
 
 module.exports = {
   DEFAULT_MESSAGE_MERGE_GAP_MS,
-  clearPendingTimer,
-  resolvePendingRequest,
-  rejectPendingRequest,
-  resolvePendingByEchoMessage,
-  sendWsMessageWithAck,
-  scrollToBottom,
-  clearScrollToBottomTimer,
-  clearRefocusComposerTimer,
-  resetKeyboardHeight,
-  handleKeyboardHeightChange,
-  handleComposerFocus,
-  handleComposerBlur,
-  measureDockHeight,
-  shouldKeepComposerAfterSend,
-  refocusComposerInput,
+  clearPendingTimer: imRequestHelper.clearPendingTimer,
+  resolvePendingRequest: imRequestHelper.resolvePendingRequest,
+  rejectPendingRequest: imRequestHelper.rejectPendingRequest,
+  resolvePendingByEchoMessage: imRequestHelper.resolvePendingByEchoMessage,
+  sendWsMessageWithAck: imRequestHelper.sendWsMessageWithAck,
+  scrollToBottom: imLayoutHelper.scrollToBottom,
+  clearScrollToBottomTimer: imLayoutHelper.clearScrollToBottomTimer,
+  clearRefocusComposerTimer: imLayoutHelper.clearRefocusComposerTimer,
+  resetKeyboardHeight: imLayoutHelper.resetKeyboardHeight,
+  handleKeyboardHeightChange: imLayoutHelper.handleKeyboardHeightChange,
+  handleComposerFocus: imLayoutHelper.handleComposerFocus,
+  handleComposerBlur: imLayoutHelper.handleComposerBlur,
+  measureDockHeight: imLayoutHelper.measureDockHeight,
+  shouldKeepComposerAfterSend: imLayoutHelper.shouldKeepComposerAfterSend,
+  refocusComposerInput: imLayoutHelper.refocusComposerInput,
   chooseMedia,
   chooseMessageFile,
   showEditableModal,

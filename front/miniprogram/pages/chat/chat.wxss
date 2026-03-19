@@ -181,9 +181,15 @@
 .session-unread {
   margin-left: 4rpx;
   align-self: flex-start;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 0;
   font-size: var(--retro-session-name-font-size);
-  line-height: 1.15;
+  line-height: 1;
   color: var(--retro-accent-text);
+  white-space: nowrap;
 }
 
 .session-presence {

@@ -267,12 +267,25 @@ async function sendComposerText(page, sendTextFn) {
   }
 }
 
-async function sendComposerTextMessage(page, imSendHelper) {
+async function sendComposerTextMessage(page, imSendHelper, options = {}) {
+  const buildExtraPayload = typeof options.buildExtraPayload === 'function'
+    ? options.buildExtraPayload
+    : null
+  const onSuccess = typeof options.onSuccess === 'function'
+    ? options.onSuccess
+    : null
   return sendComposerText(
     page,
-    (content) => imSendHelper.sendTextMessage(page, content, {
-      clearInputOnSuccess: true
-    })
+    async (content) => {
+      const extraPayload = buildExtraPayload ? (buildExtraPayload() || {}) : {}
+      await imSendHelper.sendTextMessage(page, content, {
+        clearInputOnSuccess: true,
+        extraPayload
+      })
+      if (onSuccess) {
+        onSuccess(content)
+      }
+    }
   )
 }
 

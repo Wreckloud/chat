@@ -6,6 +6,7 @@ import com.wreckloud.wolfchat.chat.conversation.application.service.Conversation
 import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
 import com.wreckloud.wolfchat.chat.media.application.service.ChatMediaService;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
+import com.wreckloud.wolfchat.chat.message.api.vo.MessagePolicyVO;
 import com.wreckloud.wolfchat.chat.message.application.support.MessageRuleSupport;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
@@ -36,6 +37,7 @@ public class MessageService {
      */
     private static final int UNDELIVERED_LIMIT = 200;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int STRANGER_SINGLE_SIDE_LIMIT = 3;
 
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
@@ -63,13 +65,11 @@ public class MessageService {
         WfConversation conversation = conversationService.getConversation(conversationId);
         Long receiverId = conversationService.getTargetUserId(conversation, userId);
 
-        // 校验互相关注
-        if (!followService.isMutualFollow(userId, receiverId)) {
-            log.warn("用户未互相关注: senderId={}, receiverId={}", userId, receiverId);
-            throw new BaseException(ErrorCode.NOT_MUTUAL_FOLLOW);
-        }
+        boolean mutualFollow = followService.isMutualFollow(userId, receiverId);
+        validateSendPermission(conversationId, userId, receiverId, mutualFollow);
 
         chatMediaService.validateMessagePayload(userId, command);
+        WfMessage replyToMessage = resolveReplyTargetMessage(conversationId, command.getReplyToMessageId());
 
         // 保存消息
         WfMessage message = new WfMessage();
@@ -83,6 +83,11 @@ public class MessageService {
         message.setMediaHeight(command.getMediaHeight());
         message.setMediaSize(command.getMediaSize());
         message.setMediaMimeType(command.getMediaMimeType());
+        if (replyToMessage != null) {
+            message.setReplyToMessageId(replyToMessage.getId());
+            message.setReplyToSenderId(replyToMessage.getSenderId());
+            message.setReplyToPreview(messageMediaService.buildReplyPreview(replyToMessage.getMsgType(), replyToMessage.getContent()));
+        }
         message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
         message.setCreateTime(LocalDateTime.now());
         int insertRows = messageMapper.insert(message);
@@ -127,6 +132,28 @@ public class MessageService {
     }
 
     /**
+     * 查询当前会话的消息策略
+     */
+    public MessagePolicyVO getMessagePolicy(Long userId, Long conversationId) {
+        conversationService.validateConversationMember(conversationId, userId);
+        WfConversation conversation = conversationService.getConversation(conversationId);
+        Long targetUserId = conversationService.getTargetUserId(conversation, userId);
+
+        boolean mutualFollow = followService.isMutualFollow(userId, targetUserId);
+        MessagePolicySnapshot policySnapshot = buildPolicySnapshot(conversationId, userId, targetUserId, mutualFollow);
+
+        MessagePolicyVO policyVO = new MessagePolicyVO();
+        policyVO.setConversationId(conversationId);
+        policyVO.setMutualFollow(policySnapshot.mutualFollow);
+        policyVO.setInteractionUnlocked(policySnapshot.interactionUnlocked);
+        policyVO.setCanSendFreely(policySnapshot.canSendFreely);
+        policyVO.setStrangerMessageLimit(STRANGER_SINGLE_SIDE_LIMIT);
+        policyVO.setStrangerMessageSent(policySnapshot.sentCount);
+        policyVO.setStrangerMessageRemaining(policySnapshot.remaining);
+        return policyVO;
+    }
+
+    /**
      * 查询未送达消息
      */
     public List<WfMessage> listUndeliveredMessages(Long userId) {
@@ -155,6 +182,72 @@ public class MessageService {
                 .in(WfMessage::getId, messageIds));
         if (updateRows == 0) {
             log.debug("标记消息送达未命中: messageIds={}", messageIds);
+        }
+    }
+
+    private void validateSendPermission(Long conversationId, Long senderId, Long targetUserId, boolean mutualFollow) {
+        if (mutualFollow) {
+            return;
+        }
+        if (hasReceivedMessageFromTarget(conversationId, targetUserId)) {
+            return;
+        }
+        int sentCount = countSenderMessages(conversationId, senderId);
+        if (sentCount >= STRANGER_SINGLE_SIDE_LIMIT) {
+            throw new BaseException(ErrorCode.CHAT_STRANGER_MESSAGE_LIMIT);
+        }
+    }
+
+    private MessagePolicySnapshot buildPolicySnapshot(Long conversationId, Long senderId, Long targetUserId, boolean mutualFollow) {
+        boolean interactionUnlocked = mutualFollow || hasReceivedMessageFromTarget(conversationId, targetUserId);
+        boolean canSendFreely = mutualFollow || interactionUnlocked;
+        int sentCount = canSendFreely ? 0 : countSenderMessages(conversationId, senderId);
+        int remaining = canSendFreely
+                ? STRANGER_SINGLE_SIDE_LIMIT
+                : Math.max(0, STRANGER_SINGLE_SIDE_LIMIT - sentCount);
+        return new MessagePolicySnapshot(mutualFollow, interactionUnlocked, canSendFreely, sentCount, remaining);
+    }
+
+    private int countSenderMessages(Long conversationId, Long senderId) {
+        Long count = messageMapper.countByConversationAndSender(conversationId, senderId);
+        if (count == null || count <= 0L) {
+            return 0;
+        }
+        if (count > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return count.intValue();
+    }
+
+    private boolean hasReceivedMessageFromTarget(Long conversationId, Long targetUserId) {
+        Integer exists = messageMapper.existsByConversationAndSender(conversationId, targetUserId);
+        return exists != null && exists > 0;
+    }
+
+    private WfMessage resolveReplyTargetMessage(Long conversationId, Long replyToMessageId) {
+        if (replyToMessageId == null || replyToMessageId <= 0L) {
+            return null;
+        }
+        WfMessage replyToMessage = messageMapper.selectById(replyToMessageId);
+        if (replyToMessage == null || !conversationId.equals(replyToMessage.getConversationId())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "回复目标消息不存在");
+        }
+        return replyToMessage;
+    }
+
+    private static class MessagePolicySnapshot {
+        private final boolean mutualFollow;
+        private final boolean interactionUnlocked;
+        private final boolean canSendFreely;
+        private final int sentCount;
+        private final int remaining;
+
+        private MessagePolicySnapshot(boolean mutualFollow, boolean interactionUnlocked, boolean canSendFreely, int sentCount, int remaining) {
+            this.mutualFollow = mutualFollow;
+            this.interactionUnlocked = interactionUnlocked;
+            this.canSendFreely = canSendFreely;
+            this.sentCount = sentCount;
+            this.remaining = remaining;
         }
     }
 

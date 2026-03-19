@@ -74,6 +74,21 @@ public class WfMessage {
     private String mediaMimeType;
 
     /**
+     * 回复目标消息ID
+     */
+    private Long replyToMessageId;
+
+    /**
+     * 回复目标发送者ID
+     */
+    private Long replyToSenderId;
+
+    /**
+     * 回复预览文案
+     */
+    private String replyToPreview;
+
+    /**
      * 是否已送达
      */
     private MessageDeliveryStatus delivered;
