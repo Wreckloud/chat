@@ -82,8 +82,7 @@ public class EmailVerifyLinkService {
         ops.set(tokenKey, payload, Duration.ofMinutes(VERIFY_LINK_EXPIRE_MINUTES));
 
         String verifyLink = buildVerifyLink(token);
-        log.debug("邮箱认证链接已生成: userId={}, email={}, link={}", userId, normalizedEmail, verifyLink);
-        log.info("邮箱认证链接发送成功: userId={}", userId);
+        log.info("邮箱认证链接已生成: userId={}, email={}, link={}", userId, normalizedEmail, verifyLink);
     }
 
     /**

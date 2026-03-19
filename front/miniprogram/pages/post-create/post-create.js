@@ -11,6 +11,17 @@ const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 
 const THREAD_IMAGE_MAX_COUNT = 9
 
+function resolveChooseImageErrorMessage(error) {
+  const raw = String((error && error.errMsg) || (error && error.message) || '').toLowerCase()
+  if (!raw) {
+    return '选择图片失败'
+  }
+  if (raw.includes('count') || raw.includes('超出') || raw.includes('exceed')) {
+    return `最多选择 ${THREAD_IMAGE_MAX_COUNT} 张图片`
+  }
+  return '选择图片失败'
+}
+
 function normalizeImageTempFile(file) {
   if (!file || !file.tempFilePath) {
     return null
@@ -27,8 +38,10 @@ function normalizeVideoTempFile(file) {
   if (!file || !file.tempFilePath) {
     return null
   }
+  const posterPath = String(file.thumbTempFilePath || file.coverTempFilePath || '').trim()
   return {
     path: file.tempFilePath,
+    posterPath,
     size: Number(file.size) || 0,
     width: Number(file.width) || 0,
     height: Number(file.height) || 0,
@@ -40,9 +53,6 @@ Page({
   data: {
     title: '',
     content: '',
-    boards: [],
-    boardIndex: 0,
-    selectedBoardName: '',
     mediaImages: [],
     mediaVideo: null,
     canSubmit: false,
@@ -50,14 +60,10 @@ Page({
     themeClass: 'theme-retro-blue'
   },
 
-  onLoad(options) {
+  onLoad() {
     pageLifecycleHelper.handleProtectedPageLoad(auth, {
       afterInit: () => {
-        const preselectBoardId = Number(options.boardId)
-        if (preselectBoardId) {
-          this.preselectBoardId = preselectBoardId
-        }
-        this.loadBoards()
+        this.syncCanSubmitState()
       }
     })
   },
@@ -67,37 +73,6 @@ Page({
       afterShow: () => {
         this.applyTheme()
       }
-    })
-  },
-
-  async loadBoards() {
-    try {
-      const res = await request.get('/forum/boards')
-      const boards = res.data || []
-      let boardIndex = 0
-      if (this.preselectBoardId && boards.length > 0) {
-        const index = boards.findIndex(item => item.boardId === this.preselectBoardId)
-        if (index >= 0) {
-          boardIndex = index
-        }
-      }
-      const selectedBoardName = boards[boardIndex] ? boards[boardIndex].name : ''
-      this.setData({ boards, boardIndex, selectedBoardName }, () => {
-        this.syncCanSubmitState()
-      })
-    } catch (error) {
-      toastError(error, '加载版块失败')
-    }
-  },
-
-  onBoardChange(e) {
-    const boardIndex = Number(e.detail.value)
-    const board = this.data.boards[boardIndex]
-    this.setData({
-      boardIndex,
-      selectedBoardName: board ? board.name : ''
-    }, () => {
-      this.syncCanSubmitState()
     })
   },
 
@@ -119,10 +94,14 @@ Page({
 
   async chooseThreadImages() {
     if (this.data.loading || this.data.mediaVideo) {
+      if (this.data.mediaVideo) {
+        toastError('已选择视频，请先清除视频后再选图片')
+      }
       return
     }
     const remain = THREAD_IMAGE_MAX_COUNT - this.data.mediaImages.length
     if (remain <= 0) {
+      toastError(`最多选择 ${THREAD_IMAGE_MAX_COUNT} 张图片`)
       return
     }
     try {
@@ -147,7 +126,7 @@ Page({
       if (imHelper.isUserCancelError(error)) {
         return
       }
-      toastError(error, '选择图片失败')
+      toastError(resolveChooseImageErrorMessage(error))
     }
   },
 
@@ -177,6 +156,9 @@ Page({
 
   async chooseThreadVideo() {
     if (this.data.loading || this.data.mediaImages.length > 0) {
+      if (this.data.mediaImages.length > 0) {
+        toastError('已选择图片，请先清除图片后再选视频')
+      }
       return
     }
     try {
@@ -229,10 +211,9 @@ Page({
 
     const title = this.data.title.trim()
     const content = this.data.content.trim()
-    const board = this.data.boards[this.data.boardIndex]
     const hasImages = this.data.mediaImages.length > 0
     const hasVideo = !!this.data.mediaVideo
-    if (!board || !board.boardId || !title || (!content && !hasImages && !hasVideo)) {
+    if (!title || (!content && !hasImages && !hasVideo)) {
       return
     }
 
@@ -261,9 +242,12 @@ Page({
           duration: this.data.mediaVideo.duration
         })
         payload.videoKey = media.mediaKey
+        if (media.mediaPosterKey) {
+          payload.videoPosterKey = media.mediaPosterKey
+        }
       }
 
-      const res = await request.post(`/forum/boards/${board.boardId}/threads`, payload)
+      const res = await request.post('/forum/threads', payload)
       const threadId = res.data && res.data.threadId
       if (!threadId) {
         throw new Error('发布结果异常')
@@ -281,11 +265,9 @@ Page({
   },
 
   syncCanSubmitState() {
-    const board = this.data.boards[this.data.boardIndex]
-    const hasBoard = !!(board && board.boardId)
     const hasTitle = !!this.data.title.trim()
     const hasBody = !!this.data.content.trim() || this.data.mediaImages.length > 0 || !!this.data.mediaVideo
-    const canSubmit = hasBoard && hasTitle && hasBody && !this.data.loading
+    const canSubmit = hasTitle && hasBody && !this.data.loading
     if (canSubmit !== this.data.canSubmit) {
       this.setData({ canSubmit })
     }

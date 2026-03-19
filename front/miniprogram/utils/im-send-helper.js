@@ -1,5 +1,6 @@
 const imHelper = require('./im-helper')
 const imBatchSendHelper = require('./im-batch-send-helper')
+const { toastError } = require('./ui')
 
 const DEFAULT_MORE_ACTIONS = [
   { key: 'image', label: '多图', icon: '图', subLabel: '相册' },
@@ -203,6 +204,7 @@ async function shareLinkAsText(page) {
 
   const link = imHelper.normalizeSharedLink(modalRes.content)
   if (!link) {
+    toastError('链接格式不正确')
     return
   }
 

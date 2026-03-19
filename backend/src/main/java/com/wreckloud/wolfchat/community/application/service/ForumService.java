@@ -7,7 +7,6 @@ import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
 import com.wreckloud.wolfchat.community.api.dto.CreateThreadDTO;
-import com.wreckloud.wolfchat.community.api.vo.ForumBoardVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
@@ -20,7 +19,6 @@ import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReplyLike;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThreadLike;
-import com.wreckloud.wolfchat.community.domain.enums.ForumBoardStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumReplyStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadType;
@@ -57,38 +55,29 @@ public class ForumService {
     private final UserAchievementService userAchievementService;
     private final UserNoticeService userNoticeService;
 
-    public List<ForumBoardVO> listBoards() {
-        return forumQueryService.listBoards();
-    }
-
     public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
         return forumQueryService.listFeedThreads(userId, page, size, tab);
     }
 
-    public ForumThreadPageVO listBoardThreads(Long userId, Long boardId, long page, long size, String tab) {
-        return forumQueryService.listBoardThreads(userId, boardId, page, size, tab);
-    }
-
     @Transactional(rollbackFor = Exception.class)
-    public ForumThreadVO createThread(Long userId, Long boardId, CreateThreadDTO dto) {
-        WfForumBoard board = forumQueryService.getBoardOrThrow(boardId);
-        if (ForumBoardStatus.CLOSED.equals(board.getStatus())) {
-            throw new BaseException(ErrorCode.FORUM_BOARD_CLOSED);
-        }
+    public ForumThreadVO createThread(Long userId, CreateThreadDTO dto) {
+        WfForumBoard board = forumQueryService.resolveDefaultBoardForPostingOrThrow();
 
         String content = forumPayloadSupport.normalizeOptionalContent(dto.getContent());
         List<String> imageKeys = forumPayloadSupport.normalizeImageKeys(dto.getImageKeys(), THREAD_IMAGE_MAX_COUNT);
         String videoKey = forumPayloadSupport.normalizeOptionalKey(dto.getVideoKey());
-        forumPayloadSupport.validateThreadPayload(userId, content, imageKeys, videoKey);
+        String videoPosterKey = forumPayloadSupport.normalizeOptionalKey(dto.getVideoPosterKey());
+        forumPayloadSupport.validateThreadPayload(userId, content, imageKeys, videoKey, videoPosterKey);
 
         LocalDateTime now = LocalDateTime.now();
         WfForumThread thread = new WfForumThread();
-        thread.setBoardId(boardId);
+        thread.setBoardId(board.getId());
         thread.setAuthorId(userId);
         thread.setTitle(dto.getTitle().trim());
         thread.setContent(content);
         thread.setImageKeys(forumPayloadSupport.joinImageKeys(imageKeys));
         thread.setVideoKey(videoKey);
+        thread.setVideoPosterKey(videoPosterKey);
         thread.setThreadType(ForumThreadType.NORMAL);
         thread.setStatus(ForumThreadStatus.NORMAL);
         thread.setIsEssence(false);
@@ -97,7 +86,7 @@ public class ForumService {
         thread.setLastReplyTime(now);
 
         assertSingleRow(wfForumThreadMapper.insert(thread));
-        updateBoardOnThreadCreate(boardId, thread.getId(), now);
+        updateBoardOnThreadCreate(board.getId(), thread.getId(), now);
         userAchievementService.grantFirstPostAchievement(userId);
         return forumQueryService.buildThreadVO(userId, thread.getId());
     }

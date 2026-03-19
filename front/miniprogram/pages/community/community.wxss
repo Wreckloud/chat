@@ -54,7 +54,7 @@
   background: rgba(255, 255, 255, 0.84);
 }
 
-.thread-board {
+.thread-list {
   display: flex;
   flex-direction: column;
   margin: 0 12rpx 20rpx;
@@ -74,22 +74,7 @@
 
 .thread-title-line {
   display: flex;
-  align-items: baseline;
-}
-
-.thread-board-col {
-  width: 108rpx;
-  flex-shrink: 0;
-  padding-right: 8rpx;
-}
-
-.thread-board-tag {
-  display: block;
-  font-size: 20rpx;
-  color: var(--retro-link-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  align-items: center;
 }
 
 .thread-title {

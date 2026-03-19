@@ -6,18 +6,6 @@
 
   <view class="editor-card">
     <view class="field-row">
-      <view class="field-label">版块</view>
-      <picker
-        class="board-picker"
-        range="{{boards}}"
-        range-key="name"
-        value="{{boardIndex}}"
-        bindchange="onBoardChange">
-        <view class="board-value">{{selectedBoardName || '请选择版块'}}</view>
-      </picker>
-    </view>
-
-    <view class="field-row">
       <view class="field-label">标题</view>
       <retro-input
         class="title-input"
@@ -81,11 +69,15 @@
     </view>
 
     <view wx:if="{{mediaVideo}}" class="media-video-card" bindtap="previewThreadVideo">
-      <view class="media-video-main">
-        <text class="media-video-title">已选择视频</text>
-        <text class="media-video-meta">点此预览，发布后可在帖子中播放</text>
+      <image
+        wx:if="{{mediaVideo.posterPath}}"
+        class="media-video-poster"
+        src="{{mediaVideo.posterPath}}"
+        mode="aspectFill" />
+      <view wx:else class="media-video-poster-fallback">视频</view>
+      <view class="media-video-play-mask">
+        <view class="media-video-play-icon"></view>
       </view>
-      <text class="media-video-size">视频</text>
     </view>
 
     <retro-button

@@ -54,6 +54,11 @@ public class WfForumThread {
     private String videoKey;
 
     /**
+     * 首帖视频封面对象 Key
+     */
+    private String videoPosterKey;
+
+    /**
      * 主题类型：NORMAL/STICKY/ANNOUNCEMENT
      */
     private ForumThreadType threadType;

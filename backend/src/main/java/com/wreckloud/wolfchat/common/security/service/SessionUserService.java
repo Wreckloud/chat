@@ -70,7 +70,7 @@ public class SessionUserService {
             long now = System.currentTimeMillis();
             if (now >= nextDbErrorLogAt) {
                 nextDbErrorLogAt = now + DB_CHECK_ERROR_LOG_INTERVAL_MILLIS;
-                log.warn("会话用户校验失败: {}", e.getMessage());
+                log.warn("会话用户校验失败: userId={}", userId, e);
             }
             throw new BaseException(ErrorCode.SYSTEM_ERROR);
         }

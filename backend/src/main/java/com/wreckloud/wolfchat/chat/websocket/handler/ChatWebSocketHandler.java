@@ -100,8 +100,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } catch (BaseException e) {
             sendError(session, e.getCode(), e.getMessage(), request.getClientMsgId());
         } catch (Exception e) {
-            log.warn("WS 请求处理异常: type={}, sessionId={}, error={}",
-                    request.getType(), session.getId(), e.getMessage());
+            log.error("WS 请求处理异常: type={}, sessionId={}",
+                    request.getType(), session.getId(), e);
             sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", request.getClientMsgId());
         }
     }
@@ -302,7 +302,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } catch (BaseException e) {
             sendError(session, e.getCode(), e.getMessage(), clientMsgId);
         } catch (Exception e) {
-            log.error("WS {}失败: {}", scene, e.getMessage());
+            log.error("WS {}失败: userId={}, sessionId={}", scene, userId, session.getId(), e);
             sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
         }
     }
@@ -457,7 +457,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             session.sendMessage(new TextMessage(JSON.toJSONString(response)));
             return true;
         } catch (Exception e) {
-            log.warn("WS 发送失败: sessionId={}, error={}", session.getId(), e.getMessage());
+            log.warn("WS 发送失败: sessionId={}", session.getId(), e);
             return false;
         }
     }

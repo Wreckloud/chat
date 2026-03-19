@@ -8,6 +8,7 @@ function mapThread(rawThread, normalizeUser, time) {
     ? rawThread.imageUrls.filter(item => typeof item === 'string' && item.trim())
     : []
   const videoUrl = typeof rawThread.videoUrl === 'string' ? rawThread.videoUrl : ''
+  const videoPosterUrl = typeof rawThread.videoPosterUrl === 'string' ? rawThread.videoPosterUrl : ''
   return {
     ...rawThread,
     viewCount,
@@ -15,6 +16,7 @@ function mapThread(rawThread, normalizeUser, time) {
     likeCount,
     imageUrls,
     videoUrl,
+    videoPosterUrl,
     likedByCurrentUser: rawThread.likedByCurrentUser === true,
     author: attachDisplayTitle(
       normalizeUser(rawThread.author) || {},

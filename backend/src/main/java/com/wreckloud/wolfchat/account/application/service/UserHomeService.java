@@ -9,10 +9,8 @@ import com.wreckloud.wolfchat.account.api.vo.UserHomeVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
-import com.wreckloud.wolfchat.community.infra.mapper.WfForumBoardMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
 import com.wreckloud.wolfchat.follow.domain.entity.WfFollow;
@@ -23,7 +21,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -43,7 +40,6 @@ public class UserHomeService {
     private final WfFollowMapper wfFollowMapper;
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
-    private final WfForumBoardMapper wfForumBoardMapper;
     private final UserAchievementService userAchievementService;
 
     /**
@@ -118,18 +114,9 @@ public class UserHomeService {
             return Collections.emptyList();
         }
 
-        List<Long> boardIds = threads.stream()
-                .map(WfForumThread::getBoardId)
-                .distinct()
-                .collect(Collectors.toList());
-        Map<Long, String> boardNameMap = wfForumBoardMapper.selectBatchIds(boardIds).stream()
-                .collect(Collectors.toMap(WfForumBoard::getId, WfForumBoard::getName, (left, right) -> left));
-
         return threads.stream().map(thread -> {
             UserHomeThreadVO vo = new UserHomeThreadVO();
             vo.setThreadId(thread.getId());
-            vo.setBoardId(thread.getBoardId());
-            vo.setBoardName(boardNameMap.get(thread.getBoardId()));
             vo.setTitle(thread.getTitle());
             vo.setThreadType(thread.getThreadType());
             vo.setStatus(thread.getStatus());

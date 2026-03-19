@@ -4,7 +4,7 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { normalizeUserList, openUserProfile } = require('../../utils/user')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const { attachDisplayTitle } = require('../../utils/title')
@@ -60,7 +60,7 @@ Page({
         list
       })
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载关注列表失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -72,7 +72,6 @@ Page({
 
     try {
       await request.post(`/follow/${userId}`)
-      toastSuccess('关注成功')
       await this.loadList()
     } catch (error) {
       toastError(error, '关注失败')
@@ -85,10 +84,9 @@ Page({
 
     try {
       await request.del(`/follow/${userId}`)
-      toastSuccess('已取消关注')
       await this.loadList()
     } catch (error) {
-      toastError(error, '操作失败')
+      toastError(error, '取消关注失败')
     }
   },
 

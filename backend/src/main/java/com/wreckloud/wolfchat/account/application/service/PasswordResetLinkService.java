@@ -71,8 +71,7 @@ public class PasswordResetLinkService {
         ops.set(buildTokenKey(tokenHash), payload, Duration.ofMinutes(RESET_LINK_EXPIRE_MINUTES));
 
         String resetLink = buildResetLink(token);
-        log.debug("重置密码链接已生成: userId={}, email={}, link={}", userId, normalizedEmail, resetLink);
-        log.info("重置密码链接发送成功: userId={}", userId);
+        log.info("重置密码链接已生成: userId={}, email={}, link={}", userId, normalizedEmail, resetLink);
     }
 
     /**

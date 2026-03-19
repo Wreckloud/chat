@@ -1,13 +1,11 @@
 package com.wreckloud.wolfchat.community.application.assembler;
 
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
-import com.wreckloud.wolfchat.community.api.vo.ForumBoardVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
 import com.wreckloud.wolfchat.community.api.vo.UserBriefVO;
-import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import org.springframework.stereotype.Component;
@@ -19,20 +17,6 @@ import java.util.List;
  */
 @Component
 public class ForumViewAssembler {
-
-    public ForumBoardVO toBoardVO(WfForumBoard board) {
-        ForumBoardVO vo = new ForumBoardVO();
-        vo.setBoardId(board.getId());
-        vo.setName(board.getName());
-        vo.setSlug(board.getSlug());
-        vo.setDescription(board.getDescription());
-        vo.setSortNo(board.getSortNo());
-        vo.setStatus(board.getStatus());
-        vo.setThreadCount(normalizeCount(board.getThreadCount()));
-        vo.setReplyCount(normalizeCount(board.getReplyCount()));
-        vo.setLastReplyTime(board.getLastReplyTime());
-        return vo;
-    }
 
     public ForumThreadPageVO toThreadPageVO(List<ForumThreadVO> list, long total, long page, long size) {
         ForumThreadPageVO pageVO = new ForumThreadPageVO();
@@ -57,7 +41,8 @@ public class ForumViewAssembler {
                                     WfUser lastReplyUser,
                                     boolean likedByCurrentUser,
                                     List<String> imageUrls,
-                                    String videoUrl) {
+                                    String videoUrl,
+                                    String videoPosterUrl) {
         ForumThreadVO vo = new ForumThreadVO();
         vo.setThreadId(thread.getId());
         vo.setBoardId(thread.getBoardId());
@@ -71,6 +56,7 @@ public class ForumViewAssembler {
         vo.setLikedByCurrentUser(likedByCurrentUser);
         vo.setImageUrls(imageUrls);
         vo.setVideoUrl(videoUrl);
+        vo.setVideoPosterUrl(videoPosterUrl);
         vo.setLastReplyTime(thread.getLastReplyTime());
         vo.setCreateTime(thread.getCreateTime());
         vo.setAuthor(toUserBriefVO(author));
@@ -79,7 +65,7 @@ public class ForumViewAssembler {
     }
 
     public ForumThreadVO toThreadVO(WfForumThread thread, WfUser author, WfUser lastReplyUser) {
-        return toThreadVO(thread, author, lastReplyUser, false, List.of(), null);
+        return toThreadVO(thread, author, lastReplyUser, false, List.of(), null, null);
     }
 
     public ForumReplyVO toReplyVO(WfForumReply reply,

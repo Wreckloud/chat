@@ -14,7 +14,6 @@
         <text class="thread-title">{{item.title}}</text>
       </view>
       <view class="thread-meta-row">
-        <text>{{item.boardName || ('版块#' + item.boardId)}}</text>
         <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
       </view>
       <view class="thread-time-row">

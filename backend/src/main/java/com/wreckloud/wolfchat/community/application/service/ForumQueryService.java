@@ -8,7 +8,6 @@ import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
 import com.wreckloud.wolfchat.community.application.assembler.ForumViewAssembler;
-import com.wreckloud.wolfchat.community.api.vo.ForumBoardVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
@@ -19,6 +18,7 @@ import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReplyLike;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThreadLike;
+import com.wreckloud.wolfchat.community.domain.enums.ForumBoardStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumReplyStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadType;
@@ -43,7 +43,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 论坛查询服务：版块/主题/回复读取与视图组装。
+ * 论坛查询服务：社区主题/回复读取与视图组装。
  */
 @Service
 @RequiredArgsConstructor
@@ -52,17 +52,12 @@ public class ForumQueryService {
     private static final long MIN_PAGE_SIZE = 1L;
     private static final long MAX_PAGE_SIZE = 50L;
 
-    private static final String TAB_ALL = "all";
-    private static final String TAB_STICKY = "sticky";
-    private static final String TAB_ESSENCE = "essence";
     private static final String FEED_TAB_RECOMMEND = "recommend";
     private static final String FEED_TAB_HOT = "hot";
     private static final String FEED_TAB_FRIENDS = "friends";
     private static final String FEED_TAB_LATEST = "latest";
+    private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
 
-    private static final String THREAD_LIST_ORDER_SQL = "ORDER BY "
-            + "CASE thread_type WHEN 'ANNOUNCEMENT' THEN 2 WHEN 'STICKY' THEN 1 ELSE 0 END DESC, "
-            + "last_reply_time DESC, create_time DESC, id DESC";
     private static final String FEED_LATEST_ORDER_SQL = "ORDER BY create_time DESC, id DESC";
     private static final String FEED_HOT_ORDER_SQL = "ORDER BY "
             + "(reply_count * 5 + like_count * 3 + view_count * 0.1 "
@@ -83,22 +78,6 @@ public class ForumQueryService {
     private final ForumViewAssembler forumViewAssembler;
     private final OssStorageService ossStorageService;
 
-    public List<ForumBoardVO> listBoards() {
-        LambdaQueryWrapper<WfForumBoard> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.orderByAsc(WfForumBoard::getSortNo)
-                .orderByAsc(WfForumBoard::getId);
-        List<WfForumBoard> boards = wfForumBoardMapper.selectList(queryWrapper);
-        if (boards.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<ForumBoardVO> list = new ArrayList<>(boards.size());
-        for (WfForumBoard board : boards) {
-            list.add(forumViewAssembler.toBoardVO(board));
-        }
-        return list;
-    }
-
     public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
         validatePageParams(page, size);
         String normalizedTab = normalizeFeedTab(tab);
@@ -112,29 +91,6 @@ public class ForumQueryService {
             return listLatestFeed(userId, page, size);
         }
         return listRecommendFeed(userId, page, size);
-    }
-
-    public ForumThreadPageVO listBoardThreads(Long userId, Long boardId, long page, long size, String tab) {
-        validatePageParams(page, size);
-        WfForumBoard board = getBoardOrThrow(boardId);
-        String normalizedTab = normalizeTab(tab);
-
-        LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfForumThread::getBoardId, boardId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
-        applyThreadTabFilter(normalizedTab, queryWrapper);
-        queryWrapper.last(THREAD_LIST_ORDER_SQL);
-
-        Page<WfForumThread> pageReq = new Page<>(page, size);
-        Page<WfForumThread> result = wfForumThreadMapper.selectPage(pageReq, queryWrapper);
-        return toThreadPageVO(
-                userId,
-                result.getRecords(),
-                result.getTotal(),
-                page,
-                size,
-                Collections.singletonMap(board.getId(), board)
-        );
     }
 
     public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
@@ -199,10 +155,9 @@ public class ForumQueryService {
                 userMap.get(thread.getLastReplyUserId()),
                 likedByCurrentUser,
                 resolveImageUrls(thread.getImageKeys()),
-                resolveMediaUrl(thread.getVideoKey())
+                resolveMediaUrl(thread.getVideoKey()),
+                resolveVideoPosterUrl(thread)
         );
-        WfForumBoard board = wfForumBoardMapper.selectById(thread.getBoardId());
-        threadVO.setBoardName(board == null ? "" : board.getName());
         return threadVO;
     }
 
@@ -231,8 +186,13 @@ public class ForumQueryService {
         );
     }
 
-    public WfForumBoard getBoardOrThrow(Long boardId) {
-        WfForumBoard board = wfForumBoardMapper.selectById(boardId);
+    public WfForumBoard resolveDefaultBoardForPostingOrThrow() {
+        LambdaQueryWrapper<WfForumBoard> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumBoard::getStatus, ForumBoardStatus.NORMAL)
+                .orderByAsc(WfForumBoard::getSortNo)
+                .orderByAsc(WfForumBoard::getId)
+                .last("LIMIT 1");
+        WfForumBoard board = wfForumBoardMapper.selectOne(queryWrapper);
         if (board == null) {
             throw new BaseException(ErrorCode.FORUM_BOARD_NOT_FOUND);
         }
@@ -632,21 +592,11 @@ public class ForumQueryService {
                                              long total,
                                              long page,
                                              long size) {
-        return toThreadPageVO(userId, records, total, page, size, null);
-    }
-
-    private ForumThreadPageVO toThreadPageVO(Long userId,
-                                             List<WfForumThread> records,
-                                             long total,
-                                             long page,
-                                             long size,
-                                             Map<Long, WfForumBoard> fixedBoardMap) {
         if (records == null || records.isEmpty()) {
             return forumViewAssembler.toThreadPageVO(Collections.emptyList(), total, page, size);
         }
         Map<Long, WfUser> userMap = loadThreadUserMap(records);
         Set<Long> likedThreadIds = loadLikedThreadIds(userId, records);
-        Map<Long, WfForumBoard> boardMap = fixedBoardMap == null ? loadBoardMap(records) : fixedBoardMap;
 
         List<ForumThreadVO> list = new ArrayList<>(records.size());
         for (WfForumThread thread : records) {
@@ -658,10 +608,9 @@ public class ForumQueryService {
                     lastReplyUser,
                     likedThreadIds.contains(thread.getId()),
                     resolveImageUrls(thread.getImageKeys()),
-                    resolveMediaUrl(thread.getVideoKey())
+                    resolveMediaUrl(thread.getVideoKey()),
+                    resolveVideoPosterUrl(thread)
             );
-            WfForumBoard board = boardMap.get(thread.getBoardId());
-            threadVO.setBoardName(board == null ? "" : board.getName());
             list.add(threadVO);
         }
         return forumViewAssembler.toThreadPageVO(list, total, page, size);
@@ -670,27 +619,6 @@ public class ForumQueryService {
     private void validatePageParams(long page, long size) {
         if (page < MIN_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
             throw new BaseException(ErrorCode.PARAM_ERROR, "分页参数不合法，page>=1 且 size 在1-50之间");
-        }
-    }
-
-    private String normalizeTab(String tab) {
-        if (!StringUtils.hasText(tab)) {
-            return TAB_ALL;
-        }
-        String normalizedTab = tab.trim().toLowerCase();
-        if (TAB_ALL.equals(normalizedTab) || TAB_STICKY.equals(normalizedTab) || TAB_ESSENCE.equals(normalizedTab)) {
-            return normalizedTab;
-        }
-        throw new BaseException(ErrorCode.PARAM_ERROR, "tab 参数不合法，仅支持 all/sticky/essence");
-    }
-
-    private void applyThreadTabFilter(String tab, LambdaQueryWrapper<WfForumThread> queryWrapper) {
-        if (TAB_STICKY.equals(tab)) {
-            queryWrapper.in(WfForumThread::getThreadType, ForumThreadType.STICKY, ForumThreadType.ANNOUNCEMENT);
-            return;
-        }
-        if (TAB_ESSENCE.equals(tab)) {
-            queryWrapper.eq(WfForumThread::getIsEssence, true);
         }
     }
 
@@ -727,25 +655,6 @@ public class ForumQueryService {
             }
         }
         return loadUserMap(userIds);
-    }
-
-    private Map<Long, WfForumBoard> loadBoardMap(List<WfForumThread> threads) {
-        if (threads == null || threads.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        List<Long> boardIds = threads.stream()
-                .map(WfForumThread::getBoardId)
-                .filter(id -> id != null && id > 0L)
-                .distinct()
-                .collect(Collectors.toList());
-        if (boardIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        List<WfForumBoard> boards = wfForumBoardMapper.selectBatchIds(boardIds);
-        if (boards == null || boards.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return boards.stream().collect(Collectors.toMap(WfForumBoard::getId, item -> item));
     }
 
     private Map<Long, WfForumReply> loadQuoteReplyMap(Long threadId, List<WfForumReply> replies) {
@@ -842,6 +751,19 @@ public class ForumQueryService {
             return null;
         }
         return ossStorageService.buildSignedReadUrl(mediaKey.trim());
+    }
+
+    private String resolveVideoPosterUrl(WfForumThread thread) {
+        if (thread == null) {
+            return null;
+        }
+        if (StringUtils.hasText(thread.getVideoPosterKey())) {
+            return resolveMediaUrl(thread.getVideoPosterKey());
+        }
+        if (!StringUtils.hasText(thread.getVideoKey())) {
+            return null;
+        }
+        return ossStorageService.buildSignedReadUrl(thread.getVideoKey().trim(), VIDEO_POSTER_PROCESS);
     }
 
 }

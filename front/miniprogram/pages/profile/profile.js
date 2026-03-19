@@ -3,7 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const { normalizeUser } = require('../../utils/user')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
@@ -153,7 +153,6 @@ Page({
       const userInfo = normalizeUser(res.data || {}) || {}
       auth.setUserInfo(userInfo)
       this.applyFormState(userInfo)
-      toastSuccess('资料已保存')
     } catch (error) {
       toastError(error, '保存失败')
       this.setData({ submitting: false }, () => {

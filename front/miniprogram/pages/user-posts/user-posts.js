@@ -91,7 +91,7 @@ Page({
         page: hasMore ? page + 1 : page
       })
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载帖子列表失败')
     } finally {
       this.setData({
         loading: false,

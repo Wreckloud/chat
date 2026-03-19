@@ -55,6 +55,9 @@ public class ForumThreadVO {
     @Schema(description = "首帖视频 URL")
     private String videoUrl;
 
+    @Schema(description = "首帖视频封面 URL")
+    private String videoPosterUrl;
+
     @Schema(description = "最近回复时间")
     private LocalDateTime lastReplyTime;
 

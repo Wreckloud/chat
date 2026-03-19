@@ -87,7 +87,7 @@ public class WsSessionManager {
                 session.sendMessage(message);
                 successCount++;
             } catch (IOException e) {
-                log.warn("WS 推送失败: userId={}, sessionId={}, error={}", userId, session.getId(), e.getMessage());
+                log.warn("WS 推送失败: userId={}, sessionId={}", userId, session.getId(), e);
                 removeSession(session);
             }
         }

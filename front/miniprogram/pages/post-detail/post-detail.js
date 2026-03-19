@@ -5,7 +5,7 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { uploadForumReplyImage } = require('../../utils/oss')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
@@ -139,7 +139,7 @@ Page({
       await this.loadReplies({ reset: true, notifyError: false })
       this.reportView()
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载主题详情失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -432,7 +432,7 @@ Page({
         'thread.likedByCurrentUser': thread.likedByCurrentUser,
         'thread.likeCount': thread.likeCount
       })
-      toastError(error, '操作失败')
+      toastError(error, '更新主题点赞失败')
     } finally {
       this.setData({ threadLikeLoading: false })
     }
@@ -463,7 +463,7 @@ Page({
         [`replies[${index}].likedByCurrentUser`]: currentReply.likedByCurrentUser,
         [`replies[${index}].likeCount`]: currentReply.likeCount
       })
-      toastError(error, '操作失败')
+      toastError(error, '更新回复点赞失败')
     } finally {
       this.setData({
         [`replyLikeLoadingMap.${replyId}`]: false
@@ -482,7 +482,6 @@ Page({
 
     try {
       await request.put(options.url, options.payload || {})
-      toastSuccess(options.successText)
       await this.loadThreadDetail()
       if (options.refreshReplies) {
         await this.loadReplies({ reset: true, notifyError: false })
@@ -500,7 +499,6 @@ Page({
       confirmContent: nextLocked ? '确认锁定主题吗？' : '确认解锁主题吗？',
       url: `/forum/threads/${this.data.threadId}/lock`,
       payload: { locked: nextLocked },
-      successText: nextLocked ? '已锁定' : '已解锁',
       failText: nextLocked ? '锁定主题失败' : '解锁主题失败',
       refreshReplies: true
     })
@@ -518,12 +516,9 @@ Page({
 
     try {
       await request.del(`/forum/threads/${this.data.threadId}`)
-      toastSuccess('主题已删除')
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 350)
+      wx.navigateBack()
     } catch (error) {
-      toastError(error, '删除失败')
+      toastError(error, '删除主题失败')
     }
   },
 
@@ -535,7 +530,6 @@ Page({
       confirmContent: nextSticky ? '确认置顶主题吗？' : '确认取消置顶吗？',
       url: `/forum/threads/${this.data.threadId}/sticky`,
       payload: { sticky: nextSticky },
-      successText: nextSticky ? '已置顶' : '已取消置顶',
       failText: nextSticky ? '置顶主题失败' : '取消置顶失败'
     })
   },
@@ -548,7 +542,6 @@ Page({
       confirmContent: nextEssence ? '确认设为精华吗？' : '确认取消精华吗？',
       url: `/forum/threads/${this.data.threadId}/essence`,
       payload: { essence: nextEssence },
-      successText: nextEssence ? '已设为精华' : '已取消精华',
       failText: nextEssence ? '设精华失败' : '取消精华失败'
     })
   },
@@ -566,11 +559,10 @@ Page({
 
     try {
       await request.del(`/forum/replies/${replyId}`)
-      toastSuccess('回复已删除')
       await this.loadThreadDetail()
       await this.loadReplies({ reset: true, notifyError: false })
     } catch (error) {
-      toastError(error, '删除失败')
+      toastError(error, '删除回复失败')
     }
   },
 

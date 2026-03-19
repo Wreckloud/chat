@@ -2,6 +2,12 @@ const time = require('./time')
 
 const ECHO_MATCH_TOLERANCE_MS = 2 * 60 * 1000
 
+function createClientError(message) {
+  const error = new Error(message)
+  error.expose = true
+  return error
+}
+
 function createClientMsgId(prefix) {
   const idPrefix = String(prefix || 'm').trim() || 'm'
   return `${idPrefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -108,7 +114,7 @@ function rejectPendingRequest(page, error, clientMsgId) {
 
   clearPendingTimer(page)
   page.pendingRequest = null
-  pending.reject(error || new Error('发送失败'))
+  pending.reject(error || createClientError('发送失败'))
   return true
 }
 
@@ -123,13 +129,13 @@ function resolvePendingByEchoMessage(page, message) {
 function startPendingTimer(page, clientMsgId, timeoutMs) {
   clearPendingTimer(page)
   page.pendingTimer = setTimeout(() => {
-    rejectPendingRequest(page, new Error('消息发送超时，请重试'), clientMsgId)
+    rejectPendingRequest(page, createClientError('消息发送超时，请重试'), clientMsgId)
   }, timeoutMs)
 }
 
 async function sendWsMessageWithAck(page, ws, payload, options = {}) {
   if (page.pendingRequest) {
-    throw new Error('存在未完成的发送请求，请稍后重试')
+    throw createClientError('存在未完成的发送请求，请稍后重试')
   }
 
   await ws.waitUntilReady(page.WS_READY_TIMEOUT_MS)
@@ -160,4 +166,3 @@ module.exports = {
   resolvePendingByEchoMessage,
   sendWsMessageWithAck
 }
-

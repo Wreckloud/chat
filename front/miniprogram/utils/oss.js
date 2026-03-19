@@ -404,8 +404,24 @@ async function uploadForumThreadVideo(tempFile) {
   const meta = await resolveVideoUploadMeta(tempFile)
   const policy = await applyUploadPolicy('/media/forum/thread/video/upload-policy', meta)
   await uploadFileToOss(policy, meta.filePath, '视频')
+
+  let mediaPosterKey = ''
+  const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
+  if (posterTempFilePath) {
+    try {
+      const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
+      const posterPolicy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', posterMeta)
+      await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
+      mediaPosterKey = posterPolicy.objectKey
+    } catch (error) {
+      // 封面上传失败不阻断视频发帖，详情页会退回无封面样式。
+      mediaPosterKey = ''
+    }
+  }
+
   return {
     mediaKey: policy.objectKey,
+    mediaPosterKey,
     mediaWidth: meta.width || null,
     mediaHeight: meta.height || null,
     mediaSize: meta.size,

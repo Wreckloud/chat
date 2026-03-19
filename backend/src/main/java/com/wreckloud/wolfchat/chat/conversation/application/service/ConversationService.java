@@ -79,7 +79,7 @@ public class ConversationService {
             log.debug("创建新会话成功: conversationId={}, userAId={}, userBId={}",
                     newConversation.getId(), userAId, userBId);
         } catch (DuplicateKeyException ex) {
-            log.warn("并发创建会话，查询已存在的会话");
+            log.warn("并发创建会话，查询已存在会话: userAId={}, userBId={}", userAId, userBId);
             WfConversation existing = conversationMapper.selectOne(queryWrapper);
             if (existing != null) {
                 return existing.getId();

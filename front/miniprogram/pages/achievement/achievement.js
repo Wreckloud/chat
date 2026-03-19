@@ -77,7 +77,7 @@ Page({
         achievements
       })
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载成就失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -109,7 +109,7 @@ Page({
       await request.put('/users/me/title/unequip')
       await this.loadData()
     } catch (error) {
-      toastError(error, '操作失败')
+      toastError(error, '卸下失败')
     } finally {
       this.setData({ equipping: false })
     }

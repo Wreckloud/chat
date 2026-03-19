@@ -8,7 +8,6 @@ import com.wreckloud.wolfchat.community.api.dto.UpdateLikeDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadEssenceDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadLockDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadStickyDTO;
-import com.wreckloud.wolfchat.community.api.vo.ForumBoardVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
@@ -29,25 +28,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 /**
  * @Description 论坛控制器
  * @Author Wreckloud
  * @Date 2026-03-10
  */
-@Tag(name = "论坛", description = "版块、主题、回复相关接口")
+@Tag(name = "论坛", description = "主题与回复相关接口")
 @RestController
 @RequestMapping("/forum")
 @RequiredArgsConstructor
 public class ForumController {
     private final ForumService forumService;
-
-    @Operation(summary = "版块列表", description = "获取论坛版块列表")
-    @GetMapping("/boards")
-    public Result<List<ForumBoardVO>> listBoards() {
-        return Result.success(forumService.listBoards());
-    }
 
     @Operation(summary = "社区信息流", description = "按推荐/热议/好友/最新获取帖子流")
     @GetMapping("/feed")
@@ -58,23 +49,11 @@ public class ForumController {
         return Result.success(forumService.listFeedThreads(userId, page, size, tab));
     }
 
-    @Operation(summary = "主题列表", description = "分页获取指定版块主题列表")
-    @GetMapping("/boards/{boardId}/threads")
-    public Result<ForumThreadPageVO> listBoardThreads(@PathVariable Long boardId,
-                                                       @RequestParam(defaultValue = "1") long page,
-                                                       @RequestParam(defaultValue = "20") long size,
-                                                       @RequestParam(required = false) String tab) {
+    @Operation(summary = "发布主题", description = "发布主题到社区")
+    @PostMapping("/threads")
+    public Result<ForumThreadVO> createThread(@RequestBody @Validated CreateThreadDTO dto) {
         Long userId = UserContext.getRequiredUserId();
-        ForumThreadPageVO pageVO = forumService.listBoardThreads(userId, boardId, page, size, tab);
-        return Result.success(pageVO);
-    }
-
-    @Operation(summary = "发布主题", description = "在指定版块发布主题")
-    @PostMapping("/boards/{boardId}/threads")
-    public Result<ForumThreadVO> createThread(@PathVariable Long boardId,
-                                              @RequestBody @Validated CreateThreadDTO dto) {
-        Long userId = UserContext.getRequiredUserId();
-        ForumThreadVO thread = forumService.createThread(userId, boardId, dto);
+        ForumThreadVO thread = forumService.createThread(userId, dto);
         return Result.success("发布成功", thread);
     }
 

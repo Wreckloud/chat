@@ -14,27 +14,37 @@ function notifyWsError(toastError, errorMessage, fallbackMessage) {
   toastError(errorMessage, fallbackMessage)
 }
 
+function createWsBusinessError(payload, fallbackMessage) {
+  const code = Number(payload && payload.code)
+  return {
+    kind: 'business',
+    code: Number.isFinite(code) ? code : 0,
+    message: payload && payload.message ? String(payload.message) : fallbackMessage
+  }
+}
+
 function handleWsError(page, payload, toastError) {
   const pageData = page && page.data ? page.data : {}
-  const errorMessage = payload && payload.message ? payload.message : '发送失败'
+  const fallbackMessage = '发送失败'
+  const wsError = createWsBusinessError(payload, fallbackMessage)
   const clientMsgId = payload && payload.clientMsgId ? String(payload.clientMsgId) : ''
 
   // 仅 clientMsgId 对应的 ERROR 参与发送链路兜底。
   if (clientMsgId) {
-    const resolved = imHelper.rejectPendingRequest(page, new Error(errorMessage), clientMsgId)
+    const resolved = imHelper.rejectPendingRequest(page, wsError, clientMsgId)
     if (!resolved && !pageData.sending) {
-      notifyWsError(toastError, errorMessage, '请求异常')
+      notifyWsError(toastError, wsError, fallbackMessage)
     }
     return true
   }
 
   if (!pageData.sending) {
-    notifyWsError(toastError, errorMessage, '请求异常')
+    notifyWsError(toastError, wsError, fallbackMessage)
     return true
   }
 
   // 服务端未带 clientMsgId 时，结束当前发送态，避免前端误报超时。
-  imHelper.rejectPendingRequest(page, new Error(errorMessage), '')
+  imHelper.rejectPendingRequest(page, wsError, '')
   return true
 }
 

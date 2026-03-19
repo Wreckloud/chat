@@ -57,16 +57,24 @@ public class ForumPayloadSupport {
         return new ArrayList<>(uniqueSet);
     }
 
-    public void validateThreadPayload(Long userId, String content, List<String> imageKeys, String videoKey) {
+    public void validateThreadPayload(Long userId,
+                                      String content,
+                                      List<String> imageKeys,
+                                      String videoKey,
+                                      String videoPosterKey) {
         boolean hasContent = content != null && !content.isEmpty();
         boolean hasImages = imageKeys != null && !imageKeys.isEmpty();
         boolean hasVideo = videoKey != null && !videoKey.isEmpty();
+        boolean hasVideoPoster = videoPosterKey != null && !videoPosterKey.isEmpty();
 
         if (!hasContent && !hasImages && !hasVideo) {
             throw new BaseException(ErrorCode.PARAM_ERROR, "主题内容不能为空");
         }
         if (hasImages && hasVideo) {
             throw new BaseException(ErrorCode.PARAM_ERROR, "图片和视频不能同时提交");
+        }
+        if (!hasVideo && hasVideoPoster) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "视频封面不能单独提交");
         }
         if (hasImages) {
             for (String imageKey : imageKeys) {
@@ -75,6 +83,9 @@ public class ForumPayloadSupport {
         }
         if (hasVideo) {
             chatMediaService.validateForumThreadVideoKey(userId, videoKey);
+        }
+        if (hasVideoPoster) {
+            chatMediaService.validateForumThreadImageKey(userId, videoPosterKey);
         }
     }
 
@@ -96,4 +107,3 @@ public class ForumPayloadSupport {
         return String.join(",", imageKeys);
     }
 }
-

@@ -75,7 +75,7 @@ Page({
         this.syncChatUnreadBadge(list)
       })
       .catch(err => {
-        toastError(err, '加载失败')
+        toastError(err, '加载会话失败')
         refreshChatUnreadBadge()
       })
       .finally(() => {
@@ -301,7 +301,6 @@ Page({
         if (tapIndex === 0) {
           const targetUserId = Number(conversation.targetUserId)
           if (!targetUserId) {
-            toastError('用户信息缺失')
             return
           }
           wx.navigateTo({
@@ -331,7 +330,7 @@ Page({
         this.syncChatUnreadBadge(nextList)
       })
       .catch(err => {
-        toastError(err, '操作失败')
+        toastError(err, '更新未读状态失败')
       })
   },
 

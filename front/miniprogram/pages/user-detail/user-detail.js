@@ -115,7 +115,7 @@ Page({
         latestThreads: Array.isArray(home.latestThreads) ? home.latestThreads.map(mapThread) : []
       })
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载行者主页失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -132,7 +132,7 @@ Page({
       }
       await this.loadHome()
     } catch (error) {
-      toastError(error, '操作失败')
+      toastError(error, '更新关注状态失败')
     } finally {
       this.setData({ followLoading: false })
     }

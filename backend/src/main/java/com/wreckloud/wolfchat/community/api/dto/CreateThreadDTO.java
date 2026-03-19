@@ -31,4 +31,8 @@ public class CreateThreadDTO {
     @Size(max = 255, message = "视频对象长度不能超过255个字符")
     @Schema(description = "主题视频对象 Key，图片与视频二选一")
     private String videoKey;
+
+    @Size(max = 255, message = "视频封面对象长度不能超过255个字符")
+    @Schema(description = "主题视频封面对象 Key，仅视频主题可选")
+    private String videoPosterKey;
 }

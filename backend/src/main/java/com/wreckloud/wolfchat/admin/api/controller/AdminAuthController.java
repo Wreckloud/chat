@@ -41,7 +41,7 @@ public class AdminAuthController {
             AdminLoginVO loginVO = adminAuthService.login(dto.getAccount(), dto.getPassword(), request);
             return Result.success("登录成功", loginVO);
         } catch (BaseException e) {
-            log.debug("管理端登录失败: code={}", e.getCode());
+            log.warn("管理端登录失败: code={}, account={}", e.getCode(), maskAccount(dto.getAccount()));
             return Result.error(ErrorCode.LOGIN_FAILED);
         } catch (Exception e) {
             log.error("管理端登录异常", e);
@@ -56,5 +56,17 @@ public class AdminAuthController {
         adminPermissionService.assertAdmin(userId);
         AdminProfileVO profileVO = adminAuthService.getCurrentAdminProfile(userId);
         return Result.success(profileVO);
+    }
+
+    private String maskAccount(String account) {
+        if (account == null || account.isBlank()) {
+            return "";
+        }
+        String normalized = account.trim();
+        int length = normalized.length();
+        if (length <= 2) {
+            return "***";
+        }
+        return normalized.substring(0, 2) + "***";
     }
 }

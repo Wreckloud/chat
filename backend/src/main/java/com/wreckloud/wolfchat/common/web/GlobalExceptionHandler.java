@@ -29,6 +29,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BaseException.class)
     public Result<?> handleBaseException(BaseException e, HttpServletRequest request) {
         if (isLoginRequest(request)) {
+            log.warn("登录业务异常: code={}, uri={}", e.getCode(), resolveRequestUri(request));
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
         log.warn("业务异常: code={}, message={}, uri={}", e.getCode(), e.getMessage(), resolveRequestUri(request));
@@ -66,8 +67,8 @@ public class GlobalExceptionHandler {
      * 处理数据库语法异常
      */
     @ExceptionHandler(BadSqlGrammarException.class)
-    public Result<?> handleBadSqlGrammarException(BadSqlGrammarException e) {
-        log.error("数据库结构异常", e);
+    public Result<?> handleBadSqlGrammarException(BadSqlGrammarException e, HttpServletRequest request) {
+        log.error("数据库结构异常: uri={}", resolveRequestUri(request), e);
         return Result.error(ErrorCode.DATABASE_ERROR);
     }
 
@@ -77,10 +78,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e, HttpServletRequest request) {
         if (isLoginRequest(request)) {
-            log.warn("登录系统异常: uri={}, message={}", resolveRequestUri(request), e.getMessage());
+            log.error("登录系统异常: uri={}", resolveRequestUri(request), e);
             return Result.error(ErrorCode.LOGIN_FAILED);
         }
-        log.error("系统异常", e);
+        log.error("系统异常: uri={}", resolveRequestUri(request), e);
         return Result.error(ErrorCode.SYSTEM_ERROR);
     }
 

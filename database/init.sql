@@ -222,6 +222,7 @@ CREATE TABLE IF NOT EXISTS `wf_forum_thread` (
     `content` TEXT NOT NULL COMMENT '首帖内容',
     `image_keys` TEXT DEFAULT NULL COMMENT '首帖图片对象Key列表（英文逗号分隔）',
     `video_key` VARCHAR(255) DEFAULT NULL COMMENT '首帖视频对象Key',
+    `video_poster_key` VARCHAR(255) DEFAULT NULL COMMENT '首帖视频封面对象Key',
     `thread_type` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '主题类型：NORMAL/STICKY/ANNOUNCEMENT',
     `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/LOCKED/DELETED',
     `is_essence` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否精华：0-否，1-是',

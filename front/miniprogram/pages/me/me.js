@@ -3,7 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { toastError, toastSuccess } = require('../../utils/ui')
+const { toastError } = require('../../utils/ui')
 const { setThemeName, listThemes } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
@@ -112,7 +112,7 @@ Page({
       auth.setUserInfo(userRes.data)
       this.applyUserInfo(auth.getUserInfo())
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载个人信息失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -168,10 +168,7 @@ Page({
     try {
       await request.del('/users/me')
       auth.logout()
-      toastSuccess('账号已注销')
-      setTimeout(() => {
-        wx.reLaunch({ url: '/pages/login/login' })
-      }, 300)
+      wx.reLaunch({ url: '/pages/login/login' })
     } catch (error) {
       toastError(error, '注销失败')
     }

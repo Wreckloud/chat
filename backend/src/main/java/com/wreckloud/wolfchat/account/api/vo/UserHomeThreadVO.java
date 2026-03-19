@@ -18,12 +18,6 @@ public class UserHomeThreadVO {
     @Schema(description = "主题ID")
     private Long threadId;
 
-    @Schema(description = "版块ID")
-    private Long boardId;
-
-    @Schema(description = "版块名称")
-    private String boardName;
-
     @Schema(description = "标题")
     private String title;
 

@@ -121,7 +121,7 @@ Page({
       refreshNoticeUnreadBadge()
       this.loadUnreadSummary()
     } catch (error) {
-      toastError(error, '加载失败')
+      toastError(error, '加载通知失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -173,7 +173,7 @@ Page({
         refreshNoticeUnreadBadge()
         this.loadUnreadSummary()
       } catch (error) {
-        toastError(error, '操作失败')
+        toastError(error, '更新通知状态失败')
         return
       }
     }
@@ -202,7 +202,7 @@ Page({
       refreshNoticeUnreadBadge()
       this.loadUnreadSummary()
     } catch (error) {
-      toastError(error, '操作失败')
+      toastError(error, '全部标记已读失败')
     }
   },
 

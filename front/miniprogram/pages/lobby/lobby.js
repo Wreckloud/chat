@@ -156,7 +156,7 @@ Page({
     return imPageHelper.loadMessages(this, request, {
       url: '/lobby/messages',
       onError: (err) => {
-        toastError(err, '加载失败')
+        toastError(err, '加载大厅消息失败')
       }
     })
   },
@@ -167,7 +167,7 @@ Page({
     return imPageHelper.sendComposerTextMessage(this, imSendHelper, {
       buildExtraPayload: () => this.buildReplyPayload(),
       onError: (error) => {
-        toastError(error, '发送失败')
+        toastError(error, '发送消息失败')
       },
       onSuccess: () => {
         this.clearReplyDraft()
@@ -401,7 +401,7 @@ Page({
         messageId
       })
     } catch (error) {
-      toastError(error, '撤回失败')
+      toastError(error, '撤回消息失败')
     } finally {
       if (!this.pageUnloaded) {
         this.setData({ sending: false })

@@ -18,7 +18,7 @@
 
   <retro-empty wx:if="{{threads.length === 0}}" description="暂无主题" />
 
-  <view wx:else class="thread-board">
+  <view wx:else class="thread-list">
     <view
       wx:for="{{threads}}"
       wx:key="threadId"
@@ -26,9 +26,6 @@
       bindtap="goPostDetail"
       data-id="{{item.threadId}}">
       <view class="thread-title-line">
-        <view class="thread-board-col">
-          <text class="thread-board-tag">[{{item.boardName || '广场'}}]</text>
-        </view>
         <text class="thread-title">{{item.title}}</text>
       </view>
 

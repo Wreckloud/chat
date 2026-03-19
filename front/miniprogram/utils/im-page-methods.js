@@ -34,7 +34,7 @@ function buildCommonImPageMethods(options) {
       return imPageHelper.sendComposerTextMessage(this, imSendHelper, {
         onError: (error) => {
           if (typeof toastError === 'function') {
-            toastError(error, '发送失败')
+            toastError(error, '发送消息失败')
           }
         }
       })

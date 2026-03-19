@@ -78,8 +78,16 @@
           class="thread-video-card"
           data-url="{{thread.videoUrl}}"
           bindtap="previewThreadVideo">
-          <view class="thread-video-title">帖子视频</view>
-          <view class="thread-video-sub">点此全屏播放</view>
+          <image
+            wx:if="{{thread.videoPosterUrl}}"
+            class="thread-video-poster"
+            src="{{thread.videoPosterUrl}}"
+            mode="aspectFill"
+            lazy-load="{{true}}" />
+          <view wx:else class="thread-video-poster-fallback">视频</view>
+          <view class="thread-video-play-mask">
+            <view class="thread-video-play-icon"></view>
+          </view>
         </view>
       </view>
 
