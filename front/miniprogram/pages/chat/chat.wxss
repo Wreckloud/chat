@@ -179,8 +179,10 @@
 }
 
 .session-unread {
-  margin-left: 8rpx;
-  font-size: var(--retro-session-unread-font-size);
+  margin-left: 4rpx;
+  align-self: flex-start;
+  font-size: var(--retro-session-name-font-size);
+  line-height: 1.15;
   color: var(--retro-accent-text);
 }
 

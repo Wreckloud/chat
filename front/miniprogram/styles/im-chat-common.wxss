@@ -285,6 +285,10 @@ page {
   padding-bottom: 10rpx;
 }
 
+.im-composer.is-keyboard-open {
+  padding-bottom: 10rpx;
+}
+
 .im-composer-input {
   flex: 1;
   height: var(--retro-chat-composer-input-height);

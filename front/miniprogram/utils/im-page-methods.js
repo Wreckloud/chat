@@ -62,6 +62,10 @@ function buildCommonImPageMethods(options) {
       imSendHelper.onTapFile(this, e, toastError)
     },
 
+    onLongPressMessage(e) {
+      imPageHelper.onLongPressMessage(this, e)
+    },
+
     scrollToBottom() {
       imHelper.scrollToBottom(this)
     },

@@ -68,7 +68,7 @@
                     style="{{item.displayTitleColor ? 'color:' + item.displayTitleColor + ';' : ''}}">
                     [{{item.displayTitleName}}]
                   </view>
-                  <text wx:if="{{item.unreadCount > 0}}" class="session-unread">[{{item.unreadCount}}]</text>
+                  <view wx:if="{{item.unreadCount > 0}}" class="session-unread u-unread-blink">[{{item.unreadCount}}]</view>
                 </view>
                 <text class="session-presence {{item.isOnline ? 'session-presence-online' : ''}}">{{item.presenceText}}</text>
               </view>

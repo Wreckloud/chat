@@ -1,4 +1,3 @@
-@import "../../styles/im-runtime-tip.wxss";
 @import "../../styles/im-chat-common.wxss";
 
 .im-page {
@@ -28,7 +27,6 @@
 
 .im-header-meta {
   min-width: 0;
-  margin-left: 12rpx;
 }
 
 .im-header-title-badge {

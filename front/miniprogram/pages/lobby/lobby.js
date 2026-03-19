@@ -41,7 +41,6 @@ Page({
     keyboardHeightPx: 0,
     dockHeightPx: 88,
     messageListBottomPx: 88,
-    connectionTip: '',
     canSendText: false,
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,

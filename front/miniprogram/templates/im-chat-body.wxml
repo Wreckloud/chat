@@ -90,6 +90,8 @@
                 class="im-text im-file"
                 data-url="{{lineItem.mediaUrl}}"
                 data-name="{{lineItem.content}}"
+                data-copy="{{lineItem.mediaUrl || lineItem.content || ''}}"
+                bindlongpress="onLongPressMessage"
                 bindtap="onTapFile">
                 {{lineItem.fileLabel}}
               </text>
@@ -97,10 +99,18 @@
                 wx:elif="{{lineItem.msgType === 'TEXT' && lineItem.linkUrl}}"
                 class="im-text im-link"
                 data-url="{{lineItem.linkUrl}}"
+                data-copy="{{lineItem.linkUrl}}"
+                bindlongpress="onLongPressMessage"
                 bindtap="onTapLink">
                 {{lineItem.content}}
               </text>
-              <text wx:elif="{{lineItem.msgType === 'TEXT'}}" class="im-text">{{lineItem.content}}</text>
+              <text
+                wx:elif="{{lineItem.msgType === 'TEXT'}}"
+                class="im-text"
+                data-copy="{{lineItem.content}}"
+                bindlongpress="onLongPressMessage">
+                {{lineItem.content}}
+              </text>
               <text wx:else class="im-media-missing">[媒体不可用]</text>
             </view>
           </view>
@@ -111,11 +121,7 @@
   </scroll-view>
 
   <view id="im-dock" class="im-dock" style="bottom: {{keyboardHeightPx}}px;">
-    <view wx:if="{{connectionTip}}" class="im-runtime-tip-bar">
-      <text wx:if="{{connectionTip}}" class="im-runtime-tip im-runtime-tip-conn">{{connectionTip}}</text>
-    </view>
-
-    <view id="im-composer" class="im-composer {{morePanelVisible ? 'is-panel-open' : ''}}">
+    <view id="im-composer" class="im-composer {{morePanelVisible ? 'is-panel-open' : ''}} {{keyboardHeightPx > 0 ? 'is-keyboard-open' : ''}}">
       <input
         class="im-composer-input"
         type="text"

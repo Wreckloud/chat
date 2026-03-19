@@ -131,7 +131,7 @@
 }
 
 .quick-badge-blink {
-  animation: unread-blink 1.2s steps(1, end) infinite;
+  animation: retro-unread-blink 1.2s steps(1, end) infinite;
 }
 
 .quick-desc {
@@ -232,16 +232,4 @@
   text-align: center;
   color: var(--retro-muted-text);
   padding-top: 80rpx;
-}
-
-@keyframes unread-blink {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-  100% {
-    opacity: 1;
-  }
 }

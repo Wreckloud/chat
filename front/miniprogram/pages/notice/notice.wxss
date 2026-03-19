@@ -131,7 +131,7 @@
   color: var(--retro-accent-text);
   font-size: 21rpx;
   line-height: 1;
-  animation: unread-blink 1.2s steps(1, end) infinite;
+  animation: retro-unread-blink 1.2s steps(1, end) infinite;
 }
 
 .notice-unread-hidden {
@@ -175,16 +175,4 @@
   font-size: 22rpx;
   color: var(--retro-muted-text);
   padding: 20rpx 0 10rpx;
-}
-
-@keyframes unread-blink {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-  100% {
-    opacity: 1;
-  }
 }

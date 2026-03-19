@@ -2,19 +2,6 @@ const imHelper = require('./im-helper')
 const imMessageHelper = require('./im-message-helper')
 const pageLifecycleHelper = require('./page-lifecycle-helper')
 
-const CONNECTION_TIP_MAP = {
-  CONNECTING: '连接中...',
-  AUTHING: '认证中...',
-  RECONNECTING: '网络波动，重连中...',
-  DISCONNECTED: '连接已断开',
-  READY: ''
-}
-
-function resolveConnectionTip(state) {
-  const key = String(state || '').toUpperCase()
-  return CONNECTION_TIP_MAP[key] || ''
-}
-
 function initSocket(page, ws, onMessage) {
   if (page.wsHandler) {
     return
@@ -24,24 +11,9 @@ function initSocket(page, ws, onMessage) {
     onMessage(payload)
   }
   ws.onMessage(page.wsHandler)
-
-  if (Object.prototype.hasOwnProperty.call(page.data || {}, 'connectionTip')) {
-    page.wsStateHandler = (state) => {
-      const nextTip = resolveConnectionTip(state)
-      if (nextTip !== page.data.connectionTip) {
-        page.setData({ connectionTip: nextTip })
-      }
-    }
-    ws.onStateChange(page.wsStateHandler)
-    page.wsStateHandler(ws.getState())
-  }
 }
 
 function teardownSocket(page, ws) {
-  if (page.wsStateHandler) {
-    ws.offStateChange(page.wsStateHandler)
-    page.wsStateHandler = null
-  }
   if (!page.wsHandler) {
     return
   }
@@ -322,6 +294,19 @@ function previewImage(page, event) {
   })
 }
 
+function onLongPressMessage(page, event) {
+  if (!page || !event || !event.currentTarget || !event.currentTarget.dataset) {
+    return
+  }
+  const content = String(event.currentTarget.dataset.copy || '').trim()
+  if (!content) {
+    return
+  }
+  wx.setClipboardData({
+    data: content
+  })
+}
+
 function onMessageListUpper(page, loadMessagesFn) {
   if (!page || !page.data || page.data.loading || !page.data.hasMore) {
     return
@@ -349,6 +334,7 @@ module.exports = {
   onDefaultMoreActionTap,
   onSendButtonTap,
   sendComposerTextMessage,
+  onLongPressMessage,
   onMessageListUpper,
   previewImage
 }

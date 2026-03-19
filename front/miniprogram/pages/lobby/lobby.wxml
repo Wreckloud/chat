@@ -12,5 +12,5 @@
 
   <template
     is="imChatBody"
-    data="{{messageListBottomPx: messageListBottomPx, scrollIntoView: scrollIntoView, loading: loading, messages: messages, messageBlocks: messageBlocks, keyboardHeightPx: keyboardHeightPx, connectionTip: connectionTip, morePanelVisible: morePanelVisible, inputMessage: inputMessage, composerFocused: composerFocused, sending: sending, canSendText: canSendText, moreActions: moreActions, emptyText: '公共聊天室还没有消息', inputPlaceholder: '在公共聊天室发言...'}}" />
+    data="{{messageListBottomPx: messageListBottomPx, scrollIntoView: scrollIntoView, loading: loading, messages: messages, messageBlocks: messageBlocks, keyboardHeightPx: keyboardHeightPx, morePanelVisible: morePanelVisible, inputMessage: inputMessage, composerFocused: composerFocused, sending: sending, canSendText: canSendText, moreActions: moreActions, emptyText: '公共聊天室还没有消息', inputPlaceholder: '在公共聊天室发言...'}}" />
 </view>

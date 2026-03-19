@@ -21,9 +21,7 @@
   flex-shrink: 0;
   align-self: flex-start;
   display: inline-block;
-  line-height: 1;
-  position: relative;
-  top: -6rpx;
+  line-height: 1.15;
 }
 
 .u-avatar-top {
