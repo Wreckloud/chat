@@ -9,6 +9,7 @@ import com.wreckloud.wolfchat.community.api.vo.UserBriefVO;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
  */
 @Component
 public class ForumViewAssembler {
+    private static final int THREAD_CONTENT_PREVIEW_MAX_LENGTH = 90;
 
     public ForumThreadPageVO toThreadPageVO(List<ForumThreadVO> list, long total, long page, long size) {
         ForumThreadPageVO pageVO = new ForumThreadPageVO();
@@ -57,6 +59,7 @@ public class ForumViewAssembler {
         vo.setImageUrls(imageUrls);
         vo.setVideoUrl(videoUrl);
         vo.setVideoPosterUrl(videoPosterUrl);
+        vo.setContentPreview(buildContentPreview(thread.getContent()));
         vo.setLastReplyTime(thread.getLastReplyTime());
         vo.setCreateTime(thread.getCreateTime());
         vo.setAuthor(toUserBriefVO(author));
@@ -84,6 +87,9 @@ public class ForumViewAssembler {
         vo.setLikeCount(normalizeCount(reply.getLikeCount()));
         vo.setLikedByCurrentUser(likedByCurrentUser);
         vo.setAuthor(toUserBriefVO(author));
+        if (reply.getQuoteReplyId() != null && reply.getQuoteReplyId() > 0) {
+            vo.setQuoteReplyId(reply.getQuoteReplyId());
+        }
         if (quoteReply != null) {
             vo.setQuoteReplyId(quoteReply.getId());
             vo.setQuoteFloorNo(quoteReply.getFloorNo());
@@ -113,5 +119,16 @@ public class ForumViewAssembler {
 
     private int normalizeCount(Integer count) {
         return count == null || count < 0 ? 0 : count;
+    }
+
+    private String buildContentPreview(String content) {
+        if (!StringUtils.hasText(content)) {
+            return "";
+        }
+        String normalized = content.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= THREAD_CONTENT_PREVIEW_MAX_LENGTH) {
+            return normalized;
+        }
+        return normalized.substring(0, THREAD_CONTENT_PREVIEW_MAX_LENGTH) + "...";
     }
 }

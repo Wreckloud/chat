@@ -2,6 +2,7 @@ package com.wreckloud.wolfchat.chat.message.api.vo;
 
 import com.alibaba.fastjson.annotation.JSONField;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -82,6 +83,9 @@ public class MessageVO {
 
     @Schema(description = "回复预览")
     private String replyToPreview;
+
+    @Schema(description = "送达状态：0-未送达，1-已送达，2-发送失败")
+    private MessageDeliveryStatus deliveryStatus;
 
     @Schema(description = "发送时间")
     private LocalDateTime createTime;

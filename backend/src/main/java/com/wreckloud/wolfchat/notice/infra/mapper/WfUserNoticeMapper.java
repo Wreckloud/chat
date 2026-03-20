@@ -21,7 +21,7 @@ public interface WfUserNoticeMapper extends BaseMapper<WfUserNotice> {
             "COUNT(1) AS totalUnread, " +
             "COALESCE(SUM(CASE WHEN notice_type = 'ACHIEVEMENT_UNLOCK' THEN 1 ELSE 0 END), 0) AS achievementUnread, " +
             "COALESCE(SUM(CASE WHEN notice_type = 'FOLLOW_RECEIVED' THEN 1 ELSE 0 END), 0) AS followUnread, " +
-            "COALESCE(SUM(CASE WHEN notice_type IN ('THREAD_LIKED', 'THREAD_REPLIED', 'REPLY_LIKED', 'CHAT_MESSAGE_REPLIED', 'LOBBY_MESSAGE_REPLIED') THEN 1 ELSE 0 END), 0) AS interactionUnread " +
+            "COALESCE(SUM(CASE WHEN notice_type IN ('THREAD_LIKED', 'THREAD_REPLIED', 'REPLY_LIKED', 'REPLY_REPLIED', 'CHAT_MESSAGE_REPLIED', 'LOBBY_MESSAGE_REPLIED') THEN 1 ELSE 0 END), 0) AS interactionUnread " +
             "FROM wf_user_notice " +
             "WHERE user_id = #{userId} AND is_read = 0")
     UserNoticeUnreadSummaryVO selectUnreadSummaryByUserId(@Param("userId") Long userId);

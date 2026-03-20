@@ -49,6 +49,15 @@ public class ForumController {
         return Result.success(forumService.listFeedThreads(userId, page, size, tab));
     }
 
+    @Operation(summary = "搜索帖子", description = "按关键词搜索标题和正文")
+    @GetMapping("/search")
+    public Result<ForumThreadPageVO> searchThreads(@RequestParam String keyword,
+                                                   @RequestParam(defaultValue = "1") long page,
+                                                   @RequestParam(defaultValue = "20") long size) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(forumService.listSearchThreads(userId, page, size, keyword));
+    }
+
     @Operation(summary = "发布主题", description = "发布主题到社区")
     @PostMapping("/threads")
     public Result<ForumThreadVO> createThread(@RequestBody @Validated CreateThreadDTO dto) {
@@ -119,9 +128,10 @@ public class ForumController {
     @GetMapping("/threads/{threadId}/replies")
     public Result<ForumReplyPageVO> listThreadReplies(@PathVariable Long threadId,
                                                        @RequestParam(defaultValue = "1") long page,
-                                                       @RequestParam(defaultValue = "20") long size) {
+                                                       @RequestParam(defaultValue = "20") long size,
+                                                       @RequestParam(defaultValue = "floor") String sort) {
         Long userId = UserContext.getRequiredUserId();
-        return Result.success(forumService.listThreadReplies(userId, threadId, page, size));
+        return Result.success(forumService.listThreadReplies(userId, threadId, page, size, sort));
     }
 
     @Operation(summary = "发布回复", description = "对指定主题发布回复")

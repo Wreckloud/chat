@@ -99,6 +99,11 @@ public class WfMessage {
     private String replyToPreview;
 
     /**
+     * 接收者是否可见：1-可见，0-仅发送者可见
+     */
+    private Integer receiverVisible;
+
+    /**
      * 是否已送达
      */
     private MessageDeliveryStatus delivered;

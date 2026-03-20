@@ -45,6 +45,7 @@ public final class MessageConverter {
         vo.setReplyToMessageId(message.getReplyToMessageId());
         vo.setReplyToSenderId(message.getReplyToSenderId());
         vo.setReplyToPreview(message.getReplyToPreview());
+        vo.setDeliveryStatus(message.getDelivered());
         vo.setCreateTime(message.getCreateTime());
         return vo;
     }

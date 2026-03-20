@@ -152,6 +152,13 @@ public class UserNoticeService {
         saveNoticeQuietly(replyAuthorId, NoticeType.REPLY_LIKED, "你的回复收到新的点赞", threadId);
     }
 
+    public void notifyReplyReplied(Long replyAuthorId, Long threadId, Long operatorUserId) {
+        if (isSelfNotice(replyAuthorId, operatorUserId)) {
+            return;
+        }
+        saveNoticeQuietly(replyAuthorId, NoticeType.REPLY_REPLIED, "你的回复收到新的回复", threadId);
+    }
+
     public void notifyChatMessageReplied(Long targetUserId, Long conversationId, Long operatorUserId) {
         if (isSelfNotice(targetUserId, operatorUserId)) {
             return;
@@ -272,6 +279,7 @@ public class UserNoticeService {
             case THREAD_LIKED:
             case THREAD_REPLIED:
             case REPLY_LIKED:
+            case REPLY_REPLIED:
                 if (notice.getBizId() == null || notice.getBizId() <= 0L) {
                     return "";
                 }

@@ -8,6 +8,7 @@ import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/media")
 @RequiredArgsConstructor
+@Slf4j
 public class ChatMediaController {
     private final ChatMediaService chatMediaService;
 
@@ -65,6 +67,7 @@ public class ChatMediaController {
     @PostMapping("/forum/reply/image/upload-policy")
     public Result<OssPostPolicy> applyForumReplyImageUploadPolicy(@RequestBody @Validated ApplyChatUploadPolicyDTO dto) {
         Long userId = UserContext.getRequiredUserId();
+        log.info("申请论坛回帖图片上传策略: userId={}, extension={}, size={}", userId, dto.getExtension(), dto.getSize());
         return Result.success(chatMediaService.createForumReplyImageUploadPolicy(userId, dto));
     }
 }

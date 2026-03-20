@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
 import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
+import com.wreckloud.wolfchat.chat.conversation.application.service.ConversationService;
+import com.wreckloud.wolfchat.chat.message.application.service.ChatSystemNoticeService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.follow.domain.enums.FollowStatus;
@@ -35,6 +37,8 @@ public class FollowService {
     private final UserService userService;
     private final UserAchievementService userAchievementService;
     private final UserNoticeService userNoticeService;
+    private final ConversationService conversationService;
+    private final ChatSystemNoticeService chatSystemNoticeService;
 
     /**
      * 关注行者
@@ -56,6 +60,7 @@ public class FollowService {
             updateFollowStatusById(follow.getId(), FollowStatus.FOLLOWING);
             userAchievementService.grantFirstFollowAchievement(followerId);
             userNoticeService.notifyFollowReceived(followeeId);
+            notifyChatFollowEvents(followerId, followeeId);
             return;
         }
 
@@ -69,6 +74,7 @@ public class FollowService {
         }
         userAchievementService.grantFirstFollowAchievement(followerId);
         userNoticeService.notifyFollowReceived(followeeId);
+        notifyChatFollowEvents(followerId, followeeId);
     }
 
     /**
@@ -227,5 +233,16 @@ public class FollowService {
         vo.setStatus(user.getStatus());
         vo.setMutual(mutual);
         return vo;
+    }
+
+    private void notifyChatFollowEvents(Long followerId, Long followeeId) {
+        Long conversationId = conversationService.findConversationId(followerId, followeeId);
+        if (conversationId == null) {
+            return;
+        }
+        chatSystemNoticeService.sendFollowReceivedNotice(conversationId, followeeId);
+        if (isMutualFollow(followerId, followeeId)) {
+            chatSystemNoticeService.sendMutualFollowNotice(conversationId, followerId, followeeId);
+        }
     }
 }

@@ -91,6 +91,24 @@ public class ConversationService {
     }
 
     /**
+     * 按双方用户ID查询已存在会话，不存在返回 null。
+     */
+    public Long findConversationId(Long userId, Long targetUserId) {
+        if (userId == null || targetUserId == null || userId.equals(targetUserId)) {
+            return null;
+        }
+        Long userAId = Math.min(userId, targetUserId);
+        Long userBId = Math.max(userId, targetUserId);
+        LambdaQueryWrapper<WfConversation> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfConversation::getUserAId, userAId)
+                .eq(WfConversation::getUserBId, userBId)
+                .select(WfConversation::getId)
+                .last("LIMIT 1");
+        WfConversation conversation = conversationMapper.selectOne(queryWrapper);
+        return conversation == null ? null : conversation.getId();
+    }
+
+    /**
      * 获取会话列表
      */
     public List<WfConversation> listConversations(Long userId) {

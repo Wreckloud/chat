@@ -190,7 +190,6 @@ public class AdminContentManageService {
 
     public void deleteThread(Long operatorUserId, Long threadId) {
         WfForumThread thread = getVisibleThreadOrThrow(threadId);
-        List<Long> replyIds = forumContentMaintenanceService.loadThreadReplyIds(threadId);
 
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, threadId)
@@ -204,8 +203,6 @@ public class AdminContentManageService {
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         wfForumReplyMapper.update(null, replyUpdateWrapper);
 
-        forumContentMaintenanceService.deleteThreadLikesByThreadId(threadId);
-        forumContentMaintenanceService.deleteReplyLikesByReplyIds(replyIds);
         forumContentMaintenanceService.refreshBoardStatsIfExists(thread.getBoardId());
         forumModerationLogService.record(
                 operatorUserId,
@@ -225,14 +222,6 @@ public class AdminContentManageService {
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         assertSingleRow(wfForumReplyMapper.update(null, replyUpdateWrapper), ErrorCode.FORUM_REPLY_NOT_FOUND);
-
-        forumContentMaintenanceService.deleteReplyLikeByReplyId(replyId);
-
-        LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
-        threadUpdateWrapper.eq(WfForumThread::getId, thread.getId())
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
-                .setSql("reply_count = IF(reply_count > 0, reply_count - 1, 0)");
-        assertSingleRow(wfForumThreadMapper.update(null, threadUpdateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
 
         forumContentMaintenanceService.refreshThreadLastReply(thread.getId());
         forumContentMaintenanceService.refreshBoardStatsIfExists(thread.getBoardId());

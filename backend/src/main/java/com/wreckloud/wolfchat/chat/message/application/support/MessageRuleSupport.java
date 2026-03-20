@@ -16,7 +16,11 @@ public final class MessageRuleSupport {
     }
 
     public static MessageType normalizeMessageType(MessageType msgType) {
-        return msgType == null ? MessageType.TEXT : msgType;
+        MessageType normalized = msgType == null ? MessageType.TEXT : msgType;
+        if (MessageType.RECALL.equals(normalized) || MessageType.SYSTEM.equals(normalized)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息类型非法");
+        }
+        return normalized;
     }
 
     public static String normalizeContent(String content, MessageType msgType) {

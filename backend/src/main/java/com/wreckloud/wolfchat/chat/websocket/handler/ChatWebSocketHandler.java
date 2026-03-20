@@ -347,7 +347,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void pushMessageToReceiver(WfMessage message, MessageVO messageVO) {
-        if (MessageDeliveryStatus.DELIVERED.equals(message.getDelivered())) {
+        if (!MessageDeliveryStatus.UNDELIVERED.equals(message.getDelivered())) {
             return;
         }
         WsResponse push = buildMessageResponse(messageVO);
@@ -486,7 +486,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private MessageVO buildMessageVOWithSender(WfMessage message) {
-        WfUser sender = userService.getByIdOrThrow(message.getSenderId());
+        WfUser sender = null;
+        Long senderId = message.getSenderId();
+        if (senderId != null && senderId > 0L) {
+            sender = userService.getByIdOrThrow(senderId);
+        }
         return messageMediaService.fillMedia(MessageConverter.toMessageVO(message, sender));
     }
 

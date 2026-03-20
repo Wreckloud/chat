@@ -3,6 +3,8 @@ package com.wreckloud.wolfchat.community.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
+import com.wreckloud.wolfchat.account.application.service.UserService;
+import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
@@ -29,17 +31,21 @@ import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadLikeMapper;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 论坛门面服务：读操作委托给查询服务，写操作在此统一编排。
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ForumService {
     private static final int THREAD_IMAGE_MAX_COUNT = 9;
 
@@ -53,10 +59,15 @@ public class ForumService {
     private final WfForumReplyLikeMapper wfForumReplyLikeMapper;
     private final ForumPayloadSupport forumPayloadSupport;
     private final UserAchievementService userAchievementService;
+    private final UserService userService;
     private final UserNoticeService userNoticeService;
 
     public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
         return forumQueryService.listFeedThreads(userId, page, size, tab);
+    }
+
+    public ForumThreadPageVO listSearchThreads(Long userId, long page, long size, String keyword) {
+        return forumQueryService.listSearchThreads(userId, page, size, keyword);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -117,18 +128,28 @@ public class ForumService {
         unlikeThread(userId, thread.getId());
     }
 
-    public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size) {
-        return forumQueryService.listThreadReplies(userId, threadId, page, size);
+    public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size, String sort) {
+        return forumQueryService.listThreadReplies(userId, threadId, page, size, sort);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ForumReplyVO createReply(Long userId, Long threadId, CreateReplyDTO dto) {
+        Long requestQuoteReplyId = dto.getQuoteReplyId();
+        log.info("开始发布回帖: userId={}, threadId={}, quoteReplyId={}, hasContent={}, hasImage={}",
+                userId,
+                threadId,
+                requestQuoteReplyId,
+                dto.getContent() != null && !dto.getContent().trim().isEmpty(),
+                dto.getImageKey() != null && !dto.getImageKey().trim().isEmpty());
         WfForumThread thread = getThreadForReplyOrThrow(threadId);
-        if (dto.getQuoteReplyId() != null) {
-            forumQueryService.getQuoteReplyOrThrow(threadId, dto.getQuoteReplyId());
+
+        WfForumReply targetReply = null;
+        if (requestQuoteReplyId != null) {
+            targetReply = forumQueryService.getQuoteReplyOrThrow(threadId, requestQuoteReplyId);
         }
 
         String content = forumPayloadSupport.normalizeOptionalContent(dto.getContent());
+        content = prependReplyMentionIfNeeded(userId, content, targetReply);
         String imageKey = forumPayloadSupport.normalizeOptionalKey(dto.getImageKey());
         forumPayloadSupport.validateReplyPayload(userId, content, imageKey);
 
@@ -141,7 +162,7 @@ public class ForumService {
         reply.setAuthorId(userId);
         reply.setContent(content);
         reply.setImageKey(imageKey);
-        reply.setQuoteReplyId(dto.getQuoteReplyId());
+        reply.setQuoteReplyId(resolveReplyParentId(targetReply));
         reply.setStatus(ForumReplyStatus.NORMAL);
 
         assertSingleRow(wfForumReplyMapper.insert(reply));
@@ -149,6 +170,8 @@ public class ForumService {
         updateBoardOnReply(thread.getBoardId(), threadId, now);
         userAchievementService.grantFirstReplyAchievement(userId);
         userNoticeService.notifyThreadReplied(thread.getAuthorId(), thread.getId(), userId);
+        notifyReplyTargetIfNeeded(thread, targetReply, userId);
+        log.info("回帖发布成功: userId={}, threadId={}, replyId={}", userId, threadId, reply.getId());
         return forumQueryService.buildReplyVO(userId, reply.getId());
     }
 
@@ -230,8 +253,6 @@ public class ForumService {
         WfForumThread thread = forumQueryService.getVisibleThreadOrThrow(threadId);
         validateThreadAuthor(userId, thread);
 
-        List<Long> replyIds = forumContentMaintenanceService.loadThreadReplyIds(threadId);
-
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, threadId)
                 .eq(WfForumThread::getAuthorId, userId)
@@ -244,9 +265,6 @@ public class ForumService {
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         wfForumReplyMapper.update(null, replyUpdateWrapper);
-
-        forumContentMaintenanceService.deleteThreadLikesByThreadId(threadId);
-        forumContentMaintenanceService.deleteReplyLikesByReplyIds(replyIds);
 
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
         recordThreadAuthorAction(userId, threadId, ForumModerationLogConstants.ACTION_DELETE_THREAD);
@@ -263,14 +281,6 @@ public class ForumService {
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
         assertSingleRow(wfForumReplyMapper.update(null, replyUpdateWrapper));
-
-        forumContentMaintenanceService.deleteReplyLikeByReplyId(replyId);
-
-        LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
-        threadUpdateWrapper.eq(WfForumThread::getId, thread.getId())
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
-                .setSql("reply_count = IF(reply_count > 0, reply_count - 1, 0)");
-        assertSingleRow(wfForumThreadMapper.update(null, threadUpdateWrapper));
 
         forumContentMaintenanceService.refreshThreadLastReply(thread.getId());
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
@@ -448,6 +458,68 @@ public class ForumService {
                 .set(WfForumBoard::getLastThreadId, threadId)
                 .set(WfForumBoard::getLastReplyTime, now);
         assertSingleRow(wfForumBoardMapper.update(null, updateWrapper));
+    }
+
+    private Long resolveReplyParentId(WfForumReply targetReply) {
+        if (targetReply == null) {
+            return null;
+        }
+        return targetReply.getId();
+    }
+
+    private String prependReplyMentionIfNeeded(Long userId, String content, WfForumReply targetReply) {
+        if (targetReply == null || targetReply.getAuthorId() == null || targetReply.getAuthorId().equals(userId)) {
+            return content;
+        }
+        String displayName = resolveMentionDisplayName(targetReply.getAuthorId());
+        if (!StringUtils.hasText(displayName)) {
+            return content;
+        }
+
+        String normalizedContent = content == null ? "" : content.trim();
+        String mentionPrefix = "@" + displayName + " ";
+        if (normalizedContent.startsWith(mentionPrefix)) {
+            return normalizedContent;
+        }
+        if (!normalizedContent.isEmpty() && normalizedContent.startsWith("@")) {
+            normalizedContent = normalizedContent.replaceFirst("^@\\S+\\s*", "");
+        }
+        if (normalizedContent.isEmpty()) {
+            return mentionPrefix.trim();
+        }
+        return mentionPrefix + normalizedContent;
+    }
+
+    private String resolveMentionDisplayName(Long targetUserId) {
+        if (targetUserId == null || targetUserId <= 0L) {
+            return "";
+        }
+        Map<Long, WfUser> userMap = userService.getUserMap(List.of(targetUserId));
+        WfUser user = userMap.get(targetUserId);
+        if (user == null) {
+            return "";
+        }
+        if (StringUtils.hasText(user.getNickname())) {
+            return user.getNickname().trim();
+        }
+        if (StringUtils.hasText(user.getWolfNo())) {
+            return user.getWolfNo().trim();
+        }
+        return "";
+    }
+
+    private void notifyReplyTargetIfNeeded(WfForumThread thread, WfForumReply targetReply, Long operatorUserId) {
+        if (thread == null || targetReply == null || targetReply.getAuthorId() == null) {
+            return;
+        }
+        Long replyTargetUserId = targetReply.getAuthorId();
+        if (replyTargetUserId.equals(operatorUserId)) {
+            return;
+        }
+        if (replyTargetUserId.equals(thread.getAuthorId())) {
+            return;
+        }
+        userNoticeService.notifyReplyReplied(replyTargetUserId, thread.getId(), operatorUserId);
     }
 
     private void assertSingleRow(int affectedRows) {

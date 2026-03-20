@@ -18,7 +18,11 @@ public enum MessageDeliveryStatus {
     /**
      * 已送达
      */
-    DELIVERED(1);
+    DELIVERED(1),
+    /**
+     * 发送失败（例如被对方拒收）
+     */
+    FAILED(2);
 
     /**
      * 存储到数据库的值，同时用于 JSON 序列化

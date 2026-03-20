@@ -15,6 +15,7 @@ import com.wreckloud.wolfchat.chat.message.infra.mapper.WfMessageMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.follow.application.service.FollowService;
+import com.wreckloud.wolfchat.follow.application.service.UserBlockService;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,12 +45,16 @@ public class MessageService {
     private static final int RECALL_WINDOW_MINUTES = 5;
     private static final int CLIENT_MSG_ID_MAX_LENGTH = 64;
     private static final String RECALL_CONTENT = "该消息已撤回";
+    private static final int RECEIVER_VISIBLE = 1;
+    private static final int RECEIVER_HIDDEN = 0;
 
     private final WfMessageMapper messageMapper;
     private final ConversationService conversationService;
     private final FollowService followService;
+    private final UserBlockService userBlockService;
     private final ChatMediaService chatMediaService;
     private final MessageMediaService messageMediaService;
+    private final ChatSystemNoticeService chatSystemNoticeService;
     private final UserNoticeService userNoticeService;
 
     /**
@@ -79,8 +84,11 @@ public class MessageService {
             return existingMessage;
         }
 
+        boolean blockedByReceiver = userBlockService.isBlocked(receiverId, userId);
         boolean mutualFollow = followService.isMutualFollow(userId, receiverId);
-        validateSendPermission(conversationId, userId, receiverId, mutualFollow);
+        int sentCountBefore = blockedByReceiver
+                ? 0
+                : validateSendPermission(conversationId, userId, receiverId, mutualFollow);
 
         chatMediaService.validateMessagePayload(userId, command);
         WfMessage replyToMessage = resolveReplyTargetMessage(conversationId, command.getReplyToMessageId());
@@ -104,7 +112,8 @@ public class MessageService {
             message.setReplyToSenderId(replyToMessage.getSenderId());
             message.setReplyToPreview(messageMediaService.buildReplyPreview(replyToMessage.getMsgType(), replyToMessage.getContent()));
         }
-        message.setDelivered(MessageDeliveryStatus.UNDELIVERED);
+        message.setReceiverVisible(blockedByReceiver ? RECEIVER_HIDDEN : RECEIVER_VISIBLE);
+        message.setDelivered(blockedByReceiver ? MessageDeliveryStatus.FAILED : MessageDeliveryStatus.UNDELIVERED);
         message.setCreateTime(LocalDateTime.now());
         try {
             int insertRows = messageMapper.insert(message);
@@ -120,6 +129,11 @@ public class MessageService {
         }
         log.debug("消息发送成功: messageId={}, conversationId={}", message.getId(), conversationId);
 
+        if (blockedByReceiver) {
+            chatSystemNoticeService.sendBlockRejectedNoticeDaily(conversationId, userId);
+            return message;
+        }
+
         // 更新会话的最近消息信息
         conversationService.updateLastMessage(
                 conversationId,
@@ -128,6 +142,9 @@ public class MessageService {
                 message.getCreateTime()
         );
         conversationService.increaseUnreadCount(conversationId, receiverId);
+        if (!mutualFollow && sentCountBefore == 0) {
+            chatSystemNoticeService.sendStrangerRuleNotice(conversationId, userId, STRANGER_SINGLE_SIDE_LIMIT);
+        }
         if (replyToMessage != null) {
             userNoticeService.notifyChatMessageReplied(
                     replyToMessage.getSenderId(),
@@ -154,6 +171,12 @@ public class MessageService {
         Page<WfMessage> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<WfMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfMessage::getConversationId, conversationId)
+                .and(visible -> visible.eq(WfMessage::getSenderId, userId)
+                        .or(receiver -> receiver.eq(WfMessage::getReceiverId, userId)
+                                .eq(WfMessage::getReceiverVisible, RECEIVER_VISIBLE)))
+                .and(wrapper -> wrapper.ne(WfMessage::getMsgType, MessageType.SYSTEM)
+                        .or(system -> system.eq(WfMessage::getMsgType, MessageType.SYSTEM)
+                                .eq(WfMessage::getReceiverId, userId)))
                 .orderByDesc(WfMessage::getCreateTime)
                 .orderByDesc(WfMessage::getId);
 
@@ -277,31 +300,30 @@ public class MessageService {
         return messageMapper.selectById(messageId);
     }
 
-    private void validateSendPermission(Long conversationId, Long senderId, Long targetUserId, boolean mutualFollow) {
+    private int validateSendPermission(Long conversationId, Long senderId, Long targetUserId, boolean mutualFollow) {
         if (mutualFollow) {
-            return;
+            return 0;
         }
-        if (hasReceivedMessageFromTarget(conversationId, targetUserId)) {
-            return;
-        }
-        int sentCount = countSenderMessages(conversationId, senderId);
+        int sentCount = countSenderMessagesSinceLastTargetReply(conversationId, senderId, targetUserId);
         if (sentCount >= STRANGER_SINGLE_SIDE_LIMIT) {
             throw new BaseException(ErrorCode.CHAT_STRANGER_MESSAGE_LIMIT);
         }
+        return sentCount;
     }
 
     private MessagePolicySnapshot buildPolicySnapshot(Long conversationId, Long senderId, Long targetUserId, boolean mutualFollow) {
-        boolean interactionUnlocked = mutualFollow || hasReceivedMessageFromTarget(conversationId, targetUserId);
-        boolean canSendFreely = mutualFollow || interactionUnlocked;
-        int sentCount = canSendFreely ? 0 : countSenderMessages(conversationId, senderId);
+        boolean interactionUnlocked = mutualFollow;
+        boolean canSendFreely = mutualFollow;
+        int sentCount = canSendFreely ? 0 : countSenderMessagesSinceLastTargetReply(conversationId, senderId, targetUserId);
         int remaining = canSendFreely
                 ? STRANGER_SINGLE_SIDE_LIMIT
                 : Math.max(0, STRANGER_SINGLE_SIDE_LIMIT - sentCount);
         return new MessagePolicySnapshot(mutualFollow, interactionUnlocked, canSendFreely, sentCount, remaining);
     }
 
-    private int countSenderMessages(Long conversationId, Long senderId) {
-        Long count = messageMapper.countByConversationAndSender(conversationId, senderId);
+    private int countSenderMessagesSinceLastTargetReply(Long conversationId, Long senderId, Long targetUserId) {
+        Long lastTargetMessageId = messageMapper.selectLastMessageIdByConversationAndSender(conversationId, targetUserId);
+        Long count = messageMapper.countByConversationAndSenderAfterMessageId(conversationId, senderId, lastTargetMessageId);
         if (count == null || count <= 0L) {
             return 0;
         }
@@ -309,11 +331,6 @@ public class MessageService {
             return Integer.MAX_VALUE;
         }
         return count.intValue();
-    }
-
-    private boolean hasReceivedMessageFromTarget(Long conversationId, Long targetUserId) {
-        Integer exists = messageMapper.existsByConversationAndSender(conversationId, targetUserId);
-        return exists != null && exists > 0;
     }
 
     private WfMessage resolveReplyTargetMessage(Long conversationId, Long replyToMessageId) {

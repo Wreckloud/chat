@@ -39,6 +39,11 @@ public enum NoticeType {
     REPLY_LIKED("REPLY_LIKED", "点赞", "THREAD"),
 
     /**
+     * 回复收到新的回复（楼中楼）
+     */
+    REPLY_REPLIED("REPLY_REPLIED", "回复", "THREAD"),
+
+    /**
      * 私聊消息被回复
      */
     CHAT_MESSAGE_REPLIED("CHAT_MESSAGE_REPLIED", "回复", "CHAT"),

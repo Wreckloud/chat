@@ -241,7 +241,45 @@ public class LobbyService {
         meta.setOnlineCount(userPresenceService.countOnlineUsers());
         meta.setLatestActiveAt(recentUsers.isEmpty() ? null : recentUsers.get(0).getLastActiveAt());
         meta.setRecentUsers(recentUsers);
+        fillLatestMessageMeta(meta);
         return meta;
+    }
+
+    private void fillLatestMessageMeta(LobbyMetaVO meta) {
+        LambdaQueryWrapper<WfLobbyMessage> latestMessageQuery = new LambdaQueryWrapper<>();
+        latestMessageQuery.orderByDesc(WfLobbyMessage::getCreateTime)
+                .orderByDesc(WfLobbyMessage::getId)
+                .last("LIMIT 1");
+        WfLobbyMessage latestMessage = lobbyMessageMapper.selectOne(latestMessageQuery);
+        if (latestMessage == null) {
+            meta.setLatestMessagePreview("");
+            meta.setLatestMessageSenderName("");
+            meta.setLatestMessageAt(null);
+            return;
+        }
+        meta.setLatestMessageSenderName(resolveLobbyMessageSenderName(latestMessage.getSenderId()));
+        meta.setLatestMessagePreview(
+                messageMediaService.buildConversationPreview(latestMessage.getMsgType(), latestMessage.getContent())
+        );
+        meta.setLatestMessageAt(latestMessage.getCreateTime());
+    }
+
+    private String resolveLobbyMessageSenderName(Long senderId) {
+        if (senderId == null || senderId <= 0L) {
+            return "";
+        }
+        Map<Long, WfUser> userMap = userService.getUserMap(List.of(senderId));
+        WfUser sender = userMap.get(senderId);
+        if (sender == null) {
+            return "";
+        }
+        if (StringUtils.hasText(sender.getNickname())) {
+            return sender.getNickname().trim();
+        }
+        if (StringUtils.hasText(sender.getWolfNo())) {
+            return sender.getWolfNo().trim();
+        }
+        return "";
     }
 
     private LobbyMessageVO fillMedia(LobbyMessageVO vo) {

@@ -32,6 +32,11 @@ public enum MessageType {
     FILE("FILE"),
 
     /**
+     * 系统提示消息
+     */
+    SYSTEM("SYSTEM"),
+
+    /**
      * 撤回消息（服务端更新原消息类型）
      */
     RECALL("RECALL");

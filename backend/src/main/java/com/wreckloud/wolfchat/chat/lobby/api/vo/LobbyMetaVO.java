@@ -22,5 +22,13 @@ public class LobbyMetaVO {
 
     @Schema(description = "最近在线用户列表")
     private List<LobbyRecentUserVO> recentUsers;
-}
 
+    @Schema(description = "最新一条大厅消息预览")
+    private String latestMessagePreview;
+
+    @Schema(description = "最新一条大厅消息发送者昵称")
+    private String latestMessageSenderName;
+
+    @Schema(description = "最新一条大厅消息时间")
+    private LocalDateTime latestMessageAt;
+}

@@ -34,6 +34,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -51,11 +52,15 @@ public class ForumQueryService {
     private static final long MIN_PAGE = 1L;
     private static final long MIN_PAGE_SIZE = 1L;
     private static final long MAX_PAGE_SIZE = 50L;
+    private static final int MAX_SEARCH_KEYWORD_LENGTH = 40;
 
     private static final String FEED_TAB_RECOMMEND = "recommend";
     private static final String FEED_TAB_HOT = "hot";
     private static final String FEED_TAB_FRIENDS = "friends";
     private static final String FEED_TAB_LATEST = "latest";
+    private static final String REPLY_SORT_FLOOR = "floor";
+    private static final String REPLY_SORT_HOT = "hot";
+    private static final String REPLY_SORT_AUTHOR = "author";
     private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
 
     private static final String FEED_LATEST_ORDER_SQL = "ORDER BY create_time DESC, id DESC";
@@ -93,6 +98,18 @@ public class ForumQueryService {
         return listRecommendFeed(userId, page, size);
     }
 
+    public ForumThreadPageVO listSearchThreads(Long userId, long page, long size, String keyword) {
+        validatePageParams(page, size);
+        String normalizedKeyword = normalizeSearchKeyword(keyword);
+        LambdaQueryWrapper<WfForumThread> queryWrapper = buildFeedVisibleThreadQuery();
+        queryWrapper.and(wrapper -> wrapper.like(WfForumThread::getTitle, normalizedKeyword)
+                .or()
+                .like(WfForumThread::getContent, normalizedKeyword))
+                .last(FEED_LATEST_ORDER_SQL);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(new Page<>(page, size), queryWrapper);
+        return toThreadPageVO(userId, result.getRecords(), result.getTotal(), page, size);
+    }
+
     public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
         WfForumThread thread = getVisibleThreadOrThrow(threadId);
         ForumThreadVO threadVO = buildThreadVO(userId, thread.getId());
@@ -103,19 +120,24 @@ public class ForumQueryService {
         return detailVO;
     }
 
-    public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size) {
+    public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size, String sort) {
         validatePageParams(page, size);
-        getVisibleThreadOrThrow(threadId);
+        WfForumThread thread = getVisibleThreadOrThrow(threadId);
+        String normalizedSort = normalizeReplySort(sort);
 
-        LambdaQueryWrapper<WfForumReply> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(WfForumReply::getThreadId, threadId)
-                .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
-                .orderByAsc(WfForumReply::getFloorNo);
+        List<WfForumReply> allReplies = loadVisibleReplies(threadId);
+        if (allReplies.isEmpty()) {
+            return forumViewAssembler.toReplyPageVO(Collections.emptyList(), 0L, page, size);
+        }
 
-        Page<WfForumReply> pageReq = new Page<>(page, size);
-        Page<WfForumReply> result = wfForumReplyMapper.selectPage(pageReq, queryWrapper);
+        Map<Long, Integer> childReplyCountMap = buildChildReplyCountMap(allReplies);
+        List<WfForumReply> sortedReplies = filterAndSortReplies(allReplies, thread.getAuthorId(), normalizedSort, childReplyCountMap);
+        long total = sortedReplies.size();
+        List<WfForumReply> records = sliceReplies(sortedReplies, page, size);
+        if (records.isEmpty()) {
+            return forumViewAssembler.toReplyPageVO(Collections.emptyList(), total, page, size);
+        }
 
-        List<WfForumReply> records = result.getRecords();
         Map<Long, WfForumReply> quoteReplyMap = loadQuoteReplyMap(threadId, records);
         Map<Long, WfUser> userMap = loadReplyUserMap(records, quoteReplyMap);
         Set<Long> likedReplyIds = loadLikedReplyIds(userId, records);
@@ -135,7 +157,7 @@ public class ForumQueryService {
             ));
         }
 
-        return forumViewAssembler.toReplyPageVO(list, result.getTotal(), page, size);
+        return forumViewAssembler.toReplyPageVO(list, total, page, size);
     }
 
     public ForumThreadVO buildThreadVO(Long userId, Long threadId) {
@@ -587,6 +609,89 @@ public class ForumQueryService {
         throw new BaseException(ErrorCode.PARAM_ERROR, "tab 参数不合法，仅支持 recommend/hot/friends/latest");
     }
 
+    private String normalizeReplySort(String sort) {
+        if (!StringUtils.hasText(sort)) {
+            return REPLY_SORT_FLOOR;
+        }
+        String normalizedSort = sort.trim().toLowerCase();
+        if (REPLY_SORT_FLOOR.equals(normalizedSort)
+                || REPLY_SORT_HOT.equals(normalizedSort)
+                || REPLY_SORT_AUTHOR.equals(normalizedSort)) {
+            return normalizedSort;
+        }
+        throw new BaseException(ErrorCode.PARAM_ERROR, "sort 参数不合法，仅支持 floor/hot/author");
+    }
+
+    private List<WfForumReply> loadVisibleReplies(Long threadId) {
+        LambdaQueryWrapper<WfForumReply> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumReply::getThreadId, threadId)
+                .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
+                .orderByAsc(WfForumReply::getFloorNo);
+        return wfForumReplyMapper.selectList(queryWrapper);
+    }
+
+    private Map<Long, Integer> buildChildReplyCountMap(List<WfForumReply> replies) {
+        if (replies == null || replies.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, Integer> countMap = new LinkedHashMap<>();
+        for (WfForumReply reply : replies) {
+            Long parentId = reply.getQuoteReplyId();
+            if (parentId == null || parentId <= 0L) {
+                continue;
+            }
+            countMap.put(parentId, countMap.getOrDefault(parentId, 0) + 1);
+        }
+        return countMap;
+    }
+
+    private List<WfForumReply> filterAndSortReplies(List<WfForumReply> allReplies,
+                                                    Long threadAuthorId,
+                                                    String sort,
+                                                    Map<Long, Integer> childReplyCountMap) {
+        List<WfForumReply> target = new ArrayList<>(allReplies.size());
+        if (REPLY_SORT_AUTHOR.equals(sort)) {
+            for (WfForumReply reply : allReplies) {
+                if (threadAuthorId != null && threadAuthorId.equals(reply.getAuthorId())) {
+                    target.add(reply);
+                }
+            }
+            return target;
+        }
+
+        target.addAll(allReplies);
+        if (REPLY_SORT_HOT.equals(sort)) {
+            target.sort(Comparator
+                    .comparingInt((WfForumReply reply) -> resolveReplyHeat(reply, childReplyCountMap)).reversed()
+                    .thenComparing(WfForumReply::getFloorNo, Comparator.nullsLast(Integer::compareTo))
+                    .thenComparing(WfForumReply::getId, Comparator.nullsLast(Long::compareTo)));
+        }
+        return target;
+    }
+
+    private int resolveReplyHeat(WfForumReply reply, Map<Long, Integer> childReplyCountMap) {
+        int likeCount = normalizeNonNegativeInt(reply.getLikeCount());
+        int childReplyCount = childReplyCountMap.getOrDefault(reply.getId(), 0);
+        return likeCount + childReplyCount;
+    }
+
+    private int normalizeNonNegativeInt(Integer value) {
+        return value == null || value < 0 ? 0 : value;
+    }
+
+    private List<WfForumReply> sliceReplies(List<WfForumReply> sortedReplies, long page, long size) {
+        if (sortedReplies == null || sortedReplies.isEmpty()) {
+            return Collections.emptyList();
+        }
+        long offset = (page - 1L) * size;
+        if (offset >= sortedReplies.size()) {
+            return Collections.emptyList();
+        }
+        int fromIndex = (int) Math.max(offset, 0L);
+        int toIndex = (int) Math.min(offset + size, sortedReplies.size());
+        return new ArrayList<>(sortedReplies.subList(fromIndex, toIndex));
+    }
+
     private ForumThreadPageVO toThreadPageVO(Long userId,
                                              List<WfForumThread> records,
                                              long total,
@@ -620,6 +725,17 @@ public class ForumQueryService {
         if (page < MIN_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
             throw new BaseException(ErrorCode.PARAM_ERROR, "分页参数不合法，page>=1 且 size 在1-50之间");
         }
+    }
+
+    private String normalizeSearchKeyword(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "关键词不能为空");
+        }
+        String normalized = keyword.trim();
+        if (normalized.length() > MAX_SEARCH_KEYWORD_LENGTH) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "关键词长度不能超过40个字符");
+        }
+        return normalized;
     }
 
     private WfForumReply loadVisibleQuoteReply(Long threadId, Long quoteReplyId) {

@@ -4,6 +4,7 @@ import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.follow.api.vo.FollowUserVO;
 import com.wreckloud.wolfchat.follow.application.service.FollowService;
+import com.wreckloud.wolfchat.follow.application.service.UserBlockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FollowController {
     private final FollowService followService;
+    private final UserBlockService userBlockService;
 
     @Operation(summary = "关注行者", description = "关注指定行者")
     @PostMapping("/{targetUserId}")
@@ -66,5 +68,21 @@ public class FollowController {
         Long userId = UserContext.getRequiredUserId();
         List<FollowUserVO> list = followService.getMutual(userId);
         return Result.success(list);
+    }
+
+    @Operation(summary = "拉黑用户", description = "拉黑后私聊消息将被拒收")
+    @PostMapping("/blocks/{targetUserId}")
+    public Result<Void> blockUser(@PathVariable Long targetUserId) {
+        Long userId = UserContext.getRequiredUserId();
+        userBlockService.blockUser(userId, targetUserId);
+        return Result.success("已拉黑", null);
+    }
+
+    @Operation(summary = "解除拉黑", description = "恢复消息接收")
+    @DeleteMapping("/blocks/{targetUserId}")
+    public Result<Void> unblockUser(@PathVariable Long targetUserId) {
+        Long userId = UserContext.getRequiredUserId();
+        userBlockService.unblockUser(userId, targetUserId);
+        return Result.success("已解除拉黑", null);
     }
 }

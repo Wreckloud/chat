@@ -194,6 +194,20 @@ CREATE TABLE IF NOT EXISTS `wf_follow` (
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='关注关系表';
 
+-- 用户拉黑关系表
+CREATE TABLE IF NOT EXISTS `wf_user_block` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `blocker_id` BIGINT NOT NULL COMMENT '拉黑用户ID',
+    `blocked_id` BIGINT NOT NULL COMMENT '被拉黑用户ID',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'BLOCKED' COMMENT '状态：BLOCKED/UNBLOCKED',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_blocker_blocked` (`blocker_id`, `blocked_id`),
+    KEY `idx_blocked_status` (`blocked_id`, `status`),
+    KEY `idx_blocker_status` (`blocker_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户拉黑关系表';
+
 -- 论坛版块表
 CREATE TABLE IF NOT EXISTS `wf_forum_board` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '版块ID',
@@ -336,7 +350,8 @@ CREATE TABLE IF NOT EXISTS `wf_message` (
     `reply_to_message_id` BIGINT DEFAULT NULL COMMENT '回复目标消息ID',
     `reply_to_sender_id` BIGINT DEFAULT NULL COMMENT '回复目标发送者ID',
     `reply_to_preview` VARCHAR(120) DEFAULT NULL COMMENT '回复预览文案',
-    `delivered` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已送达：0-未送达，1-已送达',
+    `receiver_visible` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '接收者是否可见：1-可见，0-仅发送者可见',
+    `delivered` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '送达状态：0-未送达，1-已送达，2-发送失败',
     `delivered_time` DATETIME DEFAULT NULL COMMENT '送达时间',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
     PRIMARY KEY (`id`),
