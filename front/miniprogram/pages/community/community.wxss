@@ -190,6 +190,17 @@
   height: 100%;
 }
 
+.thread-media-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: var(--retro-muted-text);
+  background: var(--retro-theme-item-bg);
+}
+
 .thread-media-video-mask {
   position: absolute;
   inset: 0;

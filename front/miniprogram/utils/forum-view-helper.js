@@ -9,8 +9,9 @@ function mapThread(rawThread, normalizeUser, time) {
     : []
   const videoUrl = typeof rawThread.videoUrl === 'string' ? rawThread.videoUrl : ''
   const videoPosterUrl = typeof rawThread.videoPosterUrl === 'string' ? rawThread.videoPosterUrl : ''
+  const hasVideo = !!videoUrl
   const contentPreview = typeof rawThread.contentPreview === 'string' ? rawThread.contentPreview.trim() : ''
-  const previewImageUrls = imageUrls.slice(0, videoUrl ? 2 : 3)
+  const previewImageUrls = imageUrls.slice(0, hasVideo ? 2 : 3)
   return {
     ...rawThread,
     viewCount,
@@ -19,6 +20,7 @@ function mapThread(rawThread, normalizeUser, time) {
     imageUrls,
     previewImageUrls,
     hasMoreImages: imageUrls.length > previewImageUrls.length,
+    hasVideo,
     videoUrl,
     videoPosterUrl,
     contentPreview,

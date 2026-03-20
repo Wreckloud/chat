@@ -19,8 +19,10 @@ function mapThread(item) {
   const imageUrls = Array.isArray(item.imageUrls)
     ? item.imageUrls.filter(url => typeof url === 'string' && url.trim())
     : []
+  const videoUrl = typeof item.videoUrl === 'string' ? item.videoUrl : ''
   const videoPosterUrl = typeof item.videoPosterUrl === 'string' ? item.videoPosterUrl : ''
-  const previewImageUrls = imageUrls.slice(0, videoPosterUrl ? 2 : 3)
+  const hasVideo = !!videoUrl
+  const previewImageUrls = imageUrls.slice(0, hasVideo ? 2 : 3)
   return {
     ...item,
     viewCount: Number(item.viewCount) || 0,
@@ -28,6 +30,8 @@ function mapThread(item) {
     likeCount: Number(item.likeCount) || 0,
     contentPreview: typeof item.contentPreview === 'string' ? item.contentPreview.trim() : '',
     imageUrls,
+    videoUrl,
+    hasVideo,
     videoPosterUrl,
     previewImageUrls,
     hasMoreImages: imageUrls.length > previewImageUrls.length,

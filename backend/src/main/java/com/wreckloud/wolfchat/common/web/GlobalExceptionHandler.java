@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -70,6 +71,15 @@ public class GlobalExceptionHandler {
     public Result<?> handleBadSqlGrammarException(BadSqlGrammarException e, HttpServletRequest request) {
         log.error("数据库结构异常: uri={}", resolveRequestUri(request), e);
         return Result.error(ErrorCode.DATABASE_ERROR);
+    }
+
+    /**
+     * 处理上传文件超限异常
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e, HttpServletRequest request) {
+        log.warn("上传文件超过大小限制: uri={}, message={}", resolveRequestUri(request), e.getMessage());
+        return Result.error(ErrorCode.MEDIA_FILE_INVALID.getCode(), "文件超过上传大小限制");
     }
 
     /**
