@@ -3,12 +3,14 @@
  * @author Wreckloud
  * @date 2024-12-18
  */
-const { getThemeName, applyTabBar } = require('./utils/theme')
+const { getThemeName, getDarkModeEnabled, applyTabBar } = require('./utils/theme')
 const { refreshAllTabBadges } = require('./utils/tab-badge')
 
 App({
   syncTheme() {
-    applyTabBar(getThemeName())
+    applyTabBar(getThemeName(), {
+      darkModeEnabled: getDarkModeEnabled()
+    })
   },
 
   onLaunch() {

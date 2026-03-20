@@ -51,11 +51,11 @@
 }
 
 .thread-tag-ann {
-  color: #a24f2a;
+  color: var(--retro-accent-color);
 }
 
 .thread-tag-locked {
-  color: #7a4258;
+  color: var(--retro-muted-text);
 }
 
 .thread-title {
@@ -159,7 +159,7 @@
 }
 
 .manage-btn.danger {
-  color: #b4474f;
+  color: var(--retro-btn-danger-border);
 }
 
 .thread-content {
@@ -179,7 +179,7 @@
   width: 100%;
   height: 194rpx;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
@@ -207,7 +207,7 @@
   justify-content: center;
   font-size: 24rpx;
   color: var(--retro-muted-text);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--retro-theme-item-bg, rgba(255, 255, 255, 0.86));
 }
 
 .thread-video-play-mask {
@@ -224,7 +224,7 @@
   height: 0;
   border-top: 16rpx solid transparent;
   border-bottom: 16rpx solid transparent;
-  border-left: 24rpx solid #ffffff;
+  border-left: 24rpx solid var(--retro-strong-text);
   filter: drop-shadow(0 0 6rpx rgba(0, 0, 0, 0.35));
 }
 
@@ -327,7 +327,7 @@
   width: 360rpx;
   max-width: 100%;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
@@ -378,7 +378,7 @@
 }
 
 .reply-delete-btn {
-  color: #b4474f;
+  color: var(--retro-btn-danger-border);
 }
 
 .quote-hint {
@@ -419,7 +419,7 @@
   padding: 10rpx 18rpx calc(10rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid var(--retro-composer-border);
   background: var(--retro-composer-bg);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
+  box-shadow: var(--retro-toolbar-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.7));
 }
 
 .reply-input {
@@ -436,8 +436,8 @@
   height: var(--reply-compose-height);
   flex-shrink: 0;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.82);
+  background: var(--retro-theme-item-bg);
+  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -459,10 +459,10 @@
   box-sizing: border-box;
   padding: 0 18rpx;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   font-size: 24rpx;
   color: var(--retro-page-text);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.82);
+  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
 }
 
 .reply-action-bar {
@@ -534,7 +534,7 @@
   width: 182rpx;
   height: 182rpx;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
@@ -547,7 +547,7 @@
   line-height: 32rpx;
   text-align: center;
   font-size: 24rpx;
-  color: #ffffff;
+  color: var(--retro-strong-text);
   background: rgba(0, 0, 0, 0.56);
 }
 

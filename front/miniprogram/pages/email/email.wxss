@@ -52,24 +52,24 @@
 .status-tag {
   padding: 4rpx 12rpx;
   border: 1rpx solid var(--retro-panel-border);
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--retro-theme-item-bg);
   font-size: 20rpx;
   color: var(--retro-body-text);
 }
 
 .status-tag-unbound {
-  border-color: #8e8e8e;
-  color: #596579;
+  border-color: var(--retro-panel-border);
+  color: var(--retro-muted-text);
 }
 
 .status-tag-pending {
-  border-color: #9a7f43;
-  color: #7d6222;
+  border-color: var(--retro-accent-color);
+  color: var(--retro-accent-text);
 }
 
 .status-tag-verified {
-  border-color: #2d7a46;
-  color: #245f39;
+  border-color: var(--retro-btn-primary-border);
+  color: var(--retro-btn-primary-outline-text);
 }
 
 .status-email {

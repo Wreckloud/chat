@@ -637,7 +637,9 @@ Page({
     applyPageTheme(this, {
       tabBar: true,
       extraData: (themeContext) => {
-        this.swipeActionStyles = getSwipeActionStyles(themeContext.themeName)
+        this.swipeActionStyles = getSwipeActionStyles(themeContext.themeName, {
+          darkModeEnabled: themeContext.darkModeEnabled
+        })
         const list = (this.data.conversationList || []).map(item => this.withConversationSwipeActions(item))
         return this.buildConversationViewData(list)
       }

@@ -284,7 +284,7 @@ page {
   display: block;
   width: var(--retro-chat-image-width);
   border: 1rpx solid var(--retro-avatar-border);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
@@ -310,8 +310,8 @@ page {
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.8);
-  background: #1a2437;
+  color: var(--retro-strong-text);
+  background: var(--retro-theme-item-active-bg);
 }
 
 .im-video-play-mask {
@@ -343,7 +343,7 @@ page {
   height: 0;
   border-top: 16rpx solid transparent;
   border-bottom: 16rpx solid transparent;
-  border-left: 22rpx solid rgba(255, 255, 255, 0.9);
+  border-left: 22rpx solid var(--retro-strong-text);
 }
 
 .im-media-missing {
@@ -379,7 +379,7 @@ page {
   padding: 10rpx 18rpx calc(10rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid var(--retro-composer-border);
   background: var(--retro-composer-bg);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
+  box-shadow: var(--retro-toolbar-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.7));
 }
 
 .im-composer.is-panel-open {
@@ -405,8 +405,8 @@ page {
   height: var(--im-compose-height);
   flex-shrink: 0;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.82);
+  background: var(--retro-theme-item-bg);
+  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,10 +457,10 @@ page {
   box-sizing: border-box;
   padding: 0 18rpx;
   border: 1rpx solid var(--retro-panel-border);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   color: var(--retro-page-text);
   font-size: 25rpx;
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.82);
+  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
 }
 
 .im-composer-input-placeholder {

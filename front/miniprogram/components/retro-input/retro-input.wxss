@@ -5,7 +5,8 @@
   box-sizing: border-box;
   padding: 0 16rpx;
   border: 1rpx solid var(--retro-panel-border, #8a9ab0);
-  background: #ffffff;
+  background: var(--retro-theme-item-bg, #ffffff);
+  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
 }
 
 .retro-input-label-wrap {
@@ -26,7 +27,7 @@
 
 .retro-input-required {
   font-size: 22rpx;
-  color: #b54852;
+  color: var(--retro-btn-danger-border, #b54852);
   line-height: 1;
   transform: translateY(-1rpx);
 }
@@ -72,8 +73,8 @@
 .strength-bar {
   width: 5rpx;
   height: 8rpx;
-  border: 1rpx solid #9aa8bb;
-  background: #e8edf3;
+  border: 1rpx solid var(--retro-panel-border, #9aa8bb);
+  background: var(--retro-theme-item-bg, #e8edf3);
 }
 
 .strength-bar-2 {
@@ -95,33 +96,33 @@
 }
 
 .strength-weak .strength-bar-1 {
-  border-color: #b54852;
-  background: rgba(229, 124, 135, 0.4);
+  border-color: var(--retro-btn-danger-border, #b54852);
+  background: var(--retro-btn-danger-outline-bg, rgba(229, 124, 135, 0.4));
 }
 
 .strength-weak .strength-text {
-  color: #9f3c47;
+  color: var(--retro-btn-danger-border, #9f3c47);
 }
 
 .strength-medium .strength-bar-1,
 .strength-medium .strength-bar-2 {
-  border-color: #8a6a23;
-  background: rgba(207, 176, 103, 0.45);
+  border-color: var(--retro-accent-color, #8a6a23);
+  background: var(--retro-chip-bg, rgba(207, 176, 103, 0.45));
 }
 
 .strength-medium .strength-text {
-  color: #7a5c1c;
+  color: var(--retro-accent-text, #7a5c1c);
 }
 
 .strength-strong .strength-bar-1,
 .strength-strong .strength-bar-2,
 .strength-strong .strength-bar-3 {
-  border-color: #2d7a46;
-  background: rgba(127, 197, 147, 0.5);
+  border-color: var(--retro-btn-primary-border, #2d7a46);
+  background: var(--retro-btn-primary-outline-bg, rgba(127, 197, 147, 0.5));
 }
 
 .strength-strong .strength-text {
-  color: #25653a;
+  color: var(--retro-btn-primary-outline-text, #25653a);
 }
 
 .reveal-btn {
@@ -137,7 +138,7 @@
 .eye-icon {
   width: 22rpx;
   height: 14rpx;
-  border: 2rpx solid #6f8098;
+  border: 2rpx solid var(--retro-muted-text, #6f8098);
   border-radius: 14rpx;
   display: flex;
   align-items: center;
@@ -148,7 +149,7 @@
   width: 6rpx;
   height: 6rpx;
   border-radius: 50%;
-  background: #6f8098;
+  background: var(--retro-muted-text, #6f8098);
 }
 
 .is-revealing {

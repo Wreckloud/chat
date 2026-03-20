@@ -20,6 +20,7 @@
         <input
           class="tab-search-input"
           placeholder="搜索会话"
+          placeholder-class="tab-search-placeholder"
           maxlength="40"
           confirm-type="search"
           value="{{searchKeyword}}"

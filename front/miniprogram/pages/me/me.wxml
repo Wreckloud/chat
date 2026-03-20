@@ -80,6 +80,23 @@
             <view class="theme-desc">{{item.description}}</view>
           </view>
         </view>
+
+        <view
+          class="theme-item theme-item-dark {{darkModeEnabled ? 'theme-item-active' : ''}}"
+          bindtap="onToggleDarkMode">
+          <view class="theme-selected {{darkModeEnabled ? '' : 'theme-selected-muted'}}">
+            {{darkModeEnabled ? '[已开]' : '[关闭]'}}
+          </view>
+          <view class="theme-bars theme-bars-dark">
+            <view class="theme-bar theme-bar-dark-1"></view>
+            <view class="theme-bar theme-bar-dark-2"></view>
+            <view class="theme-bar theme-bar-dark-3"></view>
+          </view>
+          <view class="theme-main">
+            <view class="theme-name">夜行模式</view>
+            <view class="theme-desc">随主题变暗</view>
+          </view>
+        </view>
       </view>
     </view>
 

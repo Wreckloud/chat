@@ -213,6 +213,30 @@
   color: var(--retro-accent-text);
 }
 
+.theme-selected-muted {
+  color: var(--retro-muted-text);
+}
+
+.theme-item-dark {
+  cursor: pointer;
+}
+
+.theme-bars-dark {
+  background: #1b2330;
+}
+
+.theme-bar-dark-1 {
+  background: #1f2938;
+}
+
+.theme-bar-dark-2 {
+  background: #16202c;
+}
+
+.theme-bar-dark-3 {
+  background: #0f1620;
+}
+
 .danger-card {
   border-color: var(--retro-btn-danger-border);
 }
@@ -232,4 +256,17 @@
   text-align: center;
   color: var(--retro-muted-text);
   padding-top: 80rpx;
+}
+
+.theme-dark .me-page .section-sub,
+.theme-dark .me-page .quick-desc,
+.theme-dark .me-page .theme-desc,
+.theme-dark .me-page .identity-wolf,
+.theme-dark .me-page .identity-email,
+.theme-dark .me-page .theme-selected-muted {
+  color: var(--retro-body-text);
+}
+
+.theme-dark .me-page .quick-title {
+  color: var(--retro-strong-text);
 }

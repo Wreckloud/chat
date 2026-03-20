@@ -242,7 +242,7 @@
   width: 124rpx;
   height: 92rpx;
   border: 1rpx solid var(--retro-panel-border);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--retro-theme-item-bg);
   overflow: hidden;
 }
 
@@ -270,7 +270,7 @@
   margin-left: 4rpx;
   border-top: 11rpx solid transparent;
   border-bottom: 11rpx solid transparent;
-  border-left: 16rpx solid rgba(255, 255, 255, 0.88);
+  border-left: 16rpx solid var(--retro-strong-text);
 }
 
 .thread-media-more {
@@ -280,7 +280,7 @@
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #ffffff;
+  color: var(--retro-strong-text);
   background: rgba(14, 20, 28, 0.55);
 }
 

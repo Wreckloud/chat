@@ -4,7 +4,9 @@ const { getThemeContext, applyNavigationBar, applyTabBar } = require('./theme')
  * 同步页面主题样式和导航配色
  */
 function applyPageTheme(page, options = {}) {
-  const themeContext = getThemeContext(options.themeName)
+  const themeContext = getThemeContext(options.themeName, {
+    darkModeEnabled: options.darkModeEnabled
+  })
   const payload = {
     themeClass: themeContext.themeClass
   }
@@ -17,9 +19,13 @@ function applyPageTheme(page, options = {}) {
   }
 
   page.setData(payload)
-  applyNavigationBar(themeContext.themeName)
+  applyNavigationBar(themeContext.themeName, {
+    darkModeEnabled: themeContext.darkModeEnabled
+  })
   if (options.tabBar) {
-    applyTabBar(themeContext.themeName)
+    applyTabBar(themeContext.themeName, {
+      darkModeEnabled: themeContext.darkModeEnabled
+    })
   }
 
   return themeContext

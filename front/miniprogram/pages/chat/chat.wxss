@@ -12,11 +12,7 @@
 .lobby-entry-wrap {
   margin: 12rpx var(--chat-side-gap) 0;
   border: 1rpx solid var(--retro-panel-border);
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(255, 255, 255, 0) 100%
-  ), var(--retro-panel-bg);
+  background: var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
@@ -50,7 +46,7 @@
 .tab-item-active {
   border-color: var(--retro-accent-color);
   color: var(--retro-page-text);
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--retro-tab-active-bg);
 }
 
 .tab-tools {
@@ -76,6 +72,10 @@
   padding: 0 10rpx;
   font-size: 22rpx;
   color: var(--retro-page-text);
+}
+
+.tab-search-placeholder {
+  color: var(--retro-muted-text);
 }
 
 .tab-search-action {
@@ -253,7 +253,7 @@
 .session-avatar {
   display: block;
   line-height: 0;
-  background: #ffffff;
+  background: var(--retro-theme-item-bg);
   flex-shrink: 0;
 }
 

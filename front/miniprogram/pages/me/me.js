@@ -4,7 +4,11 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { toastError } = require('../../utils/ui')
-const { setThemeName, listThemes } = require('../../utils/theme')
+const {
+  setThemeName,
+  setDarkModeEnabled,
+  listThemes
+} = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const { setNoticeBadge } = require('../../utils/tab-badge')
@@ -74,6 +78,7 @@ Page({
     loading: false,
     themeName: 'retro_blue',
     themeClass: 'theme-retro-blue',
+    darkModeEnabled: false,
     noticeUnreadCount: 0,
     themeOptions: [],
     quickActions: QUICK_ACTIONS,
@@ -84,7 +89,9 @@ Page({
     pageLifecycleHelper.handleProtectedPageLoad(auth, {
       afterInit: () => {
         this.setData({
-          themeOptions: listThemes()
+          themeOptions: listThemes({
+            darkModeEnabled: this.data.darkModeEnabled
+          })
         })
       }
     })
@@ -235,12 +242,22 @@ Page({
     this.applyTheme(themeName)
   },
 
+  onToggleDarkMode() {
+    const enabled = !this.data.darkModeEnabled
+    setDarkModeEnabled(enabled)
+    this.applyTheme(this.data.themeName)
+  },
+
   applyTheme(themeName) {
     applyPageTheme(this, {
       themeName,
       tabBar: true,
       extraData: (themeContext) => ({
-        themeName: themeContext.themeName
+        themeName: themeContext.themeName,
+        darkModeEnabled: themeContext.darkModeEnabled,
+        themeOptions: listThemes({
+          darkModeEnabled: themeContext.darkModeEnabled
+        })
       })
     })
   },
