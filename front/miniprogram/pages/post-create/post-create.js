@@ -28,6 +28,9 @@ function resolveMode(rawMode) {
   if (normalized === 'edit') {
     return 'edit'
   }
+  if (normalized === 'restore') {
+    return 'restore'
+  }
   if (normalized === 'draft') {
     return 'draft'
   }
@@ -227,6 +230,8 @@ Page({
     try {
       if (this.data.mode === 'edit' && this.data.threadId > 0) {
         await this.loadEditableThread(this.data.threadId)
+      } else if (this.data.mode === 'restore' && this.data.threadId > 0) {
+        await this.loadEditableDeletedThread(this.data.threadId)
       } else if (this.data.mode === 'draft' && this.data.threadId > 0) {
         await this.loadEditableDraft(this.data.threadId)
       } else {
@@ -246,6 +251,21 @@ Page({
     const editor = res.data || null
     if (!editor) {
       return
+    }
+    this.setData({
+      title: String(editor.title || ''),
+      content: String(editor.content || ''),
+      mediaImages: normalizeEditorImageList(editor),
+      mediaVideo: normalizeEditorVideo(editor),
+      draftThreadId: 0
+    })
+  },
+
+  async loadEditableDeletedThread(threadId) {
+    const res = await request.get(`/forum/threads/${threadId}/editable`)
+    const editor = res.data || null
+    if (!editor || editor.status !== 'DELETED') {
+      throw new Error('仅支持重新发布垃圾站主题')
     }
     this.setData({
       title: String(editor.title || ''),
@@ -458,6 +478,9 @@ Page({
       if (keepMode === 'edit' && keepThreadId > 0) {
         this.setData({ uploadProgressPercent: 95, uploadProgressText: '保存更新中...' })
         res = await request.put(`/forum/threads/${keepThreadId}`, payload)
+      } else if (keepMode === 'restore' && keepThreadId > 0) {
+        this.setData({ uploadProgressPercent: 95, uploadProgressText: '重新发布中...' })
+        res = await request.put(`/forum/threads/${keepThreadId}/restore`, payload)
       } else if (keepDraftThreadId > 0) {
         this.setData({ uploadProgressPercent: 95, uploadProgressText: '发布草稿中...' })
         res = await request.put(`/forum/threads/${keepDraftThreadId}/publish`, payload)
@@ -726,6 +749,10 @@ Page({
       pageTitle = '编辑主题'
       pageHint = '编辑后会显示编辑时间'
       submitButtonText = '保存'
+    } else if (this.data.mode === 'restore' && this.data.threadId > 0) {
+      pageTitle = '重新发布主题'
+      pageHint = '可编辑后重新发布'
+      submitButtonText = '重新发布'
     } else if (this.data.draftThreadId > 0) {
       pageTitle = '发布主题'
       pageHint = '已载入上次草稿'

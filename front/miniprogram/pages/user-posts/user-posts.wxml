@@ -49,41 +49,6 @@
           <text wx:if="{{item.isEssence}}" class="thread-tag">[精华]</text>
           <text class="thread-title">{{item.title}}</text>
         </view>
-
-        <view wx:if="{{isSelf && activeTab === 'mine'}}" class="thread-row-actions">
-          <view
-            class="thread-action-link"
-            catchtap="onEditThread"
-            data-thread-id="{{item.threadId}}">
-            [编辑]
-          </view>
-          <view
-            class="thread-action-link"
-            catchtap="onToggleSticky"
-            data-thread-id="{{item.threadId}}"
-            data-sticky="{{item.threadType === 'STICKY'}}">
-            {{item.threadType === 'STICKY' ? '[取消置顶]' : '[置顶到主页]'}}
-          </view>
-          <view
-            class="thread-action-link thread-action-danger"
-            catchtap="onDeleteThread"
-            data-thread-id="{{item.threadId}}">
-            [删除]
-          </view>
-        </view>
-
-        <view wx:if="{{isSelf && activeTab === 'draft'}}" class="thread-row-actions">
-          <view class="thread-action-link">[继续编辑]</view>
-        </view>
-
-        <view wx:if="{{isSelf && activeTab === 'trash'}}" class="thread-row-actions">
-          <view
-            class="thread-action-link thread-action-danger"
-            catchtap="onPurgeThread"
-            data-thread-id="{{item.threadId}}">
-            [彻底删除]
-          </view>
-        </view>
       </view>
 
       <view wx:if="{{item.contentPreview}}" class="thread-excerpt">{{item.contentPreview}}</view>
@@ -115,6 +80,56 @@
       </view>
       <view class="thread-time-row">
         <text>{{item.timePrefix}} {{item.timeRelativeText || item.timeText || '--'}}</text>
+      </view>
+
+      <view wx:if="{{isSelf}}" class="thread-action-row">
+        <view class="thread-primary-actions">
+          <view
+            wx:if="{{activeTab === 'mine'}}"
+            class="thread-action-link"
+            catchtap="onEditThread"
+            data-thread-id="{{item.threadId}}">
+            编辑
+          </view>
+          <view
+            wx:if="{{activeTab === 'mine'}}"
+            class="thread-action-link"
+            catchtap="onToggleSticky"
+            data-thread-id="{{item.threadId}}"
+            data-sticky="{{item.threadType === 'STICKY'}}">
+            {{item.threadType === 'STICKY' ? '取消置顶' : '置顶到主页'}}
+          </view>
+          <view
+            wx:if="{{activeTab === 'draft'}}"
+            class="thread-action-link"
+            catchtap="onTapThread"
+            data-thread-id="{{item.threadId}}">
+            继续编辑
+          </view>
+          <view
+            wx:if="{{activeTab === 'trash'}}"
+            class="thread-action-link"
+            catchtap="onRestoreThread"
+            data-thread-id="{{item.threadId}}">
+            再编辑并发布
+          </view>
+        </view>
+        <view class="thread-danger-actions">
+          <view
+            wx:if="{{activeTab === 'mine'}}"
+            class="thread-action-link thread-action-danger"
+            catchtap="onDeleteThread"
+            data-thread-id="{{item.threadId}}">
+            删除
+          </view>
+          <view
+            wx:if="{{activeTab === 'trash'}}"
+            class="thread-action-link thread-action-danger"
+            catchtap="onPurgeThread"
+            data-thread-id="{{item.threadId}}">
+            彻底删除
+          </view>
+        </view>
       </view>
     </view>
   </view>

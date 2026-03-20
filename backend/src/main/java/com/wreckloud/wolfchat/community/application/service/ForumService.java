@@ -221,6 +221,28 @@ public class ForumService {
         return forumQueryService.buildThreadVO(userId, threadId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public ForumThreadVO restoreThread(Long userId, Long threadId, UpdateThreadDTO dto) {
+        WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
+        if (!ForumThreadStatus.DELETED.equals(thread.getStatus())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "仅支持重新发布垃圾站主题");
+        }
+
+        ThreadPayload payload = normalizeThreadPayload(
+                userId,
+                dto.getTitle(),
+                dto.getContent(),
+                dto.getImageKeys(),
+                dto.getVideoKey(),
+                dto.getVideoPosterKey(),
+                false
+        );
+
+        restoreDeletedThreadContent(userId, thread, payload);
+        forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
+        return forumQueryService.buildThreadVO(userId, threadId);
+    }
+
     public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
         return forumQueryService.getThreadDetail(userId, threadId);
     }
@@ -771,7 +793,8 @@ public class ForumService {
         }
         if (!ForumThreadStatus.DRAFT.equals(status)
                 && !ForumThreadStatus.NORMAL.equals(status)
-                && !ForumThreadStatus.LOCKED.equals(status)) {
+                && !ForumThreadStatus.LOCKED.equals(status)
+                && !ForumThreadStatus.DELETED.equals(status)) {
             throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
         }
     }
@@ -788,6 +811,31 @@ public class ForumService {
             return false;
         }
         return left.equals(right);
+    }
+
+    private void restoreDeletedThreadContent(Long userId, WfForumThread thread, ThreadPayload payload) {
+        LocalDateTime now = LocalDateTime.now();
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, thread.getId())
+                .eq(WfForumThread::getAuthorId, userId)
+                .eq(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .set(WfForumThread::getTitle, payload.title)
+                .set(WfForumThread::getContent, payload.content)
+                .set(WfForumThread::getImageKeys, forumPayloadSupport.joinImageKeys(payload.imageKeys))
+                .set(WfForumThread::getVideoKey, payload.videoKey)
+                .set(WfForumThread::getVideoPosterKey, payload.videoPosterKey)
+                .set(WfForumThread::getStatus, ForumThreadStatus.NORMAL)
+                .set(WfForumThread::getThreadType, ForumThreadType.NORMAL)
+                .set(WfForumThread::getIsEssence, false)
+                .set(WfForumThread::getCreateTime, now)
+                .set(WfForumThread::getEditTime, null)
+                .set(WfForumThread::getViewCount, 0)
+                .set(WfForumThread::getReplyCount, 0)
+                .set(WfForumThread::getLikeCount, 0)
+                .set(WfForumThread::getLastReplyId, null)
+                .set(WfForumThread::getLastReplyUserId, null)
+                .set(WfForumThread::getLastReplyTime, now);
+        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
     }
 
     private static class ThreadPayload {

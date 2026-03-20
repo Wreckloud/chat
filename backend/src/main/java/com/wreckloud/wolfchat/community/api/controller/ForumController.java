@@ -106,6 +106,14 @@ public class ForumController {
         return Result.success("发布成功", forumService.publishThreadDraft(userId, threadId, dto));
     }
 
+    @Operation(summary = "重新发布垃圾站主题", description = "将当前用户垃圾站主题重新编辑后发布到社区")
+    @PutMapping("/threads/{threadId}/restore")
+    public Result<ForumThreadVO> restoreThread(@PathVariable Long threadId,
+                                               @RequestBody @Validated UpdateThreadDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success("发布成功", forumService.restoreThread(userId, threadId, dto));
+    }
+
     @Operation(summary = "主题详情", description = "获取主题详情")
     @GetMapping("/threads/{threadId}")
     public Result<ForumThreadDetailVO> getThreadDetail(@PathVariable Long threadId) {

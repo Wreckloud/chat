@@ -239,6 +239,19 @@ Page({
     })
   },
 
+  onRestoreThread(e) {
+    if (!this.data.isSelf || this.data.activeTab !== 'trash') {
+      return
+    }
+    const threadId = Number(e.currentTarget.dataset.threadId)
+    if (!threadId) {
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/post-create/post-create?mode=restore&threadId=${threadId}`
+    })
+  },
+
   async onDeleteThread(e) {
     if (!this.data.isSelf || this.data.activeTab !== 'mine') {
       return
