@@ -26,6 +26,9 @@ public class MessageVO {
     @Schema(description = "发送者ID")
     private Long senderId;
 
+    @Schema(description = "客户端消息ID")
+    private String clientMsgId;
+
     @Schema(description = "发送者狼藉号")
     private String senderWolfNo;
 

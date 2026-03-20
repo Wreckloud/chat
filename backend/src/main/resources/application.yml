@@ -5,9 +5,9 @@ spring:
     import: classpath:application-local.yml
   servlet:
     multipart:
-      # 本地媒体上传（图片/视频/文件）统一入口需要放宽 multipart 限制
-      max-file-size: 40MB
-      max-request-size: 40MB
+      # 本地媒体上传（图片/视频/文件）统一入口限制：单文件 50MB，请求总量 60MB
+      max-file-size: 50MB
+      max-request-size: 60MB
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

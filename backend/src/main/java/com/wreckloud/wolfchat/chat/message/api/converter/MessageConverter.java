@@ -26,6 +26,7 @@ public final class MessageConverter {
         vo.setMessageId(message.getId());
         vo.setConversationId(message.getConversationId());
         vo.setSenderId(message.getSenderId());
+        vo.setClientMsgId(message.getClientMsgId());
         if (sender != null) {
             vo.setSenderWolfNo(sender.getWolfNo());
             vo.setSenderNickname(sender.getNickname());

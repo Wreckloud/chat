@@ -215,13 +215,39 @@ Page({
       imHelper.resolvePendingByEchoMessage(this, payload.data)
       this.appendMessage(payload.data)
       this.scheduleLobbyMetaRefresh()
+      return
+    }
+
+    if (commonHandled.payloadType === 'UPLOAD_PROGRESS') {
+      imSendHelper.applyUploadProgressPayload(this, payload.data)
     }
   },
 
   appendMessage(message) {
-    imMessageHelper.appendMessage(this, message, {
-      isValidMessage: (current) => Boolean(current && current.messageId),
-      isDuplicate: (prev, current) => Number(prev.messageId) === Number(current.messageId),
+    const normalizedMessage = { ...(message || {}) }
+    if (Number(normalizedMessage.messageId) > 0) {
+      normalizedMessage.uploadStatus = ''
+      normalizedMessage.uploadProgress = 100
+    }
+    imMessageHelper.appendMessage(this, normalizedMessage, {
+      isValidMessage: (current) => {
+        if (!current) {
+          return false
+        }
+        const messageId = Number(current.messageId)
+        const clientMsgId = String(current.clientMsgId || '').trim()
+        return messageId > 0 || Boolean(clientMsgId)
+      },
+      isDuplicate: (prev, current) => {
+        const prevMessageId = Number(prev.messageId)
+        const currentMessageId = Number(current.messageId)
+        if (prevMessageId > 0 && currentMessageId > 0 && prevMessageId === currentMessageId) {
+          return true
+        }
+        const prevClientMsgId = String(prev.clientMsgId || '').trim()
+        const currentClientMsgId = String(current.clientMsgId || '').trim()
+        return Boolean(prevClientMsgId) && prevClientMsgId === currentClientMsgId
+      },
       upsertOnDuplicate: true,
       buildMessageBlocks: (messages) => this.buildMessageBlocks(messages),
       appendMessageBlock: (payload) => this.appendMessageBlock(payload),
@@ -501,6 +527,21 @@ Page({
 
   async sendWsMessageWithAck(payload, options = {}) {
     return imHelper.sendWsMessageWithAck(this, ws, payload, options)
+  },
+
+  sendWsUploadProgress(payload) {
+    const clientMsgId = String(payload && payload.clientMsgId ? payload.clientMsgId : '').trim()
+    if (!clientMsgId) {
+      return
+    }
+    ws.send({
+      type: 'UPLOAD_PROGRESS',
+      sendType: String(this.IM_SEND_TYPE || 'LOBBY_SEND').toUpperCase(),
+      clientMsgId,
+      msgType: payload.msgType,
+      uploadProgress: payload.uploadProgress,
+      uploadStatus: payload.uploadStatus
+    })
   }
 
 })

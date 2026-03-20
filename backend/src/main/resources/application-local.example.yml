@@ -2,6 +2,12 @@
 # 建议：仅在本机保留此文件，不提交到仓库。
 
 spring:
+  servlet:
+    multipart:
+      # 与 application.yml 保持一致，避免退回默认 1MB
+      max-file-size: 50MB
+      max-request-size: 60MB
+
   datasource:
     # 例如: jdbc:mysql://127.0.0.1:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
     url: ""

@@ -108,6 +108,20 @@
                 data-url="{{lineItem.mediaUrl}}"
                 bindtap="previewImage" />
               <view
+                wx:elif="{{lineItem.msgType === 'VIDEO' && lineItem.isUploadPlaceholder}}"
+                class="im-upload-placeholder">
+                <view class="im-upload-placeholder-head">
+                  <text class="im-upload-placeholder-title">{{lineItem.uploadFailed ? '视频上传失败' : '视频上传中'}}</text>
+                  <text class="im-upload-placeholder-percent">{{lineItem.uploadProgress}}%</text>
+                </view>
+                <view class="im-upload-progress-track">
+                  <view
+                    class="im-upload-progress-fill {{lineItem.uploadFailed ? 'is-failed' : ''}}"
+                    style="width: {{lineItem.uploadProgress}}%;"></view>
+                </view>
+                <text class="im-upload-placeholder-tip">{{lineItem.content}}</text>
+              </view>
+              <view
                 wx:elif="{{lineItem.msgType === 'VIDEO' && lineItem.mediaUrl}}"
                 class="im-video-card"
                 style="{{lineItem.videoRenderStyle}}"
@@ -122,7 +136,6 @@
                   data-message-id="{{lineItem.messageId}}"
                   binderror="onVideoPosterError"
                   lazy-load="{{true}}" />
-                <view wx:else class="im-video-poster-fallback">视频</view>
                 <view class="im-video-play-mask">
                   <view class="im-video-play-icon"></view>
                 </view>

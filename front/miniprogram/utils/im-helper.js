@@ -331,7 +331,14 @@ function resolveReplyQuoteState(message, messageLookup) {
 function createMessageRow(message, indexToken, currentUserId = 0, messageLookup = null) {
   const msgType = message.msgType || 'TEXT'
   const deliveryStatus = Number(message.deliveryStatus)
-  const deliveryFailed = Number.isFinite(deliveryStatus) && deliveryStatus === DELIVERY_STATUS_FAILED
+  const uploadStatus = String(message.uploadStatus || '').toUpperCase()
+  const uploadProgress = Number.isFinite(Number(message.uploadProgress))
+    ? Math.max(0, Math.min(100, Math.round(Number(message.uploadProgress))))
+    : 0
+  const uploadFailed = uploadStatus === 'FAILED'
+  const uploading = uploadStatus === 'UPLOADING' || uploadStatus === 'SENDING'
+  const isUploadPlaceholder = msgType === 'VIDEO' && (uploading || uploadFailed)
+  const deliveryFailed = uploadFailed || (Number.isFinite(deliveryStatus) && deliveryStatus === DELIVERY_STATUS_FAILED)
   const textContent = typeof message.content === 'string' ? message.content : ''
   const mediaUrl = message.mediaUrl || ''
   const linkUrl = extractStandaloneLink(textContent)
@@ -358,6 +365,10 @@ function createMessageRow(message, indexToken, currentUserId = 0, messageLookup 
     mediaHeight: message.mediaHeight || 0,
     mediaSize: Number(message.mediaSize) || 0,
     mediaMimeType: message.mediaMimeType || '',
+    uploadProgress,
+    uploadStatus,
+    isUploadPlaceholder,
+    uploadFailed,
     deliveryStatus: Number.isFinite(deliveryStatus) ? deliveryStatus : 0,
     deliveryFailed,
     imageRenderStyle: buildImageRenderStyle(message.mediaWidth, message.mediaHeight),

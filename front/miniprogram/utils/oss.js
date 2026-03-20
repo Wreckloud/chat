@@ -128,6 +128,16 @@ function resolveVideoPosterTempFilePath(tempFile) {
   return ''
 }
 
+async function uploadVideoPosterOrThrow(posterTempFilePath, policyPath) {
+  if (!posterTempFilePath) {
+    throw new Error('未获取到视频封面，请重新选择视频')
+  }
+  const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
+  const posterPolicy = await applyUploadPolicy(policyPath, posterMeta)
+  await uploadFileByPolicy(posterPolicy, posterMeta.filePath, '视频封面')
+  return posterPolicy.objectKey
+}
+
 async function resolveImageUploadMeta(tempFile) {
   const filePath = resolveLocalFilePath(tempFile)
   if (!filePath) {
@@ -305,9 +315,12 @@ function parseUploadResponseBody(responseBody) {
   }
 }
 
-function uploadFileByPolicy(policy, filePath, mediaLabel) {
+function uploadFileByPolicy(policy, filePath, mediaLabel, options = {}) {
+  const onProgress = typeof options.onProgress === 'function'
+    ? options.onProgress
+    : null
   return new Promise((resolve, reject) => {
-    wx.uploadFile({
+    const uploadTask = wx.uploadFile({
       url: policy.host,
       filePath,
       name: 'file',
@@ -334,6 +347,15 @@ function uploadFileByPolicy(policy, filePath, mediaLabel) {
         reject(new Error(err && err.errMsg ? err.errMsg : `${mediaLabel}上传失败`))
       }
     })
+    if (onProgress && uploadTask && typeof uploadTask.onProgressUpdate === 'function') {
+      uploadTask.onProgressUpdate((event) => {
+        const progress = Number(event && event.progress)
+        if (!Number.isFinite(progress)) {
+          return
+        }
+        onProgress(Math.max(0, Math.min(100, Math.round(progress))))
+      })
+    }
   })
 }
 
@@ -346,11 +368,11 @@ async function applyUploadPolicy(path, meta) {
   return policyRes.data
 }
 
-async function uploadChatImage(tempFile) {
+async function uploadChatImage(tempFile, options = {}) {
   try {
     const meta = await resolveImageUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/chat/image/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '图片')
+    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
 
     return {
       mediaKey: policy.objectKey,
@@ -364,25 +386,16 @@ async function uploadChatImage(tempFile) {
   }
 }
 
-async function uploadChatVideo(tempFile) {
+async function uploadChatVideo(tempFile, options = {}) {
   try {
     const meta = await resolveVideoUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/chat/video/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '视频')
-
-    let mediaPosterKey = ''
+    await uploadFileByPolicy(policy, meta.filePath, '视频', options)
     const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
-    if (posterTempFilePath) {
-      try {
-        const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
-        const posterPolicy = await applyUploadPolicy('/media/chat/image/upload-policy', posterMeta)
-        await uploadFileByPolicy(posterPolicy, posterMeta.filePath, '视频封面')
-        mediaPosterKey = posterPolicy.objectKey
-      } catch (error) {
-        // 封面上传失败不阻断视频消息发送，客户端会退回无封面样式。
-        mediaPosterKey = ''
-      }
-    }
+    const mediaPosterKey = await uploadVideoPosterOrThrow(
+      posterTempFilePath,
+      '/media/chat/image/upload-policy'
+    )
 
     return {
       mediaKey: policy.objectKey,
@@ -397,7 +410,7 @@ async function uploadChatVideo(tempFile) {
   }
 }
 
-async function uploadChatFile(tempFile) {
+async function uploadChatFile(tempFile, options = {}) {
   try {
     const filePath = resolveLocalFilePath(tempFile)
     const meta = await resolveFileUploadMeta({
@@ -405,7 +418,7 @@ async function uploadChatFile(tempFile) {
       tempFilePath: filePath
     })
     const policy = await applyUploadPolicy('/media/chat/file/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '文件')
+    await uploadFileByPolicy(policy, meta.filePath, '文件', options)
 
     return {
       mediaKey: policy.objectKey,
@@ -418,11 +431,11 @@ async function uploadChatFile(tempFile) {
   }
 }
 
-async function uploadForumThreadImage(tempFile) {
+async function uploadForumThreadImage(tempFile, options = {}) {
   try {
     const meta = await resolveImageUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '图片')
+    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
     return {
       mediaKey: policy.objectKey,
       mediaWidth: meta.width,
@@ -435,25 +448,16 @@ async function uploadForumThreadImage(tempFile) {
   }
 }
 
-async function uploadForumThreadVideo(tempFile) {
+async function uploadForumThreadVideo(tempFile, options = {}) {
   try {
     const meta = await resolveVideoUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/forum/thread/video/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '视频')
-
-    let mediaPosterKey = ''
+    await uploadFileByPolicy(policy, meta.filePath, '视频', options)
     const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
-    if (posterTempFilePath) {
-      try {
-        const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
-        const posterPolicy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', posterMeta)
-        await uploadFileByPolicy(posterPolicy, posterMeta.filePath, '视频封面')
-        mediaPosterKey = posterPolicy.objectKey
-      } catch (error) {
-        // 封面上传失败不阻断视频发帖，详情页会退回无封面样式。
-        mediaPosterKey = ''
-      }
-    }
+    const mediaPosterKey = await uploadVideoPosterOrThrow(
+      posterTempFilePath,
+      '/media/forum/thread/image/upload-policy'
+    )
 
     return {
       mediaKey: policy.objectKey,
@@ -468,11 +472,11 @@ async function uploadForumThreadVideo(tempFile) {
   }
 }
 
-async function uploadForumReplyImage(tempFile) {
+async function uploadForumReplyImage(tempFile, options = {}) {
   try {
     const meta = await resolveImageUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/forum/reply/image/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '图片')
+    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
     return {
       mediaKey: policy.objectKey,
       mediaWidth: meta.width,

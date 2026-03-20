@@ -297,21 +297,65 @@ page {
   overflow: hidden;
 }
 
+.im-upload-placeholder {
+  width: var(--retro-chat-video-width);
+  max-width: 500rpx;
+  padding: 12rpx 12rpx 10rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-theme-item-bg);
+  box-shadow: var(--retro-panel-shadow);
+  box-sizing: border-box;
+}
+
+.im-upload-placeholder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+
+.im-upload-placeholder-title {
+  font-size: 23rpx;
+  line-height: 1.2;
+  color: var(--retro-strong-text);
+}
+
+.im-upload-placeholder-percent {
+  font-size: 22rpx;
+  line-height: 1.2;
+  color: var(--retro-link-text);
+}
+
+.im-upload-progress-track {
+  position: relative;
+  width: 100%;
+  height: 10rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-page-bg);
+  overflow: hidden;
+}
+
+.im-upload-progress-fill {
+  height: 100%;
+  background: var(--retro-link-text);
+}
+
+.im-upload-progress-fill.is-failed {
+  background: var(--retro-danger-color, #a9585d);
+}
+
+.im-upload-placeholder-tip {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.3;
+  color: var(--retro-muted-text-2);
+}
+
 .im-video-poster {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-.im-video-poster-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24rpx;
-  color: var(--retro-strong-text);
-  background: var(--retro-theme-item-active-bg);
 }
 
 .im-video-play-mask {

@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 public class WsResponse {
     /**
-     * 消息类型：AUTH_OK / ACK / MESSAGE / LOBBY_MESSAGE / PRESENCE / ERROR
+     * 消息类型：AUTH_OK / ACK / MESSAGE / LOBBY_MESSAGE / UPLOAD_PROGRESS / PRESENCE / ERROR
      */
     private WsType type;
 

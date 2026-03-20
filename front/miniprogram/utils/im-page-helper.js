@@ -29,6 +29,8 @@ function cleanupPage(page, ws, options = {}) {
   page.pageUnloaded = true
   page.keepComposerOpenUntilSendFinish = false
   page.messageIdSet = null
+  page.uploadPlaceholderDraftMap = null
+  page.remoteUploadPlaceholderTimeMap = null
   imHelper.resetKeyboardHeight(page)
   imHelper.clearScrollToBottomTimer(page)
   imHelper.clearRefocusComposerTimer(page)

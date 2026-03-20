@@ -140,7 +140,8 @@ async function sendWsMessageWithAck(page, ws, payload, options = {}) {
 
   await ws.waitUntilReady(page.WS_READY_TIMEOUT_MS)
 
-  const clientMsgId = createClientMsgId(page.CLIENT_MSG_ID_PREFIX)
+  const fixedClientMsgId = String(options.clientMsgId || '').trim()
+  const clientMsgId = fixedClientMsgId || createClientMsgId(page.CLIENT_MSG_ID_PREFIX)
   const messagePayload = {
     ...payload,
     clientMsgId

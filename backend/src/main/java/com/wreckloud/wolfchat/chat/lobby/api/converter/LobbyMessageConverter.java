@@ -25,6 +25,7 @@ public final class LobbyMessageConverter {
         LobbyMessageVO vo = new LobbyMessageVO();
         vo.setMessageId(message.getId());
         vo.setSenderId(message.getSenderId());
+        vo.setClientMsgId(message.getClientMsgId());
         if (sender != null) {
             vo.setSenderWolfNo(sender.getWolfNo());
             vo.setSenderNickname(sender.getNickname());

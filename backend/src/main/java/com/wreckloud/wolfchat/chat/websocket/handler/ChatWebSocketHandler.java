@@ -3,6 +3,9 @@ package com.wreckloud.wolfchat.chat.websocket.handler;
 import com.alibaba.fastjson.JSON;
 import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
+import com.wreckloud.wolfchat.chat.conversation.application.service.ConversationService;
+import com.wreckloud.wolfchat.chat.conversation.domain.entity.WfConversation;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.chat.message.api.converter.MessageConverter;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
 import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyMessageVO;
@@ -15,6 +18,7 @@ import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.chat.websocket.dto.WsRequest;
 import com.wreckloud.wolfchat.chat.websocket.dto.WsResponse;
+import com.wreckloud.wolfchat.chat.websocket.dto.UploadProgressPayload;
 import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
 import com.wreckloud.wolfchat.chat.websocket.session.WsSessionManager;
 import com.wreckloud.wolfchat.common.excption.BaseException;
@@ -34,10 +38,12 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 /**
@@ -53,8 +59,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final Duration SEND_DEDUP_TTL = Duration.ofMinutes(10);
     private static final String SEND_DEDUP_PENDING = "PENDING";
     private static final String SESSION_PASSWORD_VERSION_KEY = "session_pwd_ver";
+    private static final String SEND_TYPE_PRIVATE = "SEND";
+    private static final String SEND_TYPE_LOBBY = "LOBBY_SEND";
+    private static final Set<String> ALLOWED_UPLOAD_STATUS = Set.of("UPLOADING", "SENDING", "FAILED");
 
     private final JwtUtil jwtUtil;
+    private final ConversationService conversationService;
     private final MessageService messageService;
     private final LobbyService lobbyService;
     private final MessageMediaService messageMediaService;
@@ -71,6 +81,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         requestHandlerMap.put(WsType.RECALL, this::handleRecall);
         requestHandlerMap.put(WsType.LOBBY_SEND, this::handleLobbySend);
         requestHandlerMap.put(WsType.LOBBY_RECALL, this::handleLobbyRecall);
+        requestHandlerMap.put(WsType.UPLOAD_PROGRESS, this::handleUploadProgress);
         requestHandlerMap.put(WsType.PING, this::handlePingRequest);
     }
 
@@ -292,6 +303,27 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         });
     }
 
+    private void handleUploadProgress(WebSocketSession session, WsRequest request) {
+        withAuthenticatedUser(session, request, "同步上传进度", (userId, clientMsgId, currentRequest) -> {
+            if (!validateUploadProgressRequest(session, currentRequest, clientMsgId)) {
+                return;
+            }
+            String sendType = currentRequest.getSendType().trim().toUpperCase();
+            UploadProgressPayload payload = buildUploadProgressPayload(userId, currentRequest, sendType);
+            WsResponse response = buildResponse(WsType.UPLOAD_PROGRESS, payload);
+            String encodedPayload = JSON.toJSONString(response);
+
+            if (SEND_TYPE_LOBBY.equals(sendType)) {
+                sessionManager.sendToAll(encodedPayload, userId);
+                return;
+            }
+
+            WfConversation conversation = conversationService.getConversation(currentRequest.getConversationId());
+            Long peerUserId = conversationService.getTargetUserId(conversation, userId);
+            sessionManager.sendToUser(peerUserId, encodedPayload);
+        });
+    }
+
     private void withAuthenticatedUser(WebSocketSession session,
                                        WsRequest request,
                                        String scene,
@@ -351,6 +383,68 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return false;
         }
         return true;
+    }
+
+    private boolean validateUploadProgressRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
+        String sendType = request.getSendType() == null ? "" : request.getSendType().trim().toUpperCase();
+        if (!SEND_TYPE_PRIVATE.equals(sendType) && !SEND_TYPE_LOBBY.equals(sendType)) {
+            sendError(session, ErrorCode.PARAM_ERROR, "发送场景不正确", clientMsgId);
+            return false;
+        }
+        if (!StringUtils.hasText(request.getClientMsgId())) {
+            sendError(session, ErrorCode.PARAM_ERROR, "客户端消息ID不能为空", clientMsgId);
+            return false;
+        }
+        MessageType msgType = request.getMsgType();
+        if (!MessageType.IMAGE.equals(msgType)
+                && !MessageType.VIDEO.equals(msgType)
+                && !MessageType.FILE.equals(msgType)) {
+            sendError(session, ErrorCode.PARAM_ERROR, "消息类型不支持进度同步", clientMsgId);
+            return false;
+        }
+        int progress = request.getUploadProgress() == null ? -1 : request.getUploadProgress();
+        if (progress < 0 || progress > 100) {
+            sendError(session, ErrorCode.PARAM_ERROR, "上传进度不合法", clientMsgId);
+            return false;
+        }
+        String uploadStatus = request.getUploadStatus() == null ? "" : request.getUploadStatus().trim().toUpperCase();
+        if (!ALLOWED_UPLOAD_STATUS.contains(uploadStatus)) {
+            sendError(session, ErrorCode.PARAM_ERROR, "上传状态不合法", clientMsgId);
+            return false;
+        }
+
+        if (SEND_TYPE_PRIVATE.equals(sendType)) {
+            if (request.getConversationId() == null || request.getConversationId() <= 0L) {
+                sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
+                return false;
+            }
+            Long userId = sessionManager.getUserId(session);
+            if (userId == null) {
+                sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
+                return false;
+            }
+            conversationService.validateConversationMember(request.getConversationId(), userId);
+        }
+        return true;
+    }
+
+    private UploadProgressPayload buildUploadProgressPayload(Long userId, WsRequest request, String sendType) {
+        WfUser sender = userService.getByIdOrThrow(userId);
+        UploadProgressPayload payload = new UploadProgressPayload();
+        payload.setSendType(sendType);
+        payload.setConversationId(request.getConversationId());
+        payload.setClientMsgId(request.getClientMsgId());
+        payload.setSenderId(userId);
+        payload.setSenderWolfNo(sender.getWolfNo());
+        payload.setSenderNickname(sender.getNickname());
+        payload.setSenderEquippedTitleName(sender.getEquippedTitleName());
+        payload.setSenderEquippedTitleColor(sender.getEquippedTitleColor());
+        payload.setSenderAvatar(sender.getAvatar());
+        payload.setMsgType(request.getMsgType());
+        payload.setUploadProgress(request.getUploadProgress());
+        payload.setUploadStatus(request.getUploadStatus() == null ? null : request.getUploadStatus().trim().toUpperCase());
+        payload.setCreateTime(LocalDateTime.now());
+        return payload;
     }
 
     private void sendAck(WebSocketSession session, String clientMsgId, Object data) {

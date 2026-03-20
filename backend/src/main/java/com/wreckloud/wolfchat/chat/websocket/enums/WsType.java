@@ -27,6 +27,10 @@ public enum WsType {
      */
     LOBBY_RECALL,
     /**
+     * 媒体上传进度同步
+     */
+    UPLOAD_PROGRESS,
+    /**
      * 心跳
      */
     PING,

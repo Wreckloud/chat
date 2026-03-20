@@ -12,7 +12,7 @@ import lombok.Data;
 @Data
 public class WsRequest {
     /**
-     * 消息类型：AUTH / SEND / RECALL / LOBBY_SEND / LOBBY_RECALL / PING
+     * 消息类型：AUTH / SEND / RECALL / LOBBY_SEND / LOBBY_RECALL / UPLOAD_PROGRESS / PING
      */
     private WsType type;
 
@@ -75,6 +75,21 @@ public class WsRequest {
      * 回复目标消息ID
      */
     private Long replyToMessageId;
+
+    /**
+     * 发送场景：SEND / LOBBY_SEND（上传进度同步使用）
+     */
+    private String sendType;
+
+    /**
+     * 上传进度（0-100）
+     */
+    private Integer uploadProgress;
+
+    /**
+     * 上传状态：UPLOADING / SENDING / FAILED
+     */
+    private String uploadStatus;
 
     /**
      * 操作目标消息ID（RECALL 消息使用）
