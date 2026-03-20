@@ -1,0 +1,91 @@
+# 本地配置模板（复制为 application-local.yml 后填写）
+# 建议：仅在本机保留此文件，不提交到仓库。
+
+spring:
+  datasource:
+    # 例如: jdbc:mysql://127.0.0.1:3306/wolf_chat?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    url: ""
+    username: ""
+    password: ""
+
+  redis:
+    host: ""
+    port: 6379
+    password: ""
+    database: 0
+
+  # 启用真实发信时必填（wolfchat.email.delivery.enabled=true）
+  mail:
+    host: "smtp.qq.com"
+    port: 587
+    username: "REPLACE_WITH_QQ_EMAIL"
+    password: "REPLACE_WITH_QQ_SMTP_AUTH_CODE"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+jwt:
+  # 必填：至少 32 字节随机字符串
+  secret: "REPLACE_WITH_AT_LEAST_32_BYTES_SECRET"
+
+wolfchat:
+  storage:
+    public-base-url: "http://127.0.0.1:8080"
+    upload-path: "/api/media/upload"
+    read-path: "/api/media/object"
+    local-root-dir: "REPLACE_WITH_LOCAL_MEDIA_DIR"
+    sign-secret: "REPLACE_WITH_AT_LEAST_16_BYTES_SECRET"
+
+  email:
+    # 例如: http://localhost:8080/api/auth/email/verify
+    verify-url: "http://127.0.0.1:8080/api/auth/email/verify"
+    # 例如: http://localhost:8080/api/auth/password/reset
+    reset-password-url: "http://127.0.0.1:8080/api/auth/password/reset"
+    delivery:
+      # false: 控制台打印链接（开发模式）；true: 真实邮件发送
+      enabled: true
+      from: "REPLACE_WITH_QQ_EMAIL"
+      subject-prefix: "WolfChat"
+
+  ai:
+    # 总开关（预留）
+    enabled: false
+    # 当前仅预留 openai
+    provider: "openai"
+    # 例如: https://api.openai.com
+    base-url: ""
+    api-key: ""
+    # 例如: gpt-5-mini
+    model: ""
+    temperature: 0.8
+    max-output-tokens: 400
+    timeout-ms: 20000
+
+    memory:
+      enabled: true
+      # 每次推理带入的最近消息条数
+      recent-window-size: 60
+      # 每累计多少条消息做一次摘要
+      summary-trigger-message-count: 80
+      # 摘要文本最大 token 预算（业务约束）
+      summary-max-tokens: 600
+      # 例如: text-embedding-3-small
+      embedding-model: ""
+      # 相似检索召回数量
+      top-k: 8
+
+    lobby:
+      # 公共聊天室 AI 开关（预留）
+      enabled: false
+      # 预留机器人账号 userId
+      bot-user-id:
+      bot-display-name: ""
+      # 至少间隔多少秒才允许再发一条，避免刷屏
+      cooldown-seconds: 45
+      # 自发言概率（0~1），用于“不是句句都回”
+      reply-probability: 0.25
+      # 每小时最大主动发言数
+      max-replies-per-hour: 40

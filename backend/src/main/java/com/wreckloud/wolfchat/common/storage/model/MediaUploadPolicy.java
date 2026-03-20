@@ -3,29 +3,29 @@ package com.wreckloud.wolfchat.common.storage.model;
 import lombok.Data;
 
 /**
- * @Description OSS 表单直传策略
+ * @Description 媒体上传策略
  * @Author Wreckloud
- * @Date 2026-03-09
+ * @Date 2026-03-20
  */
 @Data
-public class OssPostPolicy {
+public class MediaUploadPolicy {
     /**
      * 上传地址
      */
     private String host;
 
     /**
-     * AccessKey ID
+     * 占位字段（保留给前端上传表单）
      */
     private String accessKeyId;
 
     /**
-     * Base64 编码后的策略文本
+     * 占位字段（保留给前端上传表单）
      */
     private String policy;
 
     /**
-     * 签名
+     * 上传签名（本地模式下作为一次性上传令牌）
      */
     private String signature;
 

@@ -2,7 +2,7 @@ package com.wreckloud.wolfchat.chat.message.application.service;
 
 import com.wreckloud.wolfchat.chat.message.api.vo.MessageVO;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
-import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
+import com.wreckloud.wolfchat.common.storage.service.MediaStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -21,10 +21,9 @@ public class MessageMediaService {
     private static final String VIDEO_PREVIEW_TEXT = "[视频]";
     private static final String FILE_PREVIEW_TEXT = "[文件]";
     private static final String RECALL_PREVIEW_TEXT = "[消息已撤回]";
-    private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
     private static final int REPLY_PREVIEW_MAX_LENGTH = 80;
 
-    private final OssStorageService ossStorageService;
+    private final MediaStorageService mediaStorageService;
 
     /**
      * 生成会话列表里的最近消息预览
@@ -74,13 +73,13 @@ public class MessageMediaService {
                 && !MessageType.FILE.equals(msgType)) {
             return vo;
         }
-        vo.setMediaUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey()));
+        vo.setMediaUrl(mediaStorageService.buildSignedReadUrl(vo.getMediaKey()));
         if (MessageType.VIDEO.equals(msgType)) {
             String mediaPosterKey = vo.getMediaPosterKey();
             if (StringUtils.hasText(mediaPosterKey)) {
-                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(mediaPosterKey));
+                vo.setMediaPosterUrl(mediaStorageService.buildSignedReadUrl(mediaPosterKey));
             } else {
-                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey(), VIDEO_POSTER_PROCESS));
+                vo.setMediaPosterUrl(null);
             }
         }
         return vo;

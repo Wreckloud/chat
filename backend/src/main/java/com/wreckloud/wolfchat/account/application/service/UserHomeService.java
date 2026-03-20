@@ -9,7 +9,7 @@ import com.wreckloud.wolfchat.account.api.vo.UserHomeVO;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
+import com.wreckloud.wolfchat.common.storage.service.MediaStorageService;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import com.wreckloud.wolfchat.community.domain.enums.ForumThreadStatus;
 import com.wreckloud.wolfchat.community.infra.mapper.WfForumReplyMapper;
@@ -46,7 +46,7 @@ public class UserHomeService {
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
     private final UserAchievementService userAchievementService;
-    private final OssStorageService ossStorageService;
+    private final MediaStorageService mediaStorageService;
 
     /**
      * 获取行者主页
@@ -165,14 +165,14 @@ public class UserHomeService {
         if (!StringUtils.hasText(thread.getVideoKey())) {
             return null;
         }
-        return ossStorageService.buildSignedReadUrl(thread.getVideoKey().trim(), VIDEO_POSTER_PROCESS);
+        return null;
     }
 
     private String resolveMediaUrl(String mediaKey) {
         if (!StringUtils.hasText(mediaKey)) {
             return null;
         }
-        return ossStorageService.buildSignedReadUrl(mediaKey.trim());
+        return mediaStorageService.buildSignedReadUrl(mediaKey.trim());
     }
 
     private String buildContentPreview(String content) {

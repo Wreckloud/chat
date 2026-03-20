@@ -8,9 +8,9 @@ import com.wreckloud.wolfchat.chat.message.application.support.MessageRuleSuppor
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.common.storage.config.OssStorageConfig;
-import com.wreckloud.wolfchat.common.storage.model.OssPostPolicy;
-import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
+import com.wreckloud.wolfchat.common.storage.config.MediaStorageConfig;
+import com.wreckloud.wolfchat.common.storage.model.MediaUploadPolicy;
+import com.wreckloud.wolfchat.common.storage.service.MediaStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -51,8 +51,8 @@ public class ChatMediaService {
     );
     private static final Pattern FILE_EXTENSION_PATTERN = Pattern.compile("^[a-z0-9]{1,20}$");
 
-    private final OssStorageService ossStorageService;
-    private final OssStorageConfig ossStorageConfig;
+    private final MediaStorageService mediaStorageService;
+    private final MediaStorageConfig mediaStorageConfig;
     private final WfUserMapper wfUserMapper;
 
     @FunctionalInterface
@@ -63,14 +63,14 @@ public class ChatMediaService {
     /**
      * 创建聊天图片上传策略
      */
-    public OssPostPolicy createImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+    public MediaUploadPolicy createImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
         return createMappedUploadPolicy(
                 userId,
                 dto,
                 CATEGORY_CHAT_IMAGE,
                 IMAGE_MIME_MAPPING,
                 "暂不支持该图片格式",
-                ossStorageConfig.getMaxImageSizeBytes(),
+                mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
                 "图片大小超过上传限制",
                 this::validateImageMimeIfPresent
@@ -80,14 +80,14 @@ public class ChatMediaService {
     /**
      * 创建聊天视频上传策略
      */
-    public OssPostPolicy createVideoUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+    public MediaUploadPolicy createVideoUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
         return createMappedUploadPolicy(
                 userId,
                 dto,
                 CATEGORY_CHAT_VIDEO,
                 VIDEO_MIME_MAPPING,
                 "暂不支持该视频格式",
-                ossStorageConfig.getMaxVideoSizeBytes(),
+                mediaStorageConfig.getMaxVideoSizeBytes(),
                 "视频上传大小上限未配置",
                 "视频大小超过上传限制",
                 this::validateVideoMimeIfPresentIgnoreExtension
@@ -97,29 +97,29 @@ public class ChatMediaService {
     /**
      * 创建聊天文件上传策略
      */
-    public OssPostPolicy createFileUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+    public MediaUploadPolicy createFileUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
         String extension = normalizeExtension(dto.getExtension());
         validateFileExtension(extension);
         validateFileMimeIfPresent(dto.getMimeType());
-        Long maxSizeBytes = requireLimit(ossStorageConfig.getMaxFileSizeBytes(), "文件上传大小上限未配置");
+        Long maxSizeBytes = requireLimit(mediaStorageConfig.getMaxFileSizeBytes(), "文件上传大小上限未配置");
         validateMediaSize(dto.getSize(), maxSizeBytes, "文件大小超过上传限制");
 
         String wolfNo = getWolfNoByUserId(userId);
         String objectKey = buildObjectKey(CATEGORY_CHAT_FILE, wolfNo, extension);
-        return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+        return mediaStorageService.buildUploadPolicy(userId, objectKey, maxSizeBytes);
     }
 
     /**
      * 创建论坛主题图片上传策略
      */
-    public OssPostPolicy createForumThreadImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+    public MediaUploadPolicy createForumThreadImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
         return createMappedUploadPolicy(
                 userId,
                 dto,
                 CATEGORY_FORUM_THREAD_IMAGE,
                 IMAGE_MIME_MAPPING,
                 "暂不支持该图片格式",
-                ossStorageConfig.getMaxImageSizeBytes(),
+                mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
                 "图片大小超过上传限制",
                 this::validateImageMimeIfPresent
@@ -129,14 +129,14 @@ public class ChatMediaService {
     /**
      * 创建论坛主题视频上传策略
      */
-    public OssPostPolicy createForumThreadVideoUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+    public MediaUploadPolicy createForumThreadVideoUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
         return createMappedUploadPolicy(
                 userId,
                 dto,
                 CATEGORY_FORUM_THREAD_VIDEO,
                 VIDEO_MIME_MAPPING,
                 "暂不支持该视频格式",
-                ossStorageConfig.getMaxVideoSizeBytes(),
+                mediaStorageConfig.getMaxVideoSizeBytes(),
                 "视频上传大小上限未配置",
                 "视频大小超过上传限制",
                 this::validateVideoMimeIfPresentIgnoreExtension
@@ -146,14 +146,14 @@ public class ChatMediaService {
     /**
      * 创建论坛回复图片上传策略
      */
-    public OssPostPolicy createForumReplyImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
+    public MediaUploadPolicy createForumReplyImageUploadPolicy(Long userId, ApplyChatUploadPolicyDTO dto) {
         return createMappedUploadPolicy(
                 userId,
                 dto,
                 CATEGORY_FORUM_REPLY_IMAGE,
                 IMAGE_MIME_MAPPING,
                 "暂不支持该图片格式",
-                ossStorageConfig.getMaxImageSizeBytes(),
+                mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
                 "图片大小超过上传限制",
                 this::validateImageMimeIfPresent
@@ -225,7 +225,7 @@ public class ChatMediaService {
                 IMAGE_MIME_MAPPING,
                 "图片对象无效",
                 "暂不支持该图片格式",
-                ossStorageConfig.getMaxImageSizeBytes(),
+                mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
                 "图片大小超过上传限制",
                 "图片宽度不合法",
@@ -246,7 +246,7 @@ public class ChatMediaService {
                 VIDEO_MIME_MAPPING,
                 "视频对象无效",
                 "暂不支持该视频格式",
-                ossStorageConfig.getMaxVideoSizeBytes(),
+                mediaStorageConfig.getMaxVideoSizeBytes(),
                 "视频上传大小上限未配置",
                 "视频大小超过上传限制",
                 "视频宽度不合法",
@@ -282,7 +282,7 @@ public class ChatMediaService {
         validateFileMimeIfPresent(command.getMediaMimeType());
         validateMediaSize(
                 command.getMediaSize(),
-                requireLimit(ossStorageConfig.getMaxFileSizeBytes(), "文件上传大小上限未配置"),
+                requireLimit(mediaStorageConfig.getMaxFileSizeBytes(), "文件上传大小上限未配置"),
                 "文件大小超过上传限制"
         );
         if (command.getMediaWidth() != null || command.getMediaHeight() != null) {
@@ -290,7 +290,7 @@ public class ChatMediaService {
         }
     }
 
-    private OssPostPolicy createMappedUploadPolicy(Long userId,
+    private MediaUploadPolicy createMappedUploadPolicy(Long userId,
                                                    ApplyChatUploadPolicyDTO dto,
                                                    String category,
                                                    Map<String, String> mimeMapping,
@@ -307,7 +307,7 @@ public class ChatMediaService {
 
         String wolfNo = getWolfNoByUserId(userId);
         String objectKey = buildObjectKey(category, wolfNo, extension);
-        return ossStorageService.buildPostPolicy(objectKey, maxSizeBytes);
+        return mediaStorageService.buildUploadPolicy(userId, objectKey, maxSizeBytes);
     }
 
     private void validateMappedMessage(Long userId,
@@ -417,7 +417,7 @@ public class ChatMediaService {
 
     private Long requireLimit(Long value, String message) {
         if (value == null || value <= 0) {
-            throw new BaseException(ErrorCode.OSS_CONFIG_INCOMPLETE, message);
+            throw new BaseException(ErrorCode.STORAGE_CONFIG_INCOMPLETE, message);
         }
         return value;
     }

@@ -1,5 +1,5 @@
 /**
- * OSS 直传封装
+ * 媒体上传封装（本地存储）
  */
 const request = require('./request')
 
@@ -104,21 +104,6 @@ function getFileInfo(filePath) {
       fail: reject
     })
   })
-}
-
-function extractOssErrorMessage(responseText) {
-  if (!responseText || typeof responseText !== 'string') {
-    return ''
-  }
-  const codeMatch = responseText.match(/<Code>([^<]+)<\/Code>/)
-  const messageMatch = responseText.match(/<Message>([^<]+)<\/Message>/)
-  if (codeMatch && messageMatch) {
-    return `${codeMatch[1]}: ${messageMatch[1]}`
-  }
-  if (messageMatch) {
-    return messageMatch[1]
-  }
-  return ''
 }
 
 function resolveLocalFilePath(file) {
@@ -299,7 +284,28 @@ async function resolveFileUploadMeta(tempFile) {
   }
 }
 
-function uploadFileToOss(policy, filePath, mediaLabel) {
+function parseUploadResponseBody(responseBody) {
+  if (responseBody == null) {
+    return null
+  }
+  if (typeof responseBody === 'object') {
+    return responseBody
+  }
+  if (typeof responseBody !== 'string') {
+    return null
+  }
+  const trimmed = responseBody.trim()
+  if (!trimmed) {
+    return null
+  }
+  try {
+    return JSON.parse(trimmed)
+  } catch (error) {
+    return null
+  }
+}
+
+function uploadFileByPolicy(policy, filePath, mediaLabel) {
   return new Promise((resolve, reject) => {
     wx.uploadFile({
       url: policy.host,
@@ -308,20 +314,21 @@ function uploadFileToOss(policy, filePath, mediaLabel) {
       formData: {
         key: policy.objectKey,
         policy: policy.policy,
-        OSSAccessKeyId: policy.accessKeyId,
+        accessKeyId: policy.accessKeyId,
         signature: policy.signature,
         success_action_status: String(policy.successActionStatus)
       },
       success(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
+          const responseBody = parseUploadResponseBody(res.data)
+          if (responseBody && typeof responseBody.code === 'number' && responseBody.code !== 0) {
+            reject(new Error(responseBody.message || `${mediaLabel}上传失败`))
+            return
+          }
           resolve()
           return
         }
-        const detail = extractOssErrorMessage(res.data)
-        const message = detail
-          ? `${mediaLabel}上传失败(${res.statusCode}): ${detail}`
-          : `${mediaLabel}上传失败(${res.statusCode})`
-        reject(new Error(message))
+        reject(new Error(`${mediaLabel}上传失败(${res.statusCode})`))
       },
       fail(err) {
         reject(new Error(err && err.errMsg ? err.errMsg : `${mediaLabel}上传失败`))
@@ -343,7 +350,7 @@ async function uploadChatImage(tempFile) {
   try {
     const meta = await resolveImageUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/chat/image/upload-policy', meta)
-    await uploadFileToOss(policy, meta.filePath, '图片')
+    await uploadFileByPolicy(policy, meta.filePath, '图片')
 
     return {
       mediaKey: policy.objectKey,
@@ -361,7 +368,7 @@ async function uploadChatVideo(tempFile) {
   try {
     const meta = await resolveVideoUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/chat/video/upload-policy', meta)
-    await uploadFileToOss(policy, meta.filePath, '视频')
+    await uploadFileByPolicy(policy, meta.filePath, '视频')
 
     let mediaPosterKey = ''
     const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
@@ -369,7 +376,7 @@ async function uploadChatVideo(tempFile) {
       try {
         const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
         const posterPolicy = await applyUploadPolicy('/media/chat/image/upload-policy', posterMeta)
-        await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
+        await uploadFileByPolicy(posterPolicy, posterMeta.filePath, '视频封面')
         mediaPosterKey = posterPolicy.objectKey
       } catch (error) {
         // 封面上传失败不阻断视频消息发送，客户端会退回无封面样式。
@@ -398,7 +405,7 @@ async function uploadChatFile(tempFile) {
       tempFilePath: filePath
     })
     const policy = await applyUploadPolicy('/media/chat/file/upload-policy', meta)
-    await uploadFileToOss(policy, meta.filePath, '文件')
+    await uploadFileByPolicy(policy, meta.filePath, '文件')
 
     return {
       mediaKey: policy.objectKey,
@@ -415,7 +422,7 @@ async function uploadForumThreadImage(tempFile) {
   try {
     const meta = await resolveImageUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', meta)
-    await uploadFileToOss(policy, meta.filePath, '图片')
+    await uploadFileByPolicy(policy, meta.filePath, '图片')
     return {
       mediaKey: policy.objectKey,
       mediaWidth: meta.width,
@@ -432,7 +439,7 @@ async function uploadForumThreadVideo(tempFile) {
   try {
     const meta = await resolveVideoUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/forum/thread/video/upload-policy', meta)
-    await uploadFileToOss(policy, meta.filePath, '视频')
+    await uploadFileByPolicy(policy, meta.filePath, '视频')
 
     let mediaPosterKey = ''
     const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
@@ -440,7 +447,7 @@ async function uploadForumThreadVideo(tempFile) {
       try {
         const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
         const posterPolicy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', posterMeta)
-        await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
+        await uploadFileByPolicy(posterPolicy, posterMeta.filePath, '视频封面')
         mediaPosterKey = posterPolicy.objectKey
       } catch (error) {
         // 封面上传失败不阻断视频发帖，详情页会退回无封面样式。
@@ -465,7 +472,7 @@ async function uploadForumReplyImage(tempFile) {
   try {
     const meta = await resolveImageUploadMeta(tempFile)
     const policy = await applyUploadPolicy('/media/forum/reply/image/upload-policy', meta)
-    await uploadFileToOss(policy, meta.filePath, '图片')
+    await uploadFileByPolicy(policy, meta.filePath, '图片')
     return {
       mediaKey: policy.objectKey,
       mediaWidth: meta.width,

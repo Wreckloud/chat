@@ -3,7 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { uploadForumThreadImage, uploadForumThreadVideo } = require('../../utils/oss')
+const { uploadForumThreadImage, uploadForumThreadVideo } = require('../../utils/media-upload')
 const { toastError } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const imHelper = require('../../utils/im-helper')

@@ -25,6 +25,7 @@ mybatis-plus:
 
 # Knife4j 配置
 knife4j:
+  # 生产环境建议关闭
   enable: true
 
 # 自定义日志相关配置
@@ -53,10 +54,19 @@ wolfchat:
       - https://localhost:*
       - https://servicewechat.com
       - https://*.servicewechat.com
-  oss:
+  storage:
+    # 对外访问地址（前端可访问到后端）
+    public-base-url: "http://127.0.0.1:${server.port}"
+    # 本地上传/读取接口路径
+    upload-path: "/api/media/upload"
+    read-path: "/api/media/object"
+    # 本地媒体存储目录
+    local-root-dir: "D:/Temp/wolfchat-media"
+    # 读链接签名密钥（至少16字节）
+    sign-secret: "wolfchat-local-storage-sign-secret-change-me"
     # 直传策略有效期（秒）
     upload-policy-expire-seconds: 300
-    # 图片签名访问地址有效期（秒）
+    # 签名访问地址有效期（秒）
     download-url-expire-seconds: 86400
     # 聊天图片大小上限（5MB）
     max-image-size-bytes: 5242880
@@ -64,3 +74,35 @@ wolfchat:
     max-video-size-bytes: 31457280
     # 聊天文件大小上限（20MB）
     max-file-size-bytes: 20971520
+  email:
+    delivery:
+      # true: 使用 SMTP 真实发信；false: 仅控制台打印链接（开发模式）
+      enabled: false
+      # 启用真实发信时必填
+      from: ""
+      # 邮件标题前缀
+      subject-prefix: "WolfChat"
+  ai:
+    # AI 总开关（当前仅预留配置）
+    enabled: false
+    provider: "openai"
+    base-url: ""
+    api-key: ""
+    model: ""
+    temperature: 0.8
+    max-output-tokens: 400
+    timeout-ms: 20000
+    memory:
+      enabled: true
+      recent-window-size: 60
+      summary-trigger-message-count: 80
+      summary-max-tokens: 600
+      embedding-model: ""
+      top-k: 8
+    lobby:
+      enabled: false
+      bot-user-id:
+      bot-display-name: ""
+      cooldown-seconds: 45
+      reply-probability: 0.25
+      max-replies-per-hour: 40

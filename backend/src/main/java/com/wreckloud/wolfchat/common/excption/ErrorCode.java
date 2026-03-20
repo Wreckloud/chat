@@ -29,12 +29,14 @@ public enum ErrorCode {
     EMAIL_ALREADY_USED(2010, "邮箱已被占用"),
     EMAIL_NOT_BOUND(2011, "邮箱未绑定"),
     EMAIL_NOT_VERIFIED(2012, "邮箱未认证"),
+    EMAIL_SEND_FAILED(2014, "邮件发送失败，请稍后重试"),
     EMAIL_SEND_TOO_FREQUENT(2015, "邮件发送过于频繁，请稍后重试"),
     EMAIL_DAILY_LIMIT(2016, "邮件发送次数已达上限"),
     EMAIL_VERIFY_LINK_INVALID(2017, "认证链接无效或已失效"),
     EMAIL_REBIND_NOT_ALLOWED(2018, "邮箱已绑定，不支持换绑"),
     PASSWORD_RESET_LINK_INVALID(2019, "重置密码链接无效或已失效"),
     ADMIN_FORBIDDEN(2020, "无管理端访问权限"),
+    LOGIN_TOO_MANY_ATTEMPTS(2021, "登录尝试过于频繁，请稍后再试"),
 
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),
@@ -49,7 +51,7 @@ public enum ErrorCode {
     MESSAGE_CONTENT_EMPTY(3012, "消息内容不能为空"),
     MEDIA_TYPE_NOT_SUPPORTED(3013, "暂不支持该媒体类型"),
     MEDIA_FILE_INVALID(3014, "媒体文件无效"),
-    OSS_CONFIG_INCOMPLETE(3015, "OSS 配置未完成"),
+    STORAGE_CONFIG_INCOMPLETE(3015, "存储配置未完成"),
     FORUM_THREAD_NOT_FOUND(3016, "主题不存在或已删除"),
     FORUM_THREAD_LOCKED(3017, "主题已锁定，暂不可回复"),
     FORUM_REPLY_NOT_FOUND(3018, "引用楼层不存在"),

@@ -19,7 +19,7 @@ import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
+import com.wreckloud.wolfchat.common.storage.service.MediaStorageService;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,14 +48,13 @@ public class LobbyService {
     private static final int RECALL_WINDOW_MINUTES = 5;
     private static final int CLIENT_MSG_ID_MAX_LENGTH = 64;
     private static final String RECALL_CONTENT = "该消息已撤回";
-    private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
 
     private final WfLobbyMessageMapper lobbyMessageMapper;
     private final UserService userService;
     private final ChatMediaService chatMediaService;
     private final MessageMediaService messageMediaService;
     private final UserPresenceService userPresenceService;
-    private final OssStorageService ossStorageService;
+    private final MediaStorageService mediaStorageService;
     private final UserNoticeService userNoticeService;
 
     /**
@@ -292,12 +291,12 @@ public class LobbyService {
                 && !MessageType.FILE.equals(msgType)) {
             return vo;
         }
-        vo.setMediaUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey()));
+        vo.setMediaUrl(mediaStorageService.buildSignedReadUrl(vo.getMediaKey()));
         if (MessageType.VIDEO.equals(msgType)) {
             if (vo.getMediaPosterKey() != null && !vo.getMediaPosterKey().trim().isEmpty()) {
-                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaPosterKey()));
+                vo.setMediaPosterUrl(mediaStorageService.buildSignedReadUrl(vo.getMediaPosterKey()));
             } else {
-                vo.setMediaPosterUrl(ossStorageService.buildSignedReadUrl(vo.getMediaKey(), VIDEO_POSTER_PROCESS));
+                vo.setMediaPosterUrl(null);
             }
         }
         return vo;

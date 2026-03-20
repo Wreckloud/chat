@@ -11,19 +11,159 @@
       "description": "Root Logger 级别，供 logback-spring.xml 使用。"
     },
     {
-      "name": "wolfchat.oss.max-video-size-bytes",
-      "type": "java.lang.Long",
-      "description": "聊天视频上传大小上限（字节）。"
+      "name": "wolfchat.storage.public-base-url",
+      "type": "java.lang.String",
+      "description": "媒体签名地址生成使用的公开访问基地址。"
     },
     {
-      "name": "wolfchat.oss.max-file-size-bytes",
+      "name": "wolfchat.storage.upload-path",
+      "type": "java.lang.String",
+      "description": "本地媒体上传接口路径。"
+    },
+    {
+      "name": "wolfchat.storage.read-path",
+      "type": "java.lang.String",
+      "description": "本地媒体读取接口路径。"
+    },
+    {
+      "name": "wolfchat.storage.local-root-dir",
+      "type": "java.lang.String",
+      "description": "本地媒体文件存储根目录。"
+    },
+    {
+      "name": "wolfchat.storage.sign-secret",
+      "type": "java.lang.String",
+      "description": "媒体签名密钥（至少16字节）。"
+    },
+    {
+      "name": "wolfchat.storage.upload-policy-expire-seconds",
       "type": "java.lang.Long",
-      "description": "聊天文件上传大小上限（字节）。"
+      "description": "媒体上传策略令牌有效期（秒）。"
+    },
+    {
+      "name": "wolfchat.storage.download-url-expire-seconds",
+      "type": "java.lang.Long",
+      "description": "媒体读取签名链接有效期（秒）。"
+    },
+    {
+      "name": "wolfchat.storage.max-image-size-bytes",
+      "type": "java.lang.Long",
+      "description": "图片上传大小上限（字节）。"
+    },
+    {
+      "name": "wolfchat.storage.max-video-size-bytes",
+      "type": "java.lang.Long",
+      "description": "视频上传大小上限（字节）。"
+    },
+    {
+      "name": "wolfchat.storage.max-file-size-bytes",
+      "type": "java.lang.Long",
+      "description": "文件上传大小上限（字节）。"
     },
     {
       "name": "wolfchat.admin.console.allowed-user-ids",
       "type": "java.util.List<java.lang.Long>",
       "description": "管理端允许访问的用户ID列表。"
+    },
+    {
+      "name": "wolfchat.ai.enabled",
+      "type": "java.lang.Boolean",
+      "description": "AI 总开关。"
+    },
+    {
+      "name": "wolfchat.ai.provider",
+      "type": "java.lang.String",
+      "description": "AI 服务提供方标识。"
+    },
+    {
+      "name": "wolfchat.ai.base-url",
+      "type": "java.lang.String",
+      "description": "AI API 基础地址。"
+    },
+    {
+      "name": "wolfchat.ai.api-key",
+      "type": "java.lang.String",
+      "description": "AI API 密钥。"
+    },
+    {
+      "name": "wolfchat.ai.model",
+      "type": "java.lang.String",
+      "description": "默认推理模型。"
+    },
+    {
+      "name": "wolfchat.ai.temperature",
+      "type": "java.lang.Double",
+      "description": "采样温度。"
+    },
+    {
+      "name": "wolfchat.ai.max-output-tokens",
+      "type": "java.lang.Integer",
+      "description": "单次生成最大输出 token。"
+    },
+    {
+      "name": "wolfchat.ai.timeout-ms",
+      "type": "java.lang.Integer",
+      "description": "AI 请求超时（毫秒）。"
+    },
+    {
+      "name": "wolfchat.ai.memory.enabled",
+      "type": "java.lang.Boolean",
+      "description": "记忆开关。"
+    },
+    {
+      "name": "wolfchat.ai.memory.recent-window-size",
+      "type": "java.lang.Integer",
+      "description": "每次推理带入的最近消息条数。"
+    },
+    {
+      "name": "wolfchat.ai.memory.summary-trigger-message-count",
+      "type": "java.lang.Integer",
+      "description": "触发摘要压缩的消息数量阈值。"
+    },
+    {
+      "name": "wolfchat.ai.memory.summary-max-tokens",
+      "type": "java.lang.Integer",
+      "description": "摘要最大 token 预算。"
+    },
+    {
+      "name": "wolfchat.ai.memory.embedding-model",
+      "type": "java.lang.String",
+      "description": "记忆向量化模型。"
+    },
+    {
+      "name": "wolfchat.ai.memory.top-k",
+      "type": "java.lang.Integer",
+      "description": "记忆检索 TopK。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.enabled",
+      "type": "java.lang.Boolean",
+      "description": "公共聊天室 AI 开关。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.bot-user-id",
+      "type": "java.lang.Long",
+      "description": "公共聊天室 AI 对应用户 ID。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.bot-display-name",
+      "type": "java.lang.String",
+      "description": "公共聊天室 AI 展示昵称。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.cooldown-seconds",
+      "type": "java.lang.Integer",
+      "description": "公共聊天室 AI 发言冷却秒数。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.reply-probability",
+      "type": "java.lang.Double",
+      "description": "公共聊天室 AI 主动发言概率（0~1）。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.max-replies-per-hour",
+      "type": "java.lang.Integer",
+      "description": "公共聊天室 AI 每小时最大发言数。"
     }
   ]
 }

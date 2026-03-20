@@ -26,6 +26,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/**",
                         "/admin/auth/**",
                         "/api/admin/auth/**",
+                        // 管理端静态页面放行
+                        "/admin-console/**",
+                        "/api/admin-console/**",
+                        // 媒体上传/读取放行（通过上传令牌与签名链接控制）
+                        "/media/upload",
+                        "/api/media/upload",
+                        "/media/object",
+                        "/api/media/object",
                         // OpenAPI 文档放行
                         "/v3/api-docs/**",
                         "/doc.html/**",

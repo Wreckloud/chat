@@ -6,7 +6,7 @@ import com.wreckloud.wolfchat.account.application.service.UserService;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
-import com.wreckloud.wolfchat.common.storage.service.OssStorageService;
+import com.wreckloud.wolfchat.common.storage.service.MediaStorageService;
 import com.wreckloud.wolfchat.community.application.assembler.ForumViewAssembler;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
@@ -81,7 +81,7 @@ public class ForumQueryService {
     private final WfFollowMapper wfFollowMapper;
     private final UserService userService;
     private final ForumViewAssembler forumViewAssembler;
-    private final OssStorageService ossStorageService;
+    private final MediaStorageService mediaStorageService;
 
     public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
         validatePageParams(page, size);
@@ -866,7 +866,7 @@ public class ForumQueryService {
         if (!StringUtils.hasText(mediaKey)) {
             return null;
         }
-        return ossStorageService.buildSignedReadUrl(mediaKey.trim());
+        return mediaStorageService.buildSignedReadUrl(mediaKey.trim());
     }
 
     private String resolveVideoPosterUrl(WfForumThread thread) {
@@ -879,7 +879,7 @@ public class ForumQueryService {
         if (!StringUtils.hasText(thread.getVideoKey())) {
             return null;
         }
-        return ossStorageService.buildSignedReadUrl(thread.getVideoKey().trim(), VIDEO_POSTER_PROCESS);
+        return null;
     }
 
 }
