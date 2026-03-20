@@ -11,6 +11,7 @@ import com.wreckloud.wolfchat.community.application.assembler.ForumViewAssembler
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
+import com.wreckloud.wolfchat.community.api.vo.ForumThreadEditorVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
@@ -61,7 +62,6 @@ public class ForumQueryService {
     private static final String REPLY_SORT_FLOOR = "floor";
     private static final String REPLY_SORT_HOT = "hot";
     private static final String REPLY_SORT_AUTHOR = "author";
-    private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
 
     private static final String FEED_LATEST_ORDER_SQL = "ORDER BY create_time DESC, id DESC";
     private static final String FEED_HOT_ORDER_SQL = "ORDER BY "
@@ -72,6 +72,10 @@ public class ForumQueryService {
     private static final List<String> FEED_EXCLUDED_TITLE_PREFIXES = List.of("[公告]", "【公告】", "[反馈]", "【反馈】");
     private static final int RECOMMEND_INTEREST_RATIO = 60;
     private static final int RECOMMEND_HOT_RATIO = 25;
+    private static final List<ForumThreadStatus> PUBLIC_THREAD_STATUSES = List.of(
+            ForumThreadStatus.NORMAL,
+            ForumThreadStatus.LOCKED
+    );
 
     private final WfForumBoardMapper wfForumBoardMapper;
     private final WfForumThreadMapper wfForumThreadMapper;
@@ -118,6 +122,25 @@ public class ForumQueryService {
         detailVO.setThread(threadVO);
         detailVO.setContent(thread.getContent());
         return detailVO;
+    }
+
+    public ForumThreadEditorVO getLatestDraftForAuthor(Long authorId) {
+        LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumThread::getAuthorId, authorId)
+                .eq(WfForumThread::getStatus, ForumThreadStatus.DRAFT)
+                .orderByDesc(WfForumThread::getUpdateTime)
+                .orderByDesc(WfForumThread::getId)
+                .last("LIMIT 1");
+        WfForumThread thread = wfForumThreadMapper.selectOne(queryWrapper);
+        if (thread == null) {
+            return null;
+        }
+        return toThreadEditorVO(thread);
+    }
+
+    public ForumThreadEditorVO getThreadEditorVO(Long authorId, Long threadId) {
+        WfForumThread thread = getAuthorThreadOrThrow(authorId, threadId);
+        return toThreadEditorVO(thread);
     }
 
     public ForumReplyPageVO listThreadReplies(Long userId, Long threadId, long page, long size, String sort) {
@@ -221,10 +244,26 @@ public class ForumQueryService {
         return board;
     }
 
-    public WfForumThread getVisibleThreadOrThrow(Long threadId) {
+    public WfForumThread getThreadByIdOrThrow(Long threadId) {
         WfForumThread thread = wfForumThreadMapper.selectById(threadId);
-        if (thread == null || ForumThreadStatus.DELETED.equals(thread.getStatus())) {
+        if (thread == null) {
             throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
+        }
+        return thread;
+    }
+
+    public WfForumThread getVisibleThreadOrThrow(Long threadId) {
+        WfForumThread thread = getThreadByIdOrThrow(threadId);
+        if (!isPublicThreadStatus(thread.getStatus())) {
+            throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
+        }
+        return thread;
+    }
+
+    public WfForumThread getAuthorThreadOrThrow(Long authorId, Long threadId) {
+        WfForumThread thread = getThreadByIdOrThrow(threadId);
+        if (!authorId.equals(thread.getAuthorId())) {
+            throw new BaseException(ErrorCode.FORUM_OPERATION_FORBIDDEN);
         }
         return thread;
     }
@@ -554,7 +593,7 @@ public class ForumQueryService {
 
     private LambdaQueryWrapper<WfForumThread> buildVisibleThreadQuery() {
         LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+        queryWrapper.in(WfForumThread::getStatus, PUBLIC_THREAD_STATUSES);
         return queryWrapper;
     }
 
@@ -870,16 +909,42 @@ public class ForumQueryService {
     }
 
     private String resolveVideoPosterUrl(WfForumThread thread) {
-        if (thread == null) {
+        if (thread == null || !StringUtils.hasText(thread.getVideoPosterKey())) {
             return null;
         }
-        if (StringUtils.hasText(thread.getVideoPosterKey())) {
-            return resolveMediaUrl(thread.getVideoPosterKey());
+        return resolveMediaUrl(thread.getVideoPosterKey());
+    }
+
+    private ForumThreadEditorVO toThreadEditorVO(WfForumThread thread) {
+        ForumThreadEditorVO vo = new ForumThreadEditorVO();
+        vo.setThreadId(thread.getId());
+        vo.setStatus(thread.getStatus());
+        vo.setTitle(thread.getTitle());
+        vo.setContent(thread.getContent());
+        List<String> imageKeys = splitImageKeys(thread.getImageKeys());
+        vo.setImageKeys(imageKeys);
+        vo.setImageUrls(resolveImageUrls(thread.getImageKeys()));
+        vo.setVideoKey(thread.getVideoKey());
+        vo.setVideoUrl(resolveMediaUrl(thread.getVideoKey()));
+        vo.setVideoPosterKey(thread.getVideoPosterKey());
+        vo.setVideoPosterUrl(resolveVideoPosterUrl(thread));
+        vo.setCreateTime(thread.getCreateTime());
+        vo.setEditTime(thread.getEditTime());
+        return vo;
+    }
+
+    private List<String> splitImageKeys(String imageKeys) {
+        if (!StringUtils.hasText(imageKeys)) {
+            return List.of();
         }
-        if (!StringUtils.hasText(thread.getVideoKey())) {
-            return null;
-        }
-        return null;
+        return Arrays.stream(imageKeys.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+    }
+
+    private boolean isPublicThreadStatus(ForumThreadStatus status) {
+        return PUBLIC_THREAD_STATUSES.contains(status);
     }
 
 }

@@ -9,11 +9,14 @@ import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
 import com.wreckloud.wolfchat.community.api.dto.CreateThreadDTO;
+import com.wreckloud.wolfchat.community.api.dto.SaveThreadDraftDTO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
+import com.wreckloud.wolfchat.community.api.vo.ForumThreadEditorVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
+import com.wreckloud.wolfchat.community.api.dto.UpdateThreadDTO;
 import com.wreckloud.wolfchat.community.application.support.ForumPayloadSupport;
 import com.wreckloud.wolfchat.community.domain.constant.ForumModerationLogConstants;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
@@ -37,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +52,9 @@ import java.util.Map;
 @Slf4j
 public class ForumService {
     private static final int THREAD_IMAGE_MAX_COUNT = 9;
+    private static final int THREAD_TITLE_MAX_LENGTH = 120;
+    private static final int DRAFT_TITLE_CONTENT_PREVIEW_LENGTH = 20;
+    private static final String DEFAULT_DRAFT_TITLE = "未命名草稿";
 
     private final ForumQueryService forumQueryService;
     private final ForumContentMaintenanceService forumContentMaintenanceService;
@@ -70,36 +77,148 @@ public class ForumService {
         return forumQueryService.listSearchThreads(userId, page, size, keyword);
     }
 
+    public ForumThreadEditorVO getLatestThreadDraft(Long userId) {
+        return forumQueryService.getLatestDraftForAuthor(userId);
+    }
+
+    public ForumThreadEditorVO getEditableThread(Long userId, Long threadId) {
+        WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
+        validateEditableThreadStatus(thread.getStatus());
+        return forumQueryService.getThreadEditorVO(userId, threadId);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public ForumThreadVO createThread(Long userId, CreateThreadDTO dto) {
         WfForumBoard board = forumQueryService.resolveDefaultBoardForPostingOrThrow();
-
-        String content = forumPayloadSupport.normalizeOptionalContent(dto.getContent());
-        List<String> imageKeys = forumPayloadSupport.normalizeImageKeys(dto.getImageKeys(), THREAD_IMAGE_MAX_COUNT);
-        String videoKey = forumPayloadSupport.normalizeOptionalKey(dto.getVideoKey());
-        String videoPosterKey = forumPayloadSupport.normalizeOptionalKey(dto.getVideoPosterKey());
-        forumPayloadSupport.validateThreadPayload(userId, content, imageKeys, videoKey, videoPosterKey);
+        ThreadPayload payload = normalizeThreadPayload(
+                userId,
+                dto.getTitle(),
+                dto.getContent(),
+                dto.getImageKeys(),
+                dto.getVideoKey(),
+                dto.getVideoPosterKey(),
+                false
+        );
 
         LocalDateTime now = LocalDateTime.now();
         WfForumThread thread = new WfForumThread();
         thread.setBoardId(board.getId());
         thread.setAuthorId(userId);
-        thread.setTitle(dto.getTitle().trim());
-        thread.setContent(content);
-        thread.setImageKeys(forumPayloadSupport.joinImageKeys(imageKeys));
-        thread.setVideoKey(videoKey);
-        thread.setVideoPosterKey(videoPosterKey);
+        thread.setTitle(payload.title);
+        thread.setContent(payload.content);
+        thread.setImageKeys(forumPayloadSupport.joinImageKeys(payload.imageKeys));
+        thread.setVideoKey(payload.videoKey);
+        thread.setVideoPosterKey(payload.videoPosterKey);
         thread.setThreadType(ForumThreadType.NORMAL);
         thread.setStatus(ForumThreadStatus.NORMAL);
         thread.setIsEssence(false);
         thread.setViewCount(0);
         thread.setReplyCount(0);
         thread.setLastReplyTime(now);
+        thread.setEditTime(null);
 
         assertSingleRow(wfForumThreadMapper.insert(thread));
         updateBoardOnThreadCreate(board.getId(), thread.getId(), now);
         userAchievementService.grantFirstPostAchievement(userId);
         return forumQueryService.buildThreadVO(userId, thread.getId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ForumThreadEditorVO saveThreadDraft(Long userId, SaveThreadDraftDTO dto) {
+        WfForumBoard board = forumQueryService.resolveDefaultBoardForPostingOrThrow();
+        ThreadPayload payload = normalizeThreadPayload(
+                userId,
+                dto.getTitle(),
+                dto.getContent(),
+                dto.getImageKeys(),
+                dto.getVideoKey(),
+                dto.getVideoPosterKey(),
+                true
+        );
+
+        Long threadId = dto.getThreadId();
+        LocalDateTime now = LocalDateTime.now();
+        if (threadId == null || threadId <= 0L) {
+            WfForumThread draft = new WfForumThread();
+            draft.setBoardId(board.getId());
+            draft.setAuthorId(userId);
+            draft.setTitle(normalizeDraftTitle(payload.title, payload.content));
+            draft.setContent(payload.content);
+            draft.setImageKeys(forumPayloadSupport.joinImageKeys(payload.imageKeys));
+            draft.setVideoKey(payload.videoKey);
+            draft.setVideoPosterKey(payload.videoPosterKey);
+            draft.setThreadType(ForumThreadType.NORMAL);
+            draft.setStatus(ForumThreadStatus.DRAFT);
+            draft.setIsEssence(false);
+            draft.setViewCount(0);
+            draft.setReplyCount(0);
+            draft.setLikeCount(0);
+            draft.setLastReplyId(null);
+            draft.setLastReplyUserId(null);
+            draft.setLastReplyTime(null);
+            draft.setEditTime(now);
+            assertSingleRow(wfForumThreadMapper.insert(draft));
+            return forumQueryService.getThreadEditorVO(userId, draft.getId());
+        }
+
+        WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
+        if (!ForumThreadStatus.DRAFT.equals(thread.getStatus())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "仅支持保存草稿主题");
+        }
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, threadId)
+                .eq(WfForumThread::getAuthorId, userId)
+                .eq(WfForumThread::getStatus, ForumThreadStatus.DRAFT)
+                .set(WfForumThread::getTitle, normalizeDraftTitle(payload.title, payload.content))
+                .set(WfForumThread::getContent, payload.content)
+                .set(WfForumThread::getImageKeys, forumPayloadSupport.joinImageKeys(payload.imageKeys))
+                .set(WfForumThread::getVideoKey, payload.videoKey)
+                .set(WfForumThread::getVideoPosterKey, payload.videoPosterKey)
+                .set(WfForumThread::getEditTime, now);
+        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
+        return forumQueryService.getThreadEditorVO(userId, threadId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ForumThreadVO updateThread(Long userId, Long threadId, UpdateThreadDTO dto) {
+        WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
+        if (!isPublishedThreadStatus(thread.getStatus())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "仅支持编辑已发布主题");
+        }
+
+        ThreadPayload payload = normalizeThreadPayload(
+                userId,
+                dto.getTitle(),
+                dto.getContent(),
+                dto.getImageKeys(),
+                dto.getVideoKey(),
+                dto.getVideoPosterKey(),
+                false
+        );
+        updatePublishedThreadContent(userId, thread, payload, false);
+        return forumQueryService.buildThreadVO(userId, threadId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ForumThreadVO publishThreadDraft(Long userId, Long threadId, UpdateThreadDTO dto) {
+        WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
+        if (!ForumThreadStatus.DRAFT.equals(thread.getStatus())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "仅支持发布草稿主题");
+        }
+
+        ThreadPayload payload = normalizeThreadPayload(
+                userId,
+                dto.getTitle(),
+                dto.getContent(),
+                dto.getImageKeys(),
+                dto.getVideoKey(),
+                dto.getVideoPosterKey(),
+                false
+        );
+        updatePublishedThreadContent(userId, thread, payload, true);
+        forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
+        userAchievementService.grantFirstPostAchievement(userId);
+        return forumQueryService.buildThreadVO(userId, threadId);
     }
 
     public ForumThreadDetailVO getThreadDetail(Long userId, Long threadId) {
@@ -110,7 +229,7 @@ public class ForumService {
     public void increaseThreadView(Long threadId) {
         LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfForumThread::getId, threadId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED))
                 .setSql("view_count = view_count + 1");
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
     }
@@ -256,7 +375,7 @@ public class ForumService {
         LambdaUpdateWrapper<WfForumThread> threadUpdateWrapper = new LambdaUpdateWrapper<>();
         threadUpdateWrapper.eq(WfForumThread::getId, threadId)
                 .eq(WfForumThread::getAuthorId, userId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED))
                 .set(WfForumThread::getStatus, ForumThreadStatus.DELETED);
         assertSingleRow(wfForumThreadMapper.update(null, threadUpdateWrapper));
 
@@ -268,6 +387,21 @@ public class ForumService {
 
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
         recordThreadAuthorAction(userId, threadId, ForumModerationLogConstants.ACTION_DELETE_THREAD);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void purgeThread(Long userId, Long threadId) {
+        WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
+        if (!ForumThreadStatus.DELETED.equals(thread.getStatus())) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "仅支持彻底删除垃圾站主题");
+        }
+
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, threadId)
+                .eq(WfForumThread::getAuthorId, userId)
+                .eq(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .set(WfForumThread::getStatus, ForumThreadStatus.PURGED);
+        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -304,7 +438,7 @@ public class ForumService {
 
         LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfForumThread::getId, threadId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED))
                 .setSql("like_count = like_count + 1");
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
         return true;
@@ -321,7 +455,7 @@ public class ForumService {
 
         LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfForumThread::getId, threadId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED))
                 .setSql("like_count = IF(like_count > 0, like_count - 1, 0)");
         assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
     }
@@ -417,7 +551,7 @@ public class ForumService {
         LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(WfForumThread::getId, threadId)
                 .eq(WfForumThread::getAuthorId, userId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED));
         return updateWrapper;
     }
 
@@ -520,6 +654,160 @@ public class ForumService {
             return;
         }
         userNoticeService.notifyReplyReplied(replyTargetUserId, thread.getId(), operatorUserId);
+    }
+
+    private ThreadPayload normalizeThreadPayload(Long userId,
+                                                 String title,
+                                                 String content,
+                                                 List<String> imageKeys,
+                                                 String videoKey,
+                                                 String videoPosterKey,
+                                                 boolean draftMode) {
+        String normalizedTitle = title == null ? "" : title.trim();
+        if (!draftMode && !StringUtils.hasText(normalizedTitle)) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "主题标题不能为空");
+        }
+        if (normalizedTitle.length() > THREAD_TITLE_MAX_LENGTH) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "主题标题长度不能超过120个字符");
+        }
+
+        String normalizedContent = forumPayloadSupport.normalizeOptionalContent(content);
+        List<String> normalizedImageKeys = forumPayloadSupport.normalizeImageKeys(imageKeys, THREAD_IMAGE_MAX_COUNT);
+        String normalizedVideoKey = forumPayloadSupport.normalizeOptionalKey(videoKey);
+        String normalizedVideoPosterKey = forumPayloadSupport.normalizeOptionalKey(videoPosterKey);
+
+        if (draftMode) {
+            forumPayloadSupport.validateThreadDraftPayload(
+                    userId,
+                    normalizedImageKeys,
+                    normalizedVideoKey,
+                    normalizedVideoPosterKey
+            );
+        } else {
+            forumPayloadSupport.validateThreadPayload(
+                    userId,
+                    normalizedContent,
+                    normalizedImageKeys,
+                    normalizedVideoKey,
+                    normalizedVideoPosterKey
+            );
+        }
+        return new ThreadPayload(
+                normalizedTitle,
+                normalizedContent,
+                normalizedImageKeys,
+                normalizedVideoKey,
+                normalizedVideoPosterKey
+        );
+    }
+
+    private void updatePublishedThreadContent(Long userId,
+                                              WfForumThread thread,
+                                              ThreadPayload payload,
+                                              boolean publishFromDraft) {
+        boolean changed = publishFromDraft
+                || !payload.title.equals(thread.getTitle())
+                || !payload.content.equals(thread.getContent())
+                || !safeEquals(forumPayloadSupport.joinImageKeys(payload.imageKeys), thread.getImageKeys())
+                || !safeEquals(payload.videoKey, thread.getVideoKey())
+                || !safeEquals(payload.videoPosterKey, thread.getVideoPosterKey());
+
+        if (!changed) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(WfForumThread::getId, thread.getId())
+                .eq(WfForumThread::getAuthorId, userId)
+                .eq(WfForumThread::getStatus, thread.getStatus())
+                .set(WfForumThread::getTitle, payload.title)
+                .set(WfForumThread::getContent, payload.content)
+                .set(WfForumThread::getImageKeys, forumPayloadSupport.joinImageKeys(payload.imageKeys))
+                .set(WfForumThread::getVideoKey, payload.videoKey)
+                .set(WfForumThread::getVideoPosterKey, payload.videoPosterKey)
+                .set(WfForumThread::getEditTime, now);
+
+        if (publishFromDraft) {
+            updateWrapper
+                    .set(WfForumThread::getStatus, ForumThreadStatus.NORMAL)
+                    .set(WfForumThread::getCreateTime, now)
+                    .set(WfForumThread::getLastReplyId, null)
+                    .set(WfForumThread::getLastReplyUserId, null)
+                    .set(WfForumThread::getLastReplyTime, now)
+                    .set(WfForumThread::getThreadType, ForumThreadType.NORMAL)
+                    .set(WfForumThread::getIsEssence, false)
+                    .set(WfForumThread::getViewCount, 0)
+                    .set(WfForumThread::getReplyCount, 0)
+                    .set(WfForumThread::getLikeCount, 0);
+        }
+        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
+    }
+
+    private String normalizeDraftTitle(String title, String content) {
+        if (StringUtils.hasText(title)) {
+            String normalized = title.trim();
+            if (normalized.length() <= THREAD_TITLE_MAX_LENGTH) {
+                return normalized;
+            }
+            return normalized.substring(0, THREAD_TITLE_MAX_LENGTH);
+        }
+        if (StringUtils.hasText(content)) {
+            String normalizedContent = content.replaceAll("\\s+", " ").trim();
+            if (!normalizedContent.isEmpty()) {
+                int maxLength = Math.min(THREAD_TITLE_MAX_LENGTH, DRAFT_TITLE_CONTENT_PREVIEW_LENGTH);
+                if (normalizedContent.length() <= maxLength) {
+                    return normalizedContent;
+                }
+                return normalizedContent.substring(0, maxLength) + "...";
+            }
+        }
+        return DEFAULT_DRAFT_TITLE;
+    }
+
+    private void validateEditableThreadStatus(ForumThreadStatus status) {
+        if (status == null) {
+            throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
+        }
+        if (!ForumThreadStatus.DRAFT.equals(status)
+                && !ForumThreadStatus.NORMAL.equals(status)
+                && !ForumThreadStatus.LOCKED.equals(status)) {
+            throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
+        }
+    }
+
+    private boolean isPublishedThreadStatus(ForumThreadStatus status) {
+        return ForumThreadStatus.NORMAL.equals(status) || ForumThreadStatus.LOCKED.equals(status);
+    }
+
+    private boolean safeEquals(String left, String right) {
+        if (left == null && right == null) {
+            return true;
+        }
+        if (left == null || right == null) {
+            return false;
+        }
+        return left.equals(right);
+    }
+
+    private static class ThreadPayload {
+        private final String title;
+        private final String content;
+        private final List<String> imageKeys;
+        private final String videoKey;
+        private final String videoPosterKey;
+
+        private ThreadPayload(String title,
+                              String content,
+                              List<String> imageKeys,
+                              String videoKey,
+                              String videoPosterKey) {
+            this.title = title;
+            this.content = content;
+            this.imageKeys = imageKeys == null ? List.of() : new ArrayList<>(imageKeys);
+            this.videoKey = videoKey;
+            this.videoPosterKey = videoPosterKey;
+        }
     }
 
     private void assertSingleRow(int affectedRows) {

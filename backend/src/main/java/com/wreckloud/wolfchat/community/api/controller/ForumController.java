@@ -4,13 +4,16 @@ import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
 import com.wreckloud.wolfchat.community.api.dto.CreateThreadDTO;
+import com.wreckloud.wolfchat.community.api.dto.SaveThreadDraftDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateLikeDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadEssenceDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadLockDTO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadStickyDTO;
+import com.wreckloud.wolfchat.community.api.dto.UpdateThreadDTO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumReplyVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadDetailVO;
+import com.wreckloud.wolfchat.community.api.vo.ForumThreadEditorVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
 import com.wreckloud.wolfchat.community.application.service.ForumService;
@@ -64,6 +67,43 @@ public class ForumController {
         Long userId = UserContext.getRequiredUserId();
         ForumThreadVO thread = forumService.createThread(userId, dto);
         return Result.success("发布成功", thread);
+    }
+
+    @Operation(summary = "保存主题草稿", description = "保存或更新当前用户主题草稿")
+    @PostMapping("/threads/drafts")
+    public Result<ForumThreadEditorVO> saveThreadDraft(@RequestBody @Validated SaveThreadDraftDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success("草稿已保存", forumService.saveThreadDraft(userId, dto));
+    }
+
+    @Operation(summary = "获取最近草稿", description = "获取当前用户最近一次保存的主题草稿")
+    @GetMapping("/threads/drafts/latest")
+    public Result<ForumThreadEditorVO> getLatestThreadDraft() {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(forumService.getLatestThreadDraft(userId));
+    }
+
+    @Operation(summary = "获取可编辑主题", description = "获取当前用户可编辑主题（已发布或草稿）")
+    @GetMapping("/threads/{threadId}/editable")
+    public Result<ForumThreadEditorVO> getEditableThread(@PathVariable Long threadId) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(forumService.getEditableThread(userId, threadId));
+    }
+
+    @Operation(summary = "编辑已发布主题", description = "编辑当前用户已发布主题")
+    @PutMapping("/threads/{threadId}")
+    public Result<ForumThreadVO> updateThread(@PathVariable Long threadId,
+                                              @RequestBody @Validated UpdateThreadDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success("更新成功", forumService.updateThread(userId, threadId, dto));
+    }
+
+    @Operation(summary = "发布草稿主题", description = "将当前用户草稿发布到社区")
+    @PutMapping("/threads/{threadId}/publish")
+    public Result<ForumThreadVO> publishThreadDraft(@PathVariable Long threadId,
+                                                    @RequestBody @Validated UpdateThreadDTO dto) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success("发布成功", forumService.publishThreadDraft(userId, threadId, dto));
     }
 
     @Operation(summary = "主题详情", description = "获取主题详情")
@@ -122,6 +162,14 @@ public class ForumController {
         Long userId = UserContext.getRequiredUserId();
         forumService.deleteThread(userId, threadId);
         return Result.success("删除成功", null);
+    }
+
+    @Operation(summary = "彻底删除主题", description = "在垃圾站彻底删除主题（逻辑删除，用户不可见）")
+    @DeleteMapping("/threads/{threadId}/purge")
+    public Result<Void> purgeThread(@PathVariable Long threadId) {
+        Long userId = UserContext.getRequiredUserId();
+        forumService.purgeThread(userId, threadId);
+        return Result.success("彻底删除成功", null);
     }
 
     @Operation(summary = "回复列表", description = "分页获取主题回复列表")

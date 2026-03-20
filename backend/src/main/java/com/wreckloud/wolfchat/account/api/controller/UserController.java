@@ -88,6 +88,19 @@ public class UserController {
     }
 
     /**
+     * 获取当前行者主题（我的/草稿/垃圾站）
+     */
+    @Operation(summary = "获取我的主题列表", description = "分页获取当前登录行者主题，支持 mine/draft/trash 与关键词搜索（需要登录）")
+    @GetMapping("/me/threads")
+    public Result<UserHomeThreadPageVO> listMyThreads(@RequestParam(defaultValue = "mine") String tab,
+                                                      @RequestParam(required = false) String keyword,
+                                                      @RequestParam(defaultValue = "1") long page,
+                                                      @RequestParam(defaultValue = "20") long size) {
+        Long userId = UserContext.getRequiredUserId();
+        return Result.success(userHomeService.listMyThreads(userId, tab, keyword, page, size));
+    }
+
+    /**
      * 修改当前登录行者的资料
      */
     @Operation(summary = "更新个人资料", description = "更新当前登录行者的资料（需要登录）")

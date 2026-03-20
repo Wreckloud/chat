@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS `wf_forum_thread` (
     `video_key` VARCHAR(255) DEFAULT NULL COMMENT '首帖视频对象Key',
     `video_poster_key` VARCHAR(255) DEFAULT NULL COMMENT '首帖视频封面对象Key',
     `thread_type` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '主题类型：NORMAL/STICKY/ANNOUNCEMENT',
-    `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/LOCKED/DELETED',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：DRAFT/NORMAL/LOCKED/DELETED/PURGED',
     `is_essence` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否精华：0-否，1-是',
     `view_count` INT NOT NULL DEFAULT 0 COMMENT '浏览数',
     `reply_count` INT NOT NULL DEFAULT 0 COMMENT '回复数',
@@ -246,11 +246,13 @@ CREATE TABLE IF NOT EXISTS `wf_forum_thread` (
     `last_reply_id` BIGINT DEFAULT NULL COMMENT '最后回复ID',
     `last_reply_user_id` BIGINT DEFAULT NULL COMMENT '最后回复者ID',
     `last_reply_time` DATETIME DEFAULT NULL COMMENT '最后回复时间',
+    `edit_time` DATETIME DEFAULT NULL COMMENT '正文编辑时间（仅正文或媒体更新时写入）',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     KEY `idx_board_type_status_reply_time` (`board_id`, `thread_type`, `status`, `last_reply_time`),
     KEY `idx_author_create` (`author_id`, `create_time`),
+    KEY `idx_author_status_create` (`author_id`, `status`, `create_time`),
     KEY `idx_status_create` (`status`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='论坛主题表';
 

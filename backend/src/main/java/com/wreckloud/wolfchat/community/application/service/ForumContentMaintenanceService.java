@@ -30,7 +30,9 @@ public class ForumContentMaintenanceService {
 
     public void refreshThreadLastReply(Long threadId) {
         WfForumThread thread = wfForumThreadMapper.selectById(threadId);
-        if (thread == null || ForumThreadStatus.DELETED.equals(thread.getStatus())) {
+        if (thread == null
+                || (!ForumThreadStatus.NORMAL.equals(thread.getStatus())
+                && !ForumThreadStatus.LOCKED.equals(thread.getStatus()))) {
             throw new BaseException(ErrorCode.FORUM_THREAD_NOT_FOUND);
         }
 

@@ -89,6 +89,33 @@ public class ForumPayloadSupport {
         }
     }
 
+    public void validateThreadDraftPayload(Long userId,
+                                           List<String> imageKeys,
+                                           String videoKey,
+                                           String videoPosterKey) {
+        boolean hasImages = imageKeys != null && !imageKeys.isEmpty();
+        boolean hasVideo = videoKey != null && !videoKey.isEmpty();
+        boolean hasVideoPoster = videoPosterKey != null && !videoPosterKey.isEmpty();
+
+        if (hasImages && hasVideo) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "图片和视频不能同时提交");
+        }
+        if (!hasVideo && hasVideoPoster) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "视频封面不能单独提交");
+        }
+        if (hasImages) {
+            for (String imageKey : imageKeys) {
+                chatMediaService.validateForumThreadImageKey(userId, imageKey);
+            }
+        }
+        if (hasVideo) {
+            chatMediaService.validateForumThreadVideoKey(userId, videoKey);
+        }
+        if (hasVideoPoster) {
+            chatMediaService.validateForumThreadImageKey(userId, videoPosterKey);
+        }
+    }
+
     public void validateReplyPayload(Long userId, String content, String imageKey) {
         boolean hasContent = content != null && !content.isEmpty();
         boolean hasImage = imageKey != null && !imageKey.isEmpty();

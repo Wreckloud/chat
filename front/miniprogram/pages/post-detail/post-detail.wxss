@@ -199,17 +199,6 @@
   display: block;
 }
 
-.thread-video-poster-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24rpx;
-  color: var(--retro-muted-text);
-  background: var(--retro-theme-item-bg, rgba(255, 255, 255, 0.86));
-}
-
 .thread-video-play-mask {
   position: absolute;
   inset: 0;

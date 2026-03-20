@@ -54,4 +54,7 @@ public class UserHomeThreadVO {
 
     @Schema(description = "发布时间")
     private LocalDateTime createTime;
+
+    @Schema(description = "编辑时间（未编辑为空）")
+    private LocalDateTime editTime;
 }

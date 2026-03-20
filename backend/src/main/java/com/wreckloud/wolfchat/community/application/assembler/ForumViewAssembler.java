@@ -62,6 +62,7 @@ public class ForumViewAssembler {
         vo.setContentPreview(buildContentPreview(thread.getContent()));
         vo.setLastReplyTime(thread.getLastReplyTime());
         vo.setCreateTime(thread.getCreateTime());
+        vo.setEditTime(thread.getEditTime());
         vo.setAuthor(toUserBriefVO(author));
         vo.setLastReplyUser(toUserBriefVO(lastReplyUser));
         return vo;

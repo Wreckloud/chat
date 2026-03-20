@@ -18,21 +18,21 @@ public interface WfForumThreadMapper extends BaseMapper<WfForumThread> {
     @Select("SELECT COUNT(1) AS threadCount, " +
             "IFNULL(SUM(CASE WHEN reply_count > 0 THEN reply_count ELSE 0 END), 0) AS replyCount " +
             "FROM wf_forum_thread " +
-            "WHERE board_id = #{boardId} AND status <> 'DELETED'")
+            "WHERE board_id = #{boardId} AND status IN ('NORMAL', 'LOCKED')")
     Map<String, Object> selectBoardStats(@Param("boardId") Long boardId);
 
     @Select("SELECT * FROM wf_forum_thread " +
-            "WHERE board_id = #{boardId} AND status <> 'DELETED' " +
+            "WHERE board_id = #{boardId} AND status IN ('NORMAL', 'LOCKED') " +
             "ORDER BY last_reply_time DESC, create_time DESC, id DESC LIMIT 1")
     WfForumThread selectLatestVisibleByBoardId(@Param("boardId") Long boardId);
 
     @Select("SELECT COALESCE(SUM(view_count), 0) " +
             "FROM wf_forum_thread " +
-            "WHERE author_id = #{authorId} AND status <> 'DELETED'")
+            "WHERE author_id = #{authorId} AND status IN ('NORMAL', 'LOCKED')")
     Long selectViewCountSumByAuthorId(@Param("authorId") Long authorId);
 
     @Select("SELECT COALESCE(SUM(like_count), 0) " +
             "FROM wf_forum_thread " +
-            "WHERE author_id = #{authorId} AND status <> 'DELETED'")
+            "WHERE author_id = #{authorId} AND status IN ('NORMAL', 'LOCKED')")
     Long selectLikeCountSumByAuthorId(@Param("authorId") Long authorId);
 }

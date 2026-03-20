@@ -59,10 +59,9 @@
           {{item.contentPreview}}
         </view>
 
-        <view wx:if="{{item.hasVideo || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
-          <view wx:if="{{item.hasVideo}}" class="thread-media-cell thread-media-video">
-            <image wx:if="{{item.videoPosterUrl}}" class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
-            <view wx:else class="thread-media-fallback">视频</view>
+        <view wx:if="{{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
+          <view wx:if="{{item.videoPosterUrl}}" class="thread-media-cell thread-media-video">
+            <image class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
             <view class="thread-media-video-mask">
               <view class="thread-media-video-icon"></view>
             </view>
@@ -91,7 +90,7 @@
               style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
               [{{item.author.displayTitleName}}]
             </view>
-            <text class="thread-author-time">发布于 {{item.createTimeRelativeText || item.createTimeText || '--'}}</text>
+            <text class="thread-author-time">{{item.timePrefix}} {{item.timeRelativeText || item.timeText || '--'}}</text>
           </view>
           <text class="thread-stat">回 {{item.replyCount}} / 阅 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
         </view>

@@ -23,6 +23,8 @@ function mapThread(item) {
   const videoPosterUrl = typeof item.videoPosterUrl === 'string' ? item.videoPosterUrl : ''
   const hasVideo = !!videoUrl
   const previewImageUrls = imageUrls.slice(0, hasVideo ? 2 : 3)
+  const editTimeText = time.formatPostTime(item.editTime)
+  const hasEditTime = !!editTimeText
   return {
     ...item,
     viewCount: Number(item.viewCount) || 0,
@@ -36,6 +38,10 @@ function mapThread(item) {
     previewImageUrls,
     hasMoreImages: imageUrls.length > previewImageUrls.length,
     createTimeText: time.formatPostTime(item.createTime),
+    editTimeText,
+    hasEditTime,
+    timePrefix: hasEditTime ? '编辑于' : '发布于',
+    timeText: hasEditTime ? editTimeText : time.formatPostTime(item.createTime),
     lastReplyTimeText: time.formatPostTime(item.lastReplyTime)
   }
 }

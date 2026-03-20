@@ -699,6 +699,15 @@ Page({
     }
   },
 
+  goEditThread() {
+    if (!this.data.thread || !this.data.canManageThread) {
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/post-create/post-create?mode=edit&threadId=${this.data.threadId}`
+    })
+  },
+
   async handleDeleteReply(e) {
     const replyId = Number(e.currentTarget.dataset.id)
     if (!replyId) return

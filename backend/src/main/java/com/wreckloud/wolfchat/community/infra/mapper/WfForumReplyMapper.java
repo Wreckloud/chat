@@ -24,7 +24,7 @@ public interface WfForumReplyMapper extends BaseMapper<WfForumReply> {
             "INNER JOIN wf_forum_thread t ON t.id = r.thread_id " +
             "WHERE r.author_id = #{authorId} " +
             "AND r.status = 'NORMAL' " +
-            "AND t.status <> 'DELETED'")
+            "AND t.status IN ('NORMAL', 'LOCKED')")
     Long selectLikeCountSumByAuthorId(@Param("authorId") Long authorId);
 
     @Select("SELECT COUNT(1) " +
@@ -32,6 +32,6 @@ public interface WfForumReplyMapper extends BaseMapper<WfForumReply> {
             "INNER JOIN wf_forum_thread t ON t.id = r.thread_id " +
             "WHERE r.author_id = #{authorId} " +
             "AND r.status = 'NORMAL' " +
-            "AND t.status <> 'DELETED'")
+            "AND t.status IN ('NORMAL', 'LOCKED')")
     Long selectVisibleCountByAuthorId(@Param("authorId") Long authorId);
 }

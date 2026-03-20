@@ -64,7 +64,7 @@ public class WfForumThread {
     private ForumThreadType threadType;
 
     /**
-     * 状态：NORMAL/LOCKED/DELETED
+     * 状态：DRAFT/NORMAL/LOCKED/DELETED/PURGED
      */
     private ForumThreadStatus status;
 
@@ -102,6 +102,11 @@ public class WfForumThread {
      * 最后回复时间
      */
     private LocalDateTime lastReplyTime;
+
+    /**
+     * 正文编辑时间（仅正文/媒体变更时更新）
+     */
+    private LocalDateTime editTime;
 
     private LocalDateTime createTime;
 

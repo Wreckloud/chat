@@ -38,8 +38,11 @@ public class UserHomeService {
     private static final long MIN_SIZE = 1L;
     private static final long MAX_SIZE = 50L;
     private static final int HOME_LATEST_THREAD_LIMIT = 3;
-    private static final String VIDEO_POSTER_PROCESS = "video/snapshot,t_1000,f_jpg,w_480,m_fast";
     private static final int THREAD_CONTENT_PREVIEW_MAX_LENGTH = 90;
+    private static final String THREAD_TAB_MINE = "mine";
+    private static final String THREAD_TAB_DRAFT = "draft";
+    private static final String THREAD_TAB_TRASH = "trash";
+    private static final int THREAD_SEARCH_KEYWORD_MAX_LENGTH = 40;
 
     private final UserService userService;
     private final WfFollowMapper wfFollowMapper;
@@ -91,9 +94,43 @@ public class UserHomeService {
 
         LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfForumThread::getAuthorId, targetUserId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED))
                 .orderByDesc(WfForumThread::getThreadType)
                 .orderByDesc(WfForumThread::getCreateTime)
+                .orderByDesc(WfForumThread::getId);
+
+        Page<WfForumThread> pageReq = new Page<>(page, size);
+        Page<WfForumThread> result = wfForumThreadMapper.selectPage(pageReq, queryWrapper);
+
+        UserHomeThreadPageVO pageVO = new UserHomeThreadPageVO();
+        pageVO.setList(mapThreads(result.getRecords()));
+        pageVO.setTotal(result.getTotal());
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        return pageVO;
+    }
+
+    /**
+     * 分页获取当前登录行者的主题（我的/草稿/垃圾站）
+     */
+    public UserHomeThreadPageVO listMyThreads(Long userId, String tab, String keyword, long page, long size) {
+        if (userId == null || page < MIN_PAGE || size < MIN_SIZE || size > MAX_SIZE) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        userService.getByIdOrThrow(userId);
+
+        String normalizedTab = normalizeThreadTab(tab);
+        String normalizedKeyword = normalizeThreadKeyword(keyword);
+
+        LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumThread::getAuthorId, userId);
+        applyThreadTabFilter(queryWrapper, normalizedTab);
+        if (StringUtils.hasText(normalizedKeyword)) {
+            queryWrapper.and(wrapper -> wrapper.like(WfForumThread::getTitle, normalizedKeyword)
+                    .or()
+                    .like(WfForumThread::getContent, normalizedKeyword));
+        }
+        queryWrapper.orderByDesc(WfForumThread::getUpdateTime)
                 .orderByDesc(WfForumThread::getId);
 
         Page<WfForumThread> pageReq = new Page<>(page, size);
@@ -110,7 +147,7 @@ public class UserHomeService {
     private List<UserHomeThreadVO> listLatestThreads(Long targetUserId, int limit) {
         LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfForumThread::getAuthorId, targetUserId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED)
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED))
                 .orderByDesc(WfForumThread::getThreadType)
                 .orderByDesc(WfForumThread::getCreateTime)
                 .orderByDesc(WfForumThread::getId)
@@ -139,6 +176,7 @@ public class UserHomeService {
             vo.setVideoPosterUrl(resolveVideoPosterUrl(thread));
             vo.setLastReplyTime(thread.getLastReplyTime());
             vo.setCreateTime(thread.getCreateTime());
+            vo.setEditTime(thread.getEditTime());
             return vo;
         }).collect(Collectors.toList());
     }
@@ -156,16 +194,10 @@ public class UserHomeService {
     }
 
     private String resolveVideoPosterUrl(WfForumThread thread) {
-        if (thread == null) {
+        if (thread == null || !StringUtils.hasText(thread.getVideoPosterKey())) {
             return null;
         }
-        if (StringUtils.hasText(thread.getVideoPosterKey())) {
-            return resolveMediaUrl(thread.getVideoPosterKey());
-        }
-        if (!StringUtils.hasText(thread.getVideoKey())) {
-            return null;
-        }
-        return null;
+        return resolveMediaUrl(thread.getVideoPosterKey());
     }
 
     private String resolveMediaUrl(String mediaKey) {
@@ -212,8 +244,44 @@ public class UserHomeService {
     private int countVisibleThreads(Long userId) {
         LambdaQueryWrapper<WfForumThread> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfForumThread::getAuthorId, userId)
-                .ne(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+                .in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED));
         return toSafeInt(wfForumThreadMapper.selectCount(queryWrapper));
+    }
+
+    private String normalizeThreadTab(String tab) {
+        if (!StringUtils.hasText(tab)) {
+            return THREAD_TAB_MINE;
+        }
+        String normalized = tab.trim().toLowerCase();
+        if (THREAD_TAB_MINE.equals(normalized)
+                || THREAD_TAB_DRAFT.equals(normalized)
+                || THREAD_TAB_TRASH.equals(normalized)) {
+            return normalized;
+        }
+        throw new BaseException(ErrorCode.PARAM_ERROR, "tab 参数不合法，仅支持 mine/draft/trash");
+    }
+
+    private String normalizeThreadKeyword(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return "";
+        }
+        String normalized = keyword.trim();
+        if (normalized.length() > THREAD_SEARCH_KEYWORD_MAX_LENGTH) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "关键词长度不能超过40个字符");
+        }
+        return normalized;
+    }
+
+    private void applyThreadTabFilter(LambdaQueryWrapper<WfForumThread> queryWrapper, String tab) {
+        if (THREAD_TAB_DRAFT.equals(tab)) {
+            queryWrapper.eq(WfForumThread::getStatus, ForumThreadStatus.DRAFT);
+            return;
+        }
+        if (THREAD_TAB_TRASH.equals(tab)) {
+            queryWrapper.eq(WfForumThread::getStatus, ForumThreadStatus.DELETED);
+            return;
+        }
+        queryWrapper.in(WfForumThread::getStatus, List.of(ForumThreadStatus.NORMAL, ForumThreadStatus.LOCKED));
     }
 
     private int calculateTotalLikeCount(Long userId) {

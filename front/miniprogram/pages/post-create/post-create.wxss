@@ -175,17 +175,6 @@
   display: block;
 }
 
-.media-video-poster-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24rpx;
-  color: var(--retro-muted-text);
-  background: var(--retro-theme-item-bg, rgba(255, 255, 255, 0.86));
-}
-
 .media-video-play-mask {
   position: absolute;
   inset: 0;
@@ -206,6 +195,43 @@
 
 .submit-btn {
   margin-top: 18rpx;
+}
+
+.submit-progress {
+  margin-top: 10rpx;
+}
+
+.submit-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  margin-bottom: 6rpx;
+}
+
+.submit-progress-text {
+  font-size: 21rpx;
+  line-height: 1.2;
+  color: var(--retro-muted-text);
+}
+
+.submit-progress-percent {
+  font-size: 21rpx;
+  line-height: 1.2;
+  color: var(--retro-link-text);
+}
+
+.submit-progress-track {
+  width: 100%;
+  height: 10rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-page-bg);
+  overflow: hidden;
+}
+
+.submit-progress-fill {
+  height: 100%;
+  background: var(--retro-link-text);
 }
 
 .theme-dark .post-create-page .field-label,

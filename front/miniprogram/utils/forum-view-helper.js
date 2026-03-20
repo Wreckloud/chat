@@ -12,6 +12,12 @@ function mapThread(rawThread, normalizeUser, time) {
   const hasVideo = !!videoUrl
   const contentPreview = typeof rawThread.contentPreview === 'string' ? rawThread.contentPreview.trim() : ''
   const previewImageUrls = imageUrls.slice(0, hasVideo ? 2 : 3)
+  const editTimeText = time.formatPostTime(rawThread.editTime)
+  const editTimeRelativeText = time.formatRelativeTime(rawThread.editTime)
+  const hasEditTime = !!editTimeText
+  const timePrefix = hasEditTime ? '编辑于' : '发布于'
+  const timeText = hasEditTime ? editTimeText : time.formatPostTime(rawThread.createTime)
+  const timeRelativeText = hasEditTime ? editTimeRelativeText : time.formatRelativeTime(rawThread.createTime)
   return {
     ...rawThread,
     viewCount,
@@ -37,6 +43,12 @@ function mapThread(rawThread, normalizeUser, time) {
     ),
     createTimeRelativeText: time.formatRelativeTime(rawThread.createTime),
     createTimeText: time.formatPostTime(rawThread.createTime),
+    editTimeRelativeText,
+    editTimeText,
+    hasEditTime,
+    timePrefix,
+    timeText,
+    timeRelativeText,
     lastReplyTimeText: time.formatPostTime(rawThread.lastReplyTime)
   }
 }

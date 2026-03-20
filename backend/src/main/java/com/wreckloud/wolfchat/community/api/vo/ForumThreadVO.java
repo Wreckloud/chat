@@ -67,6 +67,9 @@ public class ForumThreadVO {
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
+    @Schema(description = "编辑时间（未编辑为空）")
+    private LocalDateTime editTime;
+
     @Schema(description = "作者")
     private UserBriefVO author;
 

@@ -120,10 +120,9 @@
           <text class="thread-title">{{item.title}}</text>
         </view>
         <view wx:if="{{item.contentPreview}}" class="thread-excerpt">{{item.contentPreview}}</view>
-        <view wx:if="{{item.hasVideo || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
-          <view wx:if="{{item.hasVideo}}" class="thread-media-cell thread-media-video">
-            <image wx:if="{{item.videoPosterUrl}}" class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
-            <view wx:else class="thread-media-fallback">视频</view>
+        <view wx:if="{{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
+          <view wx:if="{{item.videoPosterUrl}}" class="thread-media-cell thread-media-video">
+            <image class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
             <view class="thread-media-video-mask">
               <view class="thread-media-video-icon"></view>
             </view>
@@ -146,7 +145,7 @@
           <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
         </view>
         <view class="thread-time-row">
-          <text>{{item.createTimeText}}</text>
+          <text>{{item.timePrefix}} {{item.timeText || '--'}}</text>
         </view>
       </view>
     </view>

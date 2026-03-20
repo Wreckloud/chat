@@ -105,7 +105,7 @@
                 </view>
               </view>
               <view class="thread-meta-line">
-                <text class="thread-time">{{thread.createTimeText}}</text>
+                <text class="thread-time">{{thread.timePrefix}} {{thread.timeText || '--'}}</text>
                 <text class="thread-info-sep">/</text>
                 <text class="thread-stat">赞 {{thread.likeCount || 0}} / 回 {{thread.replyCount}} / 阅 {{thread.viewCount}}</text>
               </view>
@@ -137,7 +137,6 @@
             src="{{thread.videoPosterUrl}}"
             mode="aspectFill"
             lazy-load="{{true}}" />
-          <view wx:else class="thread-video-poster-fallback">视频</view>
           <view class="thread-video-play-mask">
             <view class="thread-video-play-icon"></view>
           </view>
@@ -148,6 +147,7 @@
             <view class="thread-like-btn" bindtap="handleToggleThreadLike">
               <text class="thread-like-label {{thread.likedByCurrentUser ? 'thread-like-label-liked' : ''}}">{{thread.likedByCurrentUser ? '已赞' : '点赞'}}</text>
             </view>
+            <text wx:if="{{canManageThread}}" class="manage-btn" bindtap="goEditThread">编辑</text>
           </view>
           <view wx:if="{{canManageThread}}" class="thread-danger-actions">
             <text class="manage-btn danger" bindtap="handleDeleteThread">删帖</text>

@@ -12,6 +12,11 @@ import lombok.Getter;
 @Getter
 public enum ForumThreadStatus {
     /**
+     * 草稿
+     */
+    DRAFT("DRAFT"),
+
+    /**
      * 正常
      */
     NORMAL("NORMAL"),
@@ -22,9 +27,14 @@ public enum ForumThreadStatus {
     LOCKED("LOCKED"),
 
     /**
-     * 已删除
+     * 已删除（垃圾站）
      */
-    DELETED("DELETED");
+    DELETED("DELETED"),
+
+    /**
+     * 已彻底删除（逻辑删除，用户不可见）
+     */
+    PURGED("PURGED");
 
     @EnumValue
     @JsonValue

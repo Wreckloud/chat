@@ -1,12 +1,86 @@
+@import "../../styles/topbar.wxss";
+
 .user-posts-page {
   min-height: 100vh;
-  padding: 12rpx;
+  padding: 0;
   background: var(--retro-page-bg);
   color: var(--retro-page-text);
-  box-sizing: border-box;
+}
+
+.tab-strip {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: 0 12rpx;
+  padding: 10rpx 0 6rpx;
+}
+
+.tab-list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.tab-item {
+  height: 50rpx;
+  padding: 0 16rpx;
+  line-height: 50rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  font-size: 23rpx;
+  color: var(--retro-muted-text);
+}
+
+.tab-item-active {
+  border-color: var(--retro-accent-color);
+  color: var(--retro-page-text);
+  background: var(--retro-tab-active-bg);
+}
+
+.tab-search {
+  width: 250rpx;
+  height: 50rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  display: flex;
+  align-items: center;
+}
+
+.tab-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 50rpx;
+  padding: 0 10rpx;
+  font-size: 22rpx;
+  color: var(--retro-page-text);
+}
+
+.tab-search-action {
+  width: 52rpx;
+  height: 50rpx;
+  border-left: 1rpx solid var(--retro-panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-tool-icon {
+  width: 26rpx;
+  height: 26rpx;
+  opacity: 0.9;
+}
+
+.tab-tool-icon-search {
+  width: 30rpx;
+  height: 30rpx;
 }
 
 .thread-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 12rpx 20rpx;
   border: 1rpx solid var(--retro-panel-border);
   background: var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
@@ -56,10 +130,20 @@
   white-space: nowrap;
 }
 
-.thread-sticky-action {
+.thread-row-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.thread-action-link {
   font-size: 20rpx;
   color: var(--retro-link-text);
+}
+
+.thread-action-danger {
+  color: var(--retro-btn-danger-border);
 }
 
 .thread-excerpt {
@@ -96,17 +180,6 @@
 .thread-media-image {
   width: 100%;
   height: 100%;
-}
-
-.thread-media-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22rpx;
-  color: var(--retro-muted-text);
-  background: var(--retro-theme-item-bg);
 }
 
 .thread-media-video-mask {
@@ -155,3 +228,4 @@
   font-size: 21rpx;
   color: var(--retro-muted-text);
 }
+

@@ -1,7 +1,7 @@
 <view class="post-create-page {{themeClass}}">
   <view class="editor-toolbar retro-topbar">
-    <view class="title retro-topbar-title">发布主题</view>
-    <view class="hint retro-topbar-meta">标题 120 字内</view>
+    <view class="title retro-topbar-title">{{pageTitle}}</view>
+    <view class="hint retro-topbar-meta">{{pageHint}}</view>
   </view>
 
   <view class="editor-body">
@@ -77,12 +77,12 @@
       </view>
 
       <view wx:if="{{mediaImages.length > 0}}" class="media-image-grid">
-        <view wx:for="{{mediaImages}}" wx:key="path" class="media-image-item">
+        <view wx:for="{{mediaImages}}" wx:key="previewUrl" class="media-image-item">
           <image
             class="media-image"
-            src="{{item.path}}"
+            src="{{item.previewUrl}}"
             mode="aspectFill"
-            data-url="{{item.path}}"
+            data-url="{{item.previewUrl}}"
             bindtap="previewThreadImage" />
           <view class="media-remove" data-index="{{index}}" bindtap="removeThreadImage">×</view>
         </view>
@@ -90,11 +90,10 @@
 
       <view wx:if="{{mediaVideo}}" class="media-video-card" bindtap="previewThreadVideo">
         <image
-          wx:if="{{mediaVideo.posterPath}}"
+          wx:if="{{mediaVideo.posterPreviewUrl}}"
           class="media-video-poster"
-          src="{{mediaVideo.posterPath}}"
+          src="{{mediaVideo.posterPreviewUrl}}"
           mode="aspectFill" />
-        <view wx:else class="media-video-poster-fallback">视频</view>
         <view class="media-video-play-mask">
           <view class="media-video-play-icon"></view>
         </view>
@@ -108,8 +107,17 @@
         disabled="{{!canSubmit}}"
         loading="{{loading}}"
         bindtap="handleSubmit">
-        发布
+        {{submitButtonText}}
       </retro-button>
+      <view wx:if="{{loading && uploadProgressText}}" class="submit-progress">
+        <view class="submit-progress-head">
+          <text class="submit-progress-text">{{uploadProgressText}}</text>
+          <text class="submit-progress-percent">{{uploadProgressPercent}}%</text>
+        </view>
+        <view class="submit-progress-track">
+          <view class="submit-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
+        </view>
+      </view>
     </view>
   </view>
 </view>
