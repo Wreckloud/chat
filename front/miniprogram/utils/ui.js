@@ -31,7 +31,7 @@ const ACTIONABLE_BUSINESS_MESSAGE_BY_CODE = {
   3011: '无权访问该会话',
   3012: '消息内容不能为空',
   3013: '暂不支持该文件类型',
-  3014: '媒体文件无效，请重新选择',
+  3014: '媒体文件超过上传限制，请压缩后重试',
   3015: '文件服务暂不可用，请稍后重试',
   3016: '主题不存在或已删除',
   3017: '主题已锁定，暂不可回复',
@@ -61,6 +61,12 @@ function resolveErrorMessage(error, fallback, options = {}) {
   const code = normalizeErrorCode(error)
   if (LOGIN_ERROR_CODES.has(code)) {
     return LOGIN_ERROR_MESSAGE
+  }
+  if (code === 3014) {
+    if (error && typeof error.message === 'string' && error.message.trim()) {
+      return error.message.trim()
+    }
+    return ACTIONABLE_BUSINESS_MESSAGE_BY_CODE[3014]
   }
   if (code > 0 && Object.prototype.hasOwnProperty.call(ACTIONABLE_BUSINESS_MESSAGE_BY_CODE, code)) {
     return ACTIONABLE_BUSINESS_MESSAGE_BY_CODE[code]

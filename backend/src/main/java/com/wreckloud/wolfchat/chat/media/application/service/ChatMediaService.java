@@ -72,7 +72,7 @@ public class ChatMediaService {
                 "暂不支持该图片格式",
                 mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
-                "图片大小超过上传限制",
+                buildExceedSizeMessage("图片", mediaStorageConfig.getMaxImageSizeBytes()),
                 this::validateImageMimeIfPresent
         );
     }
@@ -89,7 +89,7 @@ public class ChatMediaService {
                 "暂不支持该视频格式",
                 mediaStorageConfig.getMaxVideoSizeBytes(),
                 "视频上传大小上限未配置",
-                "视频大小超过上传限制",
+                buildExceedSizeMessage("视频", mediaStorageConfig.getMaxVideoSizeBytes()),
                 this::validateVideoMimeIfPresentIgnoreExtension
         );
     }
@@ -102,7 +102,7 @@ public class ChatMediaService {
         validateFileExtension(extension);
         validateFileMimeIfPresent(dto.getMimeType());
         Long maxSizeBytes = requireLimit(mediaStorageConfig.getMaxFileSizeBytes(), "文件上传大小上限未配置");
-        validateMediaSize(dto.getSize(), maxSizeBytes, "文件大小超过上传限制");
+        validateMediaSize(dto.getSize(), maxSizeBytes, buildExceedSizeMessage("文件", maxSizeBytes));
 
         String wolfNo = getWolfNoByUserId(userId);
         String objectKey = buildObjectKey(CATEGORY_CHAT_FILE, wolfNo, extension);
@@ -121,7 +121,7 @@ public class ChatMediaService {
                 "暂不支持该图片格式",
                 mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
-                "图片大小超过上传限制",
+                buildExceedSizeMessage("图片", mediaStorageConfig.getMaxImageSizeBytes()),
                 this::validateImageMimeIfPresent
         );
     }
@@ -138,7 +138,7 @@ public class ChatMediaService {
                 "暂不支持该视频格式",
                 mediaStorageConfig.getMaxVideoSizeBytes(),
                 "视频上传大小上限未配置",
-                "视频大小超过上传限制",
+                buildExceedSizeMessage("视频", mediaStorageConfig.getMaxVideoSizeBytes()),
                 this::validateVideoMimeIfPresentIgnoreExtension
         );
     }
@@ -155,7 +155,7 @@ public class ChatMediaService {
                 "暂不支持该图片格式",
                 mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
-                "图片大小超过上传限制",
+                buildExceedSizeMessage("图片", mediaStorageConfig.getMaxImageSizeBytes()),
                 this::validateImageMimeIfPresent
         );
     }
@@ -227,7 +227,7 @@ public class ChatMediaService {
                 "暂不支持该图片格式",
                 mediaStorageConfig.getMaxImageSizeBytes(),
                 "图片上传大小上限未配置",
-                "图片大小超过上传限制",
+                buildExceedSizeMessage("图片", mediaStorageConfig.getMaxImageSizeBytes()),
                 "图片宽度不合法",
                 "图片高度不合法",
                 this::validateImageMimeIfPresent
@@ -248,7 +248,7 @@ public class ChatMediaService {
                 "暂不支持该视频格式",
                 mediaStorageConfig.getMaxVideoSizeBytes(),
                 "视频上传大小上限未配置",
-                "视频大小超过上传限制",
+                buildExceedSizeMessage("视频", mediaStorageConfig.getMaxVideoSizeBytes()),
                 "视频宽度不合法",
                 "视频高度不合法",
                 this::validateVideoMimeIfPresentIgnoreExtension
@@ -283,7 +283,7 @@ public class ChatMediaService {
         validateMediaSize(
                 command.getMediaSize(),
                 requireLimit(mediaStorageConfig.getMaxFileSizeBytes(), "文件上传大小上限未配置"),
-                "文件大小超过上传限制"
+                buildExceedSizeMessage("文件", mediaStorageConfig.getMaxFileSizeBytes())
         );
         if (command.getMediaWidth() != null || command.getMediaHeight() != null) {
             throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, "文件消息不支持宽高字段");
@@ -398,6 +398,40 @@ public class ChatMediaService {
         if (size > maxSizeBytes) {
             throw new BaseException(ErrorCode.MEDIA_FILE_INVALID, exceedMessage);
         }
+    }
+
+    private String buildExceedSizeMessage(String mediaLabel, Long maxSizeBytes) {
+        String normalizedLabel = StringUtils.hasText(mediaLabel) ? mediaLabel : "文件";
+        if (maxSizeBytes == null || maxSizeBytes <= 0L) {
+            return normalizedLabel + "大小超过上传限制";
+        }
+        return String.format(
+                Locale.ROOT,
+                "%s大小超过上传限制（上限 %s）",
+                normalizedLabel,
+                formatSize(maxSizeBytes)
+        );
+    }
+
+    private String formatSize(long bytes) {
+        if (bytes >= 1024L * 1024L * 1024L) {
+            return formatDecimal(bytes / (1024d * 1024d * 1024d), "GB");
+        }
+        if (bytes >= 1024L * 1024L) {
+            return formatDecimal(bytes / (1024d * 1024d), "MB");
+        }
+        if (bytes >= 1024L) {
+            return formatDecimal(bytes / 1024d, "KB");
+        }
+        return bytes + "B";
+    }
+
+    private String formatDecimal(double value, String unit) {
+        double rounded = Math.round(value * 10d) / 10d;
+        if (Math.abs(rounded - Math.rint(rounded)) < 0.0001d) {
+            return String.format(Locale.ROOT, "%.0f%s", rounded, unit);
+        }
+        return String.format(Locale.ROOT, "%.1f%s", rounded, unit);
     }
 
     private void validatePositiveDimension(Integer value, String errorMessage) {

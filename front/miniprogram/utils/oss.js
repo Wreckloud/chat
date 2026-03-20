@@ -33,6 +33,11 @@ const FILE_MIME_MAPPING = {
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 }
 const FILE_EXTENSION_PATTERN = /^[a-z0-9]{1,20}$/
+const MEDIA_SIZE_EXCEED_CODE = 3014
+const IMAGE_SOFT_COMPRESS_TRIGGER_BYTES = 2 * 1024 * 1024
+const IMAGE_SOFT_COMPRESS_QUALITY = 90
+const IMAGE_SOFT_COMPRESS_MIN_REDUCTION_RATIO = 0.08
+const IMAGE_HARD_COMPRESS_QUALITY_STEPS = [86, 78, 70, 62, 54]
 
 function toExposedUploadError(error, fallbackMessage) {
   if (error && (error.kind === 'business' || error.kind === 'network' || error.kind === 'http' || error.code)) {
@@ -106,6 +111,59 @@ function getFileInfo(filePath) {
   })
 }
 
+function compressImage(filePath, quality) {
+  return new Promise((resolve, reject) => {
+    wx.compressImage({
+      src: filePath,
+      quality,
+      success: resolve,
+      fail: reject
+    })
+  })
+}
+
+function toBytesByUnit(number, unit) {
+  const value = Number(number)
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0
+  }
+  const normalizedUnit = String(unit || 'B').toUpperCase()
+  if (normalizedUnit === 'GB') {
+    return Math.floor(value * 1024 * 1024 * 1024)
+  }
+  if (normalizedUnit === 'MB') {
+    return Math.floor(value * 1024 * 1024)
+  }
+  if (normalizedUnit === 'KB') {
+    return Math.floor(value * 1024)
+  }
+  return Math.floor(value)
+}
+
+function parseLimitBytesFromErrorMessage(message) {
+  const text = String(message || '')
+  if (!text) {
+    return 0
+  }
+  const preferredMatch = text.match(/上限\s*([0-9]+(?:\.[0-9]+)?)\s*(B|KB|MB|GB)/i)
+  if (preferredMatch) {
+    return toBytesByUnit(preferredMatch[1], preferredMatch[2])
+  }
+  const fallbackMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(B|KB|MB|GB)/i)
+  if (!fallbackMatch) {
+    return 0
+  }
+  return toBytesByUnit(fallbackMatch[1], fallbackMatch[2])
+}
+
+function isMediaSizeExceedError(error) {
+  if (!error) {
+    return false
+  }
+  return Number(error.code) === MEDIA_SIZE_EXCEED_CODE
+    || String(error.message || '').includes('超过上传限制')
+}
+
 function resolveLocalFilePath(file) {
   if (!file) {
     return ''
@@ -132,10 +190,11 @@ async function uploadVideoPosterOrThrow(posterTempFilePath, policyPath) {
   if (!posterTempFilePath) {
     throw new Error('未获取到视频封面，请重新选择视频')
   }
-  const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
-  const posterPolicy = await applyUploadPolicy(policyPath, posterMeta)
-  await uploadFileByPolicy(posterPolicy, posterMeta.filePath, '视频封面')
-  return posterPolicy.objectKey
+  const uploadResult = await uploadImageByPolicy(
+    policyPath,
+    { tempFilePath: posterTempFilePath }
+  )
+  return uploadResult.policy.objectKey
 }
 
 async function resolveImageUploadMeta(tempFile) {
@@ -190,6 +249,64 @@ async function resolveImageUploadMeta(tempFile) {
     width,
     height
   }
+}
+
+async function tryCompressImageMeta(meta, quality) {
+  if (!meta || !meta.filePath) {
+    return null
+  }
+  try {
+    const compressed = await compressImage(meta.filePath, quality)
+    if (!compressed || !compressed.tempFilePath) {
+      return null
+    }
+    const compressedMeta = await resolveImageUploadMeta({ tempFilePath: compressed.tempFilePath })
+    if (!compressedMeta || !compressedMeta.filePath) {
+      return null
+    }
+    return compressedMeta
+  } catch (error) {
+    return null
+  }
+}
+
+async function maybeAutoCompressImageMeta(meta) {
+  if (!meta || !meta.filePath) {
+    return meta
+  }
+  if (meta.size < IMAGE_SOFT_COMPRESS_TRIGGER_BYTES) {
+    return meta
+  }
+  const compressedMeta = await tryCompressImageMeta(meta, IMAGE_SOFT_COMPRESS_QUALITY)
+  if (!compressedMeta || compressedMeta.size >= meta.size) {
+    return meta
+  }
+  const reductionRatio = (meta.size - compressedMeta.size) / meta.size
+  if (reductionRatio < IMAGE_SOFT_COMPRESS_MIN_REDUCTION_RATIO) {
+    return meta
+  }
+  return compressedMeta
+}
+
+async function compressImageMetaToTarget(meta, targetMaxSizeBytes) {
+  if (!meta || !meta.filePath) {
+    return meta
+  }
+  if (!Number.isFinite(targetMaxSizeBytes) || targetMaxSizeBytes <= 0 || meta.size <= targetMaxSizeBytes) {
+    return meta
+  }
+  let bestMeta = meta
+  for (const quality of IMAGE_HARD_COMPRESS_QUALITY_STEPS) {
+    const compressedMeta = await tryCompressImageMeta(bestMeta, quality)
+    if (!compressedMeta || compressedMeta.size >= bestMeta.size) {
+      continue
+    }
+    bestMeta = compressedMeta
+    if (bestMeta.size <= targetMaxSizeBytes) {
+      return bestMeta
+    }
+  }
+  return bestMeta
 }
 
 async function resolveVideoUploadMeta(tempFile) {
@@ -368,11 +485,38 @@ async function applyUploadPolicy(path, meta) {
   return policyRes.data
 }
 
+async function uploadImageByPolicy(policyPath, tempFile, options = {}) {
+  let meta = await resolveImageUploadMeta(tempFile)
+  meta = await maybeAutoCompressImageMeta(meta)
+  try {
+    const policy = await applyUploadPolicy(policyPath, meta)
+    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
+    return {
+      policy,
+      meta
+    }
+  } catch (error) {
+    if (!isMediaSizeExceedError(error)) {
+      throw error
+    }
+    const maxSizeBytes = parseLimitBytesFromErrorMessage(error.message)
+    const compressedMeta = await compressImageMetaToTarget(meta, maxSizeBytes)
+    if (!compressedMeta || compressedMeta.size >= meta.size) {
+      throw error
+    }
+    const retryPolicy = await applyUploadPolicy(policyPath, compressedMeta)
+    await uploadFileByPolicy(retryPolicy, compressedMeta.filePath, '图片', options)
+    return {
+      policy: retryPolicy,
+      meta: compressedMeta
+    }
+  }
+}
+
 async function uploadChatImage(tempFile, options = {}) {
   try {
-    const meta = await resolveImageUploadMeta(tempFile)
-    const policy = await applyUploadPolicy('/media/chat/image/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
+    const uploadResult = await uploadImageByPolicy('/media/chat/image/upload-policy', tempFile, options)
+    const { policy, meta } = uploadResult
 
     return {
       mediaKey: policy.objectKey,
@@ -433,9 +577,8 @@ async function uploadChatFile(tempFile, options = {}) {
 
 async function uploadForumThreadImage(tempFile, options = {}) {
   try {
-    const meta = await resolveImageUploadMeta(tempFile)
-    const policy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
+    const uploadResult = await uploadImageByPolicy('/media/forum/thread/image/upload-policy', tempFile, options)
+    const { policy, meta } = uploadResult
     return {
       mediaKey: policy.objectKey,
       mediaWidth: meta.width,
@@ -474,9 +617,8 @@ async function uploadForumThreadVideo(tempFile, options = {}) {
 
 async function uploadForumReplyImage(tempFile, options = {}) {
   try {
-    const meta = await resolveImageUploadMeta(tempFile)
-    const policy = await applyUploadPolicy('/media/forum/reply/image/upload-policy', meta)
-    await uploadFileByPolicy(policy, meta.filePath, '图片', options)
+    const uploadResult = await uploadImageByPolicy('/media/forum/reply/image/upload-policy', tempFile, options)
+    const { policy, meta } = uploadResult
     return {
       mediaKey: policy.objectKey,
       mediaWidth: meta.width,

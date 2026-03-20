@@ -73,8 +73,8 @@ wolfchat:
     upload-policy-expire-seconds: 300
     # 签名访问地址有效期（秒）
     download-url-expire-seconds: 86400
-    # 聊天图片大小上限（5MB）
-    max-image-size-bytes: 5242880
+    # 聊天/社区图片大小上限（12MB）
+    max-image-size-bytes: 12582912
     # 聊天视频大小上限（30MB）
     max-video-size-bytes: 31457280
     # 聊天文件大小上限（20MB）
