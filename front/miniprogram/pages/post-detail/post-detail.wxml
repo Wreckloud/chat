@@ -215,7 +215,7 @@
             theme="default"
             size="medium"
             disabled="{{replySubmitting}}"
-            bind:tap="chooseReplyImage">
+            bindtap="chooseReplyImage">
             图片
           </retro-button>
           <retro-button
@@ -223,7 +223,7 @@
             theme="primary"
             size="medium"
             disabled="{{!canReplySubmit}}"
-            bind:tap="onReplySubmitTap">
+            bindtap="onReplySubmitTap">
             {{replySubmitting ? '提交中' : '回帖'}}
           </retro-button>
         </view>

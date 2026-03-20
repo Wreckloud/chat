@@ -72,6 +72,10 @@ function resolveHasMoreByTotal(currentSize, total) {
 }
 
 function mapReply(rawReply, normalizeUser, time, options = {}) {
+  const rawReplyId = Number(rawReply && rawReply.replyId)
+  const replyId = Number.isFinite(rawReplyId) && rawReplyId > 0 ? rawReplyId : 0
+  const rawQuoteReplyId = Number(rawReply && rawReply.quoteReplyId)
+  const quoteReplyId = Number.isFinite(rawQuoteReplyId) && rawQuoteReplyId > 0 ? rawQuoteReplyId : 0
   const author = attachDisplayTitle(
     normalizeUser(rawReply.author) || {},
     rawReply.author && rawReply.author.equippedTitleName,
@@ -80,9 +84,9 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
   const currentUserId = Number(options.currentUserId) || 0
   const canManageThread = options.canManageThread === true
   const likeCount = Number(rawReply.likeCount) || 0
-  const quoteReplyId = Number(rawReply.quoteReplyId) || 0
   return {
     ...rawReply,
+    replyId,
     likeCount,
     imageUrl: typeof rawReply.imageUrl === 'string' ? rawReply.imageUrl : '',
     likedByCurrentUser: rawReply.likedByCurrentUser === true,

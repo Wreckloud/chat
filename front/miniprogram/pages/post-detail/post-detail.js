@@ -81,8 +81,21 @@ function buildReplyTree(replies) {
   if (!Array.isArray(replies) || replies.length === 0) {
     return []
   }
+  const normalizedReplies = replies.map(item => {
+    const replyId = Number(item && item.replyId)
+    const quoteReplyId = Number(item && item.quoteReplyId)
+    return {
+      ...item,
+      replyId: Number.isFinite(replyId) && replyId > 0 ? replyId : 0,
+      quoteReplyId: Number.isFinite(quoteReplyId) && quoteReplyId > 0 ? quoteReplyId : 0
+    }
+  })
+  if (normalizedReplies.some(item => item.replyId <= 0)) {
+    throw new Error('回复数据缺少 replyId')
+  }
+
   const nodeMap = new Map()
-  replies.forEach(item => {
+  normalizedReplies.forEach(item => {
     const node = {
       ...item,
       children: []
@@ -91,7 +104,7 @@ function buildReplyTree(replies) {
   })
 
   const childReplyIdSet = new Set()
-  replies.forEach(item => {
+  normalizedReplies.forEach(item => {
     const node = nodeMap.get(Number(item.replyId))
     const quoteReplyId = Number(item.quoteReplyId) || 0
     if (!quoteReplyId) {
@@ -107,7 +120,7 @@ function buildReplyTree(replies) {
   })
 
   const roots = []
-  replies.forEach(item => {
+  normalizedReplies.forEach(item => {
     const replyId = Number(item.replyId)
     if (childReplyIdSet.has(replyId)) {
       return
@@ -284,7 +297,11 @@ Page({
         size: this.data.replySize,
         sort: replySort
       })
-      const list = (res.data.list || []).map(item => (
+      const payload = res.data || {}
+      if (!Array.isArray(payload.list)) {
+        throw new Error('回复列表数据格式异常')
+      }
+      const list = payload.list.map(item => (
         forumViewHelper.mapReply(item, normalizeUser, time, {
           currentUserId: this.data.currentUserId,
           canManageThread: this.data.canManageThread
@@ -292,7 +309,7 @@ Page({
       ))
       const mergedReplies = forumViewHelper.mergePagedList(this.data.replies, list, reset)
       const replyTree = buildReplyTree(mergedReplies)
-      const total = Number(res.data.total) || 0
+      const total = Number(payload.total) || 0
       const hasMore = forumViewHelper.resolveHasMoreByTotal(mergedReplies.length, total)
       const replyTarget = findReplyById(mergedReplies, this.data.replyTargetId)
       this.setData({
@@ -591,7 +608,18 @@ Page({
         })
         payload.imageKey = media.mediaKey
       }
-      await request.post(`/forum/threads/${this.data.threadId}/replies`, payload)
+      const createdRes = await request.post(`/forum/threads/${this.data.threadId}/replies`, payload)
+      const createdRawReply = createdRes.data
+      if (!createdRawReply) {
+        throw new Error('回帖响应缺少数据')
+      }
+      const createdReply = forumViewHelper.mapReply(createdRawReply, normalizeUser, time, {
+        currentUserId: this.data.currentUserId,
+        canManageThread: this.data.canManageThread
+      })
+      if (!createdReply.replyId) {
+        throw new Error('回帖响应缺少 replyId')
+      }
       this.setData({
         replyContent: '',
         replyImage: null,
@@ -599,10 +627,8 @@ Page({
       }, () => {
         postReplyLayoutHelper.measureReplyDockHeight(this)
       })
-      await Promise.all([
-        this.loadThreadDetail(),
-        this.loadReplies({ reset: true, notifyError: false })
-      ])
+      await this.loadThreadDetail()
+      this.appendCreatedReply(createdReply)
     } catch (error) {
       toastError(error, hasImage ? '图片回帖失败' : '回帖失败')
     } finally {
@@ -734,6 +760,30 @@ Page({
 
   onReachBottom() {
     this.loadMoreReplies()
+  },
+
+  appendCreatedReply(createdReply) {
+    const currentReplies = Array.isArray(this.data.replies) ? this.data.replies : []
+    const deduped = currentReplies.filter(item => Number(item.replyId) !== Number(createdReply.replyId))
+    let nextReplies = deduped
+
+    if (this.data.replySort === 'author') {
+      const threadAuthorId = Number(this.data.thread && this.data.thread.author && this.data.thread.author.userId) || 0
+      const createdAuthorId = Number(createdReply.author && createdReply.author.userId) || 0
+      if (threadAuthorId > 0 && threadAuthorId === createdAuthorId) {
+        nextReplies = [...deduped, createdReply]
+      }
+    } else {
+      nextReplies = [...deduped, createdReply]
+    }
+
+    const nextReplyTree = buildReplyTree(nextReplies)
+    this.setData({
+      replies: nextReplies,
+      replyTree: nextReplyTree
+    }, () => {
+      this.scrollReplyListToBottom()
+    })
   },
 
   refocusReplyInput() {
