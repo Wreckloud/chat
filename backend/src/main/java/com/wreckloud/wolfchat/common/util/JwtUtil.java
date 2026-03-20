@@ -31,8 +31,20 @@ public class JwtUtil {
      * @return JWT token
      */
     public String generateToken(Long userId) {
+        return generateToken(userId, 0L);
+    }
+
+    /**
+     * 生成 JWT token
+     *
+     * @param userId 行者ID
+     * @param passwordVersion 密码版本（秒级时间戳）
+     * @return JWT token
+     */
+    public String generateToken(Long userId, Long passwordVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("pwdVer", passwordVersion == null ? 0L : passwordVersion);
         return createToken(claims);
     }
 
@@ -78,11 +90,18 @@ public class JwtUtil {
         if (claims == null) {
             return null;
         }
-        Object userId = claims.get("userId");
-        if (userId instanceof Integer) {
-            return ((Integer) userId).longValue();
+        return readLongClaim(claims, "userId");
+    }
+
+    /**
+     * 从 token 中获取密码版本
+     */
+    public Long getPasswordVersionFromToken(String token) {
+        Claims claims = getClaimsFromToken(token);
+        if (claims == null) {
+            return null;
         }
-        return (Long) userId;
+        return readLongClaim(claims, "pwdVer");
     }
 
     /**
@@ -95,6 +114,20 @@ public class JwtUtil {
         }
         Date expiration = claims.getExpiration();
         return expiration.after(new Date());
+    }
+
+    private Long readLongClaim(Claims claims, String claimKey) {
+        if (claims == null || claimKey == null) {
+            return null;
+        }
+        Object claimValue = claims.get(claimKey);
+        if (claimValue instanceof Integer) {
+            return ((Integer) claimValue).longValue();
+        }
+        if (claimValue instanceof Long) {
+            return (Long) claimValue;
+        }
+        return null;
     }
 }
 

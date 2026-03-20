@@ -44,7 +44,14 @@ public class JwtInterceptor implements HandlerInterceptor {
         if (userId == null) {
             throw new BaseException(ErrorCode.TOKEN_INVALID);
         }
+        Long tokenPasswordVersion = jwtUtil.getPasswordVersionFromToken(token);
+        if (tokenPasswordVersion == null) {
+            throw new BaseException(ErrorCode.TOKEN_INVALID);
+        }
         if (!sessionUserService.isSessionUserExists(userId)) {
+            throw new BaseException(ErrorCode.TOKEN_INVALID);
+        }
+        if (!sessionUserService.isPasswordVersionMatched(userId, tokenPasswordVersion)) {
             throw new BaseException(ErrorCode.TOKEN_INVALID);
         }
         UserContext.setUserId(userId);

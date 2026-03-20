@@ -103,8 +103,8 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%p][%c][%M][%L]-> %m%n</pattern>
         </encoder>
 
-        <!-- append=false：重启日志时是否覆盖旧文件（一般设 true 保留） -->
-        <append>false</append>
+        <!-- append=true：重启时追加写入，保留历史审计日志 -->
+        <append>true</append>
 
         <!-- prudent=false：是否启用安全写模式（一般 dev 不启用） -->
         <prudent>false</prudent>

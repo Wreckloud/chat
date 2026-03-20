@@ -62,6 +62,7 @@ public class EmailVerifyLinkService {
     private final StringRedisTemplate stringRedisTemplate;
     private final EmailSendLimitService emailSendLimitService;
     private final EmailVerifyLinkConfig emailVerifyLinkConfig;
+    private final EmailDeliveryService emailDeliveryService;
 
     /**
      * 发送绑定邮箱认证链接
@@ -82,7 +83,13 @@ public class EmailVerifyLinkService {
         ops.set(tokenKey, payload, Duration.ofMinutes(VERIFY_LINK_EXPIRE_MINUTES));
 
         String verifyLink = buildVerifyLink(token);
-        log.info("邮箱认证链接已生成: userId={}, email={}, link={}", userId, normalizedEmail, verifyLink);
+        try {
+            emailDeliveryService.sendVerifyLink(normalizedEmail, verifyLink, VERIFY_LINK_EXPIRE_MINUTES);
+        } catch (Exception e) {
+            stringRedisTemplate.delete(tokenKey);
+            throw e;
+        }
+        log.info("邮箱认证链接发送成功: userId={}, email={}", userId, normalizedEmail);
     }
 
     /**

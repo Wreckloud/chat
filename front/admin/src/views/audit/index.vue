@@ -25,6 +25,40 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="登录日志" name="login">
+          <div class="risk-overview">
+            <div class="risk-item">
+              <div class="risk-label">账号锁定</div>
+              <div class="risk-value">{{ riskOverview.accountLockCount }}</div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-label">IP锁定</div>
+              <div class="risk-value">{{ riskOverview.ipLockCount }}</div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-label">账号失败桶</div>
+              <div class="risk-value">{{ riskOverview.accountFailBucketCount }}</div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-label">IP失败桶</div>
+              <div class="risk-value">{{ riskOverview.ipFailBucketCount }}</div>
+            </div>
+            <el-button :loading="loadingRiskOverview" @click="loadLoginRiskOverview">刷新风控</el-button>
+          </div>
+
+          <div class="risk-check-wrap">
+            <el-input v-model="riskQuery.account" placeholder="输入账号（狼藉号或邮箱）" clearable />
+            <el-input v-model="riskQuery.ip" placeholder="输入IP" clearable />
+            <el-button type="primary" :loading="checkingRisk" @click="handleCheckRisk">检测</el-button>
+          </div>
+          <div v-if="riskCheck" class="risk-check-result">
+            <span>账号锁定: <b>{{ riskCheck.accountLocked ? '是' : '否' }}</b></span>
+            <span>账号锁定剩余: <b>{{ riskCheck.accountLockTtlSeconds }}s</b></span>
+            <span>账号失败次数: <b>{{ riskCheck.accountFailCount }}</b></span>
+            <span>IP锁定: <b>{{ riskCheck.ipLocked ? '是' : '否' }}</b></span>
+            <span>IP锁定剩余: <b>{{ riskCheck.ipLockTtlSeconds }}s</b></span>
+            <span>IP失败次数: <b>{{ riskCheck.ipFailCount }}</b></span>
+          </div>
+
           <el-table :data="loginRows" v-loading="loadingLogins" stripe>
             <el-table-column prop="logId" label="日志ID" width="90" />
             <el-table-column prop="accountMask" label="账号" min-width="180" />
@@ -54,13 +88,31 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { fetchActionLogPage, fetchLoginLogPage } from '@/api/audit'
+import {
+  checkLoginRisk,
+  fetchActionLogPage,
+  fetchLoginLogPage,
+  fetchLoginRiskOverview
+} from '@/api/audit'
 
 const activeTab = ref('action')
 const loadingActions = ref(false)
 const loadingLogins = ref(false)
+const loadingRiskOverview = ref(false)
+const checkingRisk = ref(false)
 const actionRows = ref([])
 const loginRows = ref([])
+const riskCheck = ref(null)
+const riskOverview = reactive({
+  accountLockCount: 0,
+  ipLockCount: 0,
+  accountFailBucketCount: 0,
+  ipFailBucketCount: 0
+})
+const riskQuery = reactive({
+  account: '',
+  ip: ''
+})
 const actionPager = reactive({
   page: 1,
   size: 20,
@@ -98,12 +150,43 @@ async function loadLoginLogs() {
   }
 }
 
+async function loadLoginRiskOverview() {
+  loadingRiskOverview.value = true
+  try {
+    const data = await fetchLoginRiskOverview()
+    riskOverview.accountLockCount = Number(data?.accountLockCount || 0)
+    riskOverview.ipLockCount = Number(data?.ipLockCount || 0)
+    riskOverview.accountFailBucketCount = Number(data?.accountFailBucketCount || 0)
+    riskOverview.ipFailBucketCount = Number(data?.ipFailBucketCount || 0)
+  } catch (error) {
+    ElMessage.error(error?.message || '加载风控总览失败')
+  } finally {
+    loadingRiskOverview.value = false
+  }
+}
+
+async function handleCheckRisk() {
+  checkingRisk.value = true
+  try {
+    const data = await checkLoginRisk({
+      account: riskQuery.account || '',
+      ip: riskQuery.ip || ''
+    })
+    riskCheck.value = data || null
+  } catch (error) {
+    ElMessage.error(error?.message || '检测失败')
+  } finally {
+    checkingRisk.value = false
+  }
+}
+
 watch(activeTab, (tab) => {
   if (tab === 'action') {
     loadActionLogs()
     return
   }
   loadLoginLogs()
+  loadLoginRiskOverview()
 })
 
 function onActionPageChange(page) {
@@ -148,5 +231,49 @@ onMounted(() => {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.risk-overview {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.risk-item {
+  padding: 8px 10px;
+  border: 1px solid var(--line-color, #d7d7d7);
+  background: #fff;
+}
+
+.risk-label {
+  font-size: 12px;
+  color: #7a7f8a;
+}
+
+.risk-value {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f3d8a;
+}
+
+.risk-check-wrap {
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr auto;
+  gap: 8px;
+}
+
+.risk-check-result {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
+  border: 1px solid var(--line-color, #d7d7d7);
+  background: #fff;
+  font-size: 12px;
+  color: #4d5566;
 }
 </style>

@@ -3,11 +3,14 @@ package com.wreckloud.wolfchat.admin.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wreckloud.wolfchat.account.application.service.UserService;
+import com.wreckloud.wolfchat.account.application.service.LoginRiskControlService;
 import com.wreckloud.wolfchat.account.domain.entity.WfLoginRecord;
 import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.account.infra.mapper.WfLoginRecordMapper;
 import com.wreckloud.wolfchat.admin.api.vo.AdminActionLogRowVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminLoginLogRowVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminLoginRiskCheckVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminLoginRiskOverviewVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminPageVO;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
@@ -34,6 +37,7 @@ public class AdminAuditService {
 
     private final WfForumModerationLogMapper wfForumModerationLogMapper;
     private final WfLoginRecordMapper wfLoginRecordMapper;
+    private final LoginRiskControlService loginRiskControlService;
     private final UserService userService;
 
     public AdminPageVO<AdminActionLogRowVO> listActionLogPage(long page, long size) {
@@ -98,6 +102,28 @@ public class AdminAuditService {
         return AdminPageVO.of(result.getCurrent(), result.getSize(), result.getTotal(), list);
     }
 
+    public AdminLoginRiskOverviewVO getLoginRiskOverview() {
+        AdminLoginRiskOverviewVO overviewVO = new AdminLoginRiskOverviewVO();
+        overviewVO.setAccountLockCount(loginRiskControlService.countAccountLocks());
+        overviewVO.setIpLockCount(loginRiskControlService.countIpLocks());
+        overviewVO.setAccountFailBucketCount(loginRiskControlService.countAccountFailBuckets());
+        overviewVO.setIpFailBucketCount(loginRiskControlService.countIpFailBuckets());
+        return overviewVO;
+    }
+
+    public AdminLoginRiskCheckVO checkLoginRisk(String account, String ip) {
+        AdminLoginRiskCheckVO checkVO = new AdminLoginRiskCheckVO();
+        checkVO.setAccount(account);
+        checkVO.setIp(ip);
+        checkVO.setAccountLocked(loginRiskControlService.isAccountLocked(account));
+        checkVO.setAccountLockTtlSeconds(loginRiskControlService.getAccountLockTtlSeconds(account));
+        checkVO.setAccountFailCount(loginRiskControlService.getAccountFailCount(account));
+        checkVO.setIpLocked(loginRiskControlService.isIpLocked(ip));
+        checkVO.setIpLockTtlSeconds(loginRiskControlService.getIpLockTtlSeconds(ip));
+        checkVO.setIpFailCount(loginRiskControlService.getIpFailCount(ip));
+        return checkVO;
+    }
+
     private String resolveOperatorName(WfUser operator, Long operatorUserId) {
         if (operator != null && operator.getNickname() != null) {
             return operator.getNickname();
@@ -111,4 +137,3 @@ public class AdminAuditService {
         }
     }
 }
-

@@ -84,6 +84,12 @@
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
+		<!-- 邮件发送（邮箱认证/重置密码链接） -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 		<!-- 密码哈希（BCrypt） -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>
@@ -140,6 +146,47 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.3.0</version>
+				<executions>
+					<execution>
+						<id>npm-install-admin</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}/../front/admin</workingDirectory>
+							<executable>npm</executable>
+							<arguments>
+								<argument>ci</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>build-admin-console</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}/../front/admin</workingDirectory>
+							<executable>npm</executable>
+							<arguments>
+								<argument>run</argument>
+								<argument>build</argument>
+								<argument>--</argument>
+								<argument>--emptyOutDir</argument>
+								<argument>--outDir</argument>
+								<argument>${project.build.outputDirectory}/static/admin-console</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

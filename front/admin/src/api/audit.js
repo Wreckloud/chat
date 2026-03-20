@@ -15,3 +15,18 @@ export function fetchLoginLogPage(params) {
     params
   })
 }
+
+export function fetchLoginRiskOverview() {
+  return request({
+    url: '/admin/audit/login-risk/overview',
+    method: 'get'
+  })
+}
+
+export function checkLoginRisk(params) {
+  return request({
+    url: '/admin/audit/login-risk/check',
+    method: 'get',
+    params
+  })
+}

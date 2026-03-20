@@ -52,6 +52,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final String SEND_DEDUP_KEY_PREFIX = "chat:ws:send:dedup:";
     private static final Duration SEND_DEDUP_TTL = Duration.ofMinutes(10);
     private static final String SEND_DEDUP_PENDING = "PENDING";
+    private static final String SESSION_PASSWORD_VERSION_KEY = "session_pwd_ver";
 
     private final JwtUtil jwtUtil;
     private final MessageService messageService;
@@ -162,10 +163,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
+        Long tokenPasswordVersion = jwtUtil.getPasswordVersionFromToken(token);
+        if (tokenPasswordVersion == null) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return null;
+        }
         if (!sessionUserService.isSessionUserExists(userId)) {
             sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
+        if (!sessionUserService.isPasswordVersionMatched(userId, tokenPasswordVersion)) {
+            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            return null;
+        }
+        session.getAttributes().put(SESSION_PASSWORD_VERSION_KEY, tokenPasswordVersion);
         return userId;
     }
 
@@ -294,6 +305,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         try {
             if (!sessionUserService.isSessionUserExists(userId)) {
+                sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
+                sessionManager.removeSession(session);
+                return;
+            }
+            Long tokenPasswordVersion = (Long) session.getAttributes().get(SESSION_PASSWORD_VERSION_KEY);
+            if (!sessionUserService.isPasswordVersionMatched(userId, tokenPasswordVersion)) {
                 sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
                 sessionManager.removeSession(session);
                 return;

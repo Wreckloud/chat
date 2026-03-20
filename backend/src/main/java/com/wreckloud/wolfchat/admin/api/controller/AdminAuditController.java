@@ -2,6 +2,8 @@ package com.wreckloud.wolfchat.admin.api.controller;
 
 import com.wreckloud.wolfchat.admin.api.vo.AdminActionLogRowVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminLoginLogRowVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminLoginRiskCheckVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminLoginRiskOverviewVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminPageVO;
 import com.wreckloud.wolfchat.admin.application.service.AdminAuditService;
 import com.wreckloud.wolfchat.admin.application.service.AdminPermissionService;
@@ -44,5 +46,22 @@ public class AdminAuditController {
     ) {
         adminPermissionService.assertAdmin(UserContext.getRequiredUserId());
         return Result.success(adminAuditService.listLoginLogPage(page, size));
+    }
+
+    @Operation(summary = "登录风控总览")
+    @GetMapping("/login-risk/overview")
+    public Result<AdminLoginRiskOverviewVO> getLoginRiskOverview() {
+        adminPermissionService.assertAdmin(UserContext.getRequiredUserId());
+        return Result.success(adminAuditService.getLoginRiskOverview());
+    }
+
+    @Operation(summary = "登录风控单项检测")
+    @GetMapping("/login-risk/check")
+    public Result<AdminLoginRiskCheckVO> checkLoginRisk(
+            @RequestParam(defaultValue = "") String account,
+            @RequestParam(defaultValue = "") String ip
+    ) {
+        adminPermissionService.assertAdmin(UserContext.getRequiredUserId());
+        return Result.success(adminAuditService.checkLoginRisk(account, ip));
     }
 }

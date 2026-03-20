@@ -4,6 +4,7 @@ import com.wreckloud.wolfchat.account.api.dto.LoginDTO;
 import com.wreckloud.wolfchat.account.api.dto.RegisterDTO;
 import com.wreckloud.wolfchat.account.api.dto.SendResetPasswordLinkDTO;
 import com.wreckloud.wolfchat.account.api.vo.LoginVO;
+import com.wreckloud.wolfchat.account.application.support.AccountMaskingSupport;
 import com.wreckloud.wolfchat.account.application.service.AuthService;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
@@ -65,8 +66,19 @@ public class AuthController {
     @Operation(summary = "发送重置密码链接", description = "发送重置密码邮箱链接")
     @PostMapping("/password/reset-link/send")
     public Result<Void> sendResetPasswordLink(@RequestBody @Validated SendResetPasswordLinkDTO dto) {
-        authService.sendResetPasswordLink(dto.getEmail());
-        return Result.success("重置链接已发送", null);
+        String email = dto.getEmail();
+        try {
+            authService.sendResetPasswordLink(email);
+            return Result.success("重置链接已发送", null);
+        } catch (BaseException e) {
+            // 防枚举：邮箱不存在、未认证时不暴露真实原因。
+            if (ErrorCode.EMAIL_NOT_BOUND.getCode().equals(e.getCode())
+                    || ErrorCode.EMAIL_NOT_VERIFIED.getCode().equals(e.getCode())) {
+                log.info("重置链接请求已处理: account={}", AccountMaskingSupport.maskAccount(email));
+                return Result.success("若邮箱可用，重置链接已发送", null);
+            }
+            throw e;
+        }
     }
 
     /**

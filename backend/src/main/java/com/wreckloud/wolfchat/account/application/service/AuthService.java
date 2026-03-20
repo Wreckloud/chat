@@ -14,6 +14,8 @@ import com.wreckloud.wolfchat.account.domain.enums.UserStatus;
 import com.wreckloud.wolfchat.account.infra.mapper.WfUserMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.security.service.SessionUserService;
+import com.wreckloud.wolfchat.common.util.ClientIpSupport;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,10 +47,12 @@ public class AuthService {
     private final WolfNoService wolfNoService;
     private final EmailVerifyLinkService emailVerifyLinkService;
     private final PasswordResetLinkService passwordResetLinkService;
+    private final LoginRiskControlService loginRiskControlService;
     private final LoginRecordService loginRecordService;
     private final UserService userService;
     private final UserAchievementService userAchievementService;
     private final UserAuthService userAuthService;
+    private final SessionUserService sessionUserService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -111,6 +115,7 @@ public class AuthService {
         WfUser user = null;
         WfUserAuth auth = null;
         String normalizedAccount = normalizeAccount(account);
+        String clientIp = ClientIpSupport.resolveClientIp(request);
         String maskedAccount = AccountMaskingSupport.maskAccount(normalizedAccount);
         LoginMethod loginMethod = resolveLoginMethod(normalizedAccount);
         try {
@@ -118,6 +123,7 @@ public class AuthService {
             if (!StringUtils.hasText(normalizedAccount)) {
                 throw new BaseException(ErrorCode.PARAM_ERROR);
             }
+            loginRiskControlService.assertCanLogin(normalizedAccount, clientIp);
 
             if (LoginMethod.EMAIL.equals(loginMethod)) {
                 String normalizedEmail = normalizeEmail(normalizedAccount);
@@ -132,11 +138,13 @@ public class AuthService {
             verifyLoginKey(normalizedLoginKey, auth.getCredentialHash(), ErrorCode.LOGIN_KEY_ERROR);
             refreshLoginStats(user);
             userAuthService.touchLoginAt(auth.getId());
+            loginRiskControlService.clearFailure(normalizedAccount, clientIp);
             recordLoginSafely(user.getId(), loginMethod, LoginResult.SUCCESS, null, normalizedAccount, request);
 
             log.info("行者登录成功: method={}, userId={}", loginMethod.getValue(), user.getId());
             return buildLoginVO(user);
         } catch (BaseException e) {
+            handleLoginFailureRisk(normalizedAccount, clientIp, e);
             log.info(
                     "行者登录失败: method={}, code={}, account={}",
                     loginMethod.getValue(),
@@ -203,6 +211,7 @@ public class AuthService {
         userService.getEnabledByIdOrThrow(emailAuth.getUserId());
 
         userAuthService.updateAllPasswordCredentialByUserId(emailAuth.getUserId(), encodeLoginKey(normalizedNewLoginKey));
+        sessionUserService.invalidateUserCache(emailAuth.getUserId());
 
         log.info("链接重置密码成功: userId={}", emailAuth.getUserId());
     }
@@ -230,6 +239,7 @@ public class AuthService {
         }
 
         userAuthService.updateAllPasswordCredentialByUserId(userId, encodeLoginKey(normalizedNewLoginKey));
+        sessionUserService.invalidateUserCache(userId);
 
         log.info("行者修改密码成功: userId={}", userId);
     }
@@ -270,7 +280,8 @@ public class AuthService {
      * @return 登录响应
      */
     private LoginVO buildLoginVO(WfUser user) {
-        String token = jwtUtil.generateToken(user.getId());
+        long passwordVersion = userAuthService.resolvePasswordVersion(user.getId());
+        String token = jwtUtil.generateToken(user.getId(), passwordVersion);
 
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(token);
@@ -289,6 +300,13 @@ public class AuthService {
         if (!passwordEncoder.matches(rawLoginKey, encodedLoginKey)) {
             throw new BaseException(errorCode);
         }
+    }
+
+    private void handleLoginFailureRisk(String normalizedAccount, String clientIp, BaseException e) {
+        if (!StringUtils.hasText(normalizedAccount) || !shouldRecordLoginFailure(e)) {
+            return;
+        }
+        loginRiskControlService.recordFailure(normalizedAccount, clientIp);
     }
 
     private void requireEmailVerified(WfUserAuth emailAuth) {
@@ -343,6 +361,15 @@ public class AuthService {
             return null;
         }
         return normalizeEmail(email);
+    }
+
+    private boolean shouldRecordLoginFailure(BaseException e) {
+        Integer code = e.getCode();
+        return ErrorCode.WOLF_NO_NOT_FOUND.getCode().equals(code)
+                || ErrorCode.LOGIN_KEY_ERROR.getCode().equals(code)
+                || ErrorCode.EMAIL_NOT_BOUND.getCode().equals(code)
+                || ErrorCode.EMAIL_NOT_VERIFIED.getCode().equals(code)
+                || ErrorCode.USER_DISABLED.getCode().equals(code);
     }
 
     private void refreshLoginStats(WfUser user) {
@@ -405,4 +432,5 @@ public class AuthService {
         }
         return normalizedLoginKey;
     }
+
 }

@@ -7,6 +7,7 @@ import com.wreckloud.wolfchat.account.domain.enums.LoginResult;
 import com.wreckloud.wolfchat.account.infra.mapper.WfLoginRecordMapper;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
+import com.wreckloud.wolfchat.common.util.ClientIpSupport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -29,7 +30,6 @@ public class LoginRecordService {
     private static final int CLIENT_VERSION_MAX_LENGTH = 32;
     private static final String CLIENT_TYPE_HEADER = "X-Client-Type";
     private static final String CLIENT_VERSION_HEADER = "X-Client-Version";
-    private static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
     private static final String USER_AGENT_HEADER = "User-Agent";
     private static final String UNKNOWN_CLIENT_TYPE = "UNKNOWN";
 
@@ -49,7 +49,7 @@ public class LoginRecordService {
         record.setLoginResult(loginResult);
         record.setFailCode(failCode);
         record.setAccountMask(limitLength(AccountMaskingSupport.maskAccount(account), ACCOUNT_MASK_MAX_LENGTH));
-        record.setIp(limitLength(resolveClientIp(request), IP_MAX_LENGTH));
+        record.setIp(limitLength(ClientIpSupport.resolveClientIp(request), IP_MAX_LENGTH));
         record.setUserAgent(limitLength(resolveHeader(request, USER_AGENT_HEADER), USER_AGENT_MAX_LENGTH));
         record.setClientType(limitLength(resolveClientType(request), CLIENT_TYPE_MAX_LENGTH));
         record.setClientVersion(limitLength(resolveHeader(request, CLIENT_VERSION_HEADER), CLIENT_VERSION_MAX_LENGTH));
@@ -59,21 +59,6 @@ public class LoginRecordService {
         if (insertRows != 1) {
             throw new BaseException(ErrorCode.DATABASE_ERROR);
         }
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
-        String forwardedFor = resolveHeader(request, FORWARDED_FOR_HEADER);
-        if (StringUtils.hasText(forwardedFor)) {
-            int separatorIndex = forwardedFor.indexOf(',');
-            if (separatorIndex > 0) {
-                return forwardedFor.substring(0, separatorIndex).trim();
-            }
-            return forwardedFor;
-        }
-        return request.getRemoteAddr();
     }
 
     private String resolveClientType(HttpServletRequest request) {

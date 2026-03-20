@@ -52,6 +52,7 @@ public class PasswordResetLinkService {
     private final StringRedisTemplate stringRedisTemplate;
     private final EmailSendLimitService emailSendLimitService;
     private final EmailVerifyLinkConfig emailVerifyLinkConfig;
+    private final EmailDeliveryService emailDeliveryService;
 
     /**
      * 发送重置密码链接
@@ -68,10 +69,17 @@ public class PasswordResetLinkService {
         String token = generateToken();
         String tokenHash = hashToken(token);
         String payload = buildPayload(userId, normalizedEmail);
-        ops.set(buildTokenKey(tokenHash), payload, Duration.ofMinutes(RESET_LINK_EXPIRE_MINUTES));
+        String tokenKey = buildTokenKey(tokenHash);
+        ops.set(tokenKey, payload, Duration.ofMinutes(RESET_LINK_EXPIRE_MINUTES));
 
         String resetLink = buildResetLink(token);
-        log.info("重置密码链接已生成: userId={}, email={}, link={}", userId, normalizedEmail, resetLink);
+        try {
+            emailDeliveryService.sendResetPasswordLink(normalizedEmail, resetLink, RESET_LINK_EXPIRE_MINUTES);
+        } catch (Exception e) {
+            stringRedisTemplate.delete(tokenKey);
+            throw e;
+        }
+        log.info("重置密码链接发送成功: userId={}, email={}", userId, normalizedEmail);
     }
 
     /**

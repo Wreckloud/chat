@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 
@@ -155,6 +156,25 @@ public class UserAuthService {
                 throw new BaseException(ErrorCode.DATABASE_ERROR);
             }
         }
+    }
+
+    public long resolvePasswordVersion(Long userId) {
+        if (userId == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR);
+        }
+        LambdaQueryWrapper<WfUserAuth> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(WfUserAuth::getUpdateTime)
+                .eq(WfUserAuth::getUserId, userId)
+                .eq(WfUserAuth::getEnabled, true)
+                .in(WfUserAuth::getAuthType, UserAuthType.WOLF_NO_PASSWORD, UserAuthType.EMAIL_PASSWORD)
+                .orderByDesc(WfUserAuth::getUpdateTime)
+                .orderByDesc(WfUserAuth::getId)
+                .last("LIMIT 1");
+        WfUserAuth latestAuth = wfUserAuthMapper.selectOne(queryWrapper);
+        if (latestAuth == null || latestAuth.getUpdateTime() == null) {
+            return 0L;
+        }
+        return latestAuth.getUpdateTime().atZone(ZoneId.systemDefault()).toEpochSecond();
     }
 
     private WfUserAuth findByUserIdAndType(Long userId, UserAuthType authType) {
