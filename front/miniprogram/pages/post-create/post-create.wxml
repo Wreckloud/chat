@@ -1,94 +1,115 @@
 <view class="post-create-page {{themeClass}}">
-  <view class="editor-toolbar">
-    <view class="title">发布主题</view>
-    <view class="hint">标题 120 字内</view>
+  <view class="editor-toolbar retro-topbar">
+    <view class="title retro-topbar-title">发布主题</view>
+    <view class="hint retro-topbar-meta">标题 120 字内</view>
   </view>
 
-  <view class="editor-card">
-    <view class="field-row">
-      <view class="field-label">标题</view>
-      <retro-input
-        class="title-input"
-        placeholder="输入主题标题"
-        value="{{title}}"
-        maxlength="120"
-        bind:input="onTitleInput"
+  <view class="editor-body">
+    <view class="editor-card">
+      <view class="field-row">
+        <view class="field-label">标题</view>
+        <retro-input
+          class="title-input"
+          placeholder="输入主题标题"
+          value="{{title}}"
+          maxlength="120"
+          bind:input="onTitleInput"
+        />
+      </view>
+
+      <view class="field-row column">
+        <view class="field-label">正文</view>
+        <view class="content-hint">最多 5000 字，可仅发媒体</view>
+      </view>
+      <view class="content-toolbar">
+        <view class="content-emoji-trigger" bindtap="toggleEmojiPanel">
+          <image class="content-emoji-icon" src="/images/icon-kaomoji.svg" mode="aspectFit" />
+        </view>
+      </view>
+      <retro-textarea
+        placeholder="写下你的主题内容..."
+        value="{{content}}"
+        maxlength="5000"
+        bind:input="onContentInput"
       />
-    </view>
+      <view wx:if="{{emojiPanelVisible}}" class="content-emoji-panel">
+        <scroll-view class="content-emoji-scroll" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="content-emoji-grid">
+            <view
+              wx:for="{{emojiList}}"
+              wx:key="*this"
+              class="content-emoji-item"
+              data-emoji="{{item}}"
+              bindtap="onSelectEmoji">
+              <text class="content-emoji-item-text">{{item}}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
 
-    <view class="field-row column">
-      <view class="field-label">正文</view>
-      <view class="content-hint">最多 5000 字，可仅发媒体</view>
-    </view>
-    <retro-textarea
-      placeholder="写下你的主题内容..."
-      value="{{content}}"
-      maxlength="5000"
-      bind:input="onContentInput"
-    />
+      <view class="field-row column media-head-row">
+        <view class="field-label">媒体</view>
+        <view class="content-hint">9 图或 1 视频（二选一）</view>
+      </view>
+      <view class="media-toolbar">
+        <retro-button
+          size="small"
+          theme="default"
+          disabled="{{loading || !!mediaVideo || mediaImages.length >= 9}}"
+          bindtap="chooseThreadImages">
+          选图片
+        </retro-button>
+        <retro-button
+          size="small"
+          theme="default"
+          disabled="{{loading || !!mediaVideo || mediaImages.length > 0}}"
+          bindtap="chooseThreadVideo">
+          选视频
+        </retro-button>
+        <retro-button
+          wx:if="{{mediaVideo}}"
+          size="small"
+          theme="default"
+          disabled="{{loading}}"
+          bindtap="clearThreadVideo">
+          清除视频
+        </retro-button>
+      </view>
 
-    <view class="field-row column media-head-row">
-      <view class="field-label">媒体</view>
-      <view class="content-hint">9 图或 1 视频（二选一）</view>
-    </view>
-    <view class="media-toolbar">
-      <retro-button
-        size="small"
-        theme="default"
-        disabled="{{loading || !!mediaVideo || mediaImages.length >= 9}}"
-        bindtap="chooseThreadImages">
-        选图片
-      </retro-button>
-      <retro-button
-        size="small"
-        theme="default"
-        disabled="{{loading || !!mediaVideo || mediaImages.length > 0}}"
-        bindtap="chooseThreadVideo">
-        选视频
-      </retro-button>
-      <retro-button
-        wx:if="{{mediaVideo}}"
-        size="small"
-        theme="default"
-        disabled="{{loading}}"
-        bindtap="clearThreadVideo">
-        清除视频
-      </retro-button>
-    </view>
+      <view wx:if="{{mediaImages.length > 0}}" class="media-image-grid">
+        <view wx:for="{{mediaImages}}" wx:key="path" class="media-image-item">
+          <image
+            class="media-image"
+            src="{{item.path}}"
+            mode="aspectFill"
+            data-url="{{item.path}}"
+            bindtap="previewThreadImage" />
+          <view class="media-remove" data-index="{{index}}" bindtap="removeThreadImage">×</view>
+        </view>
+      </view>
 
-    <view wx:if="{{mediaImages.length > 0}}" class="media-image-grid">
-      <view wx:for="{{mediaImages}}" wx:key="path" class="media-image-item">
+      <view wx:if="{{mediaVideo}}" class="media-video-card" bindtap="previewThreadVideo">
         <image
-          class="media-image"
-          src="{{item.path}}"
-          mode="aspectFill"
-          data-url="{{item.path}}"
-          bindtap="previewThreadImage" />
-        <view class="media-remove" data-index="{{index}}" bindtap="removeThreadImage">×</view>
+          wx:if="{{mediaVideo.posterPath}}"
+          class="media-video-poster"
+          src="{{mediaVideo.posterPath}}"
+          mode="aspectFill" />
+        <view wx:else class="media-video-poster-fallback">视频</view>
+        <view class="media-video-play-mask">
+          <view class="media-video-play-icon"></view>
+        </view>
       </view>
-    </view>
 
-    <view wx:if="{{mediaVideo}}" class="media-video-card" bindtap="previewThreadVideo">
-      <image
-        wx:if="{{mediaVideo.posterPath}}"
-        class="media-video-poster"
-        src="{{mediaVideo.posterPath}}"
-        mode="aspectFill" />
-      <view wx:else class="media-video-poster-fallback">视频</view>
-      <view class="media-video-play-mask">
-        <view class="media-video-play-icon"></view>
-      </view>
+      <retro-button
+        class="submit-btn"
+        theme="primary"
+        size="large"
+        block
+        disabled="{{!canSubmit}}"
+        loading="{{loading}}"
+        bindtap="handleSubmit">
+        发布
+      </retro-button>
     </view>
-
-    <retro-button
-      class="submit-btn"
-      theme="primary"
-      size="large"
-      block
-      disabled="{{!canSubmit}}"
-      loading="{{loading}}"
-      bindtap="handleSubmit">
-      发布
-    </retro-button>
   </view>
 </view>

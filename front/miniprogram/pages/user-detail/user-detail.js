@@ -4,7 +4,7 @@
 const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const { normalizeUser } = require('../../utils/user')
-const { toastError } = require('../../utils/ui')
+const { toastError, confirmAction } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
@@ -16,11 +16,21 @@ function formatCount(value) {
 }
 
 function mapThread(item) {
+  const imageUrls = Array.isArray(item.imageUrls)
+    ? item.imageUrls.filter(url => typeof url === 'string' && url.trim())
+    : []
+  const videoPosterUrl = typeof item.videoPosterUrl === 'string' ? item.videoPosterUrl : ''
+  const previewImageUrls = imageUrls.slice(0, videoPosterUrl ? 2 : 3)
   return {
     ...item,
     viewCount: Number(item.viewCount) || 0,
     replyCount: Number(item.replyCount) || 0,
     likeCount: Number(item.likeCount) || 0,
+    contentPreview: typeof item.contentPreview === 'string' ? item.contentPreview.trim() : '',
+    imageUrls,
+    videoPosterUrl,
+    previewImageUrls,
+    hasMoreImages: imageUrls.length > previewImageUrls.length,
     createTimeText: time.formatPostTime(item.createTime),
     lastReplyTimeText: time.formatPostTime(item.lastReplyTime)
   }
@@ -32,6 +42,7 @@ Page({
     userInfo: null,
     loading: false,
     isSelf: false,
+    isTargetDisabled: false,
     isFollowing: false,
     isMutual: false,
     followLoading: false,
@@ -92,6 +103,7 @@ Page({
         home.user && home.user.equippedTitleName,
         home.user && home.user.equippedTitleColor
       )
+      const isTargetDisabled = userInfo && userInfo.status === 'DISABLED'
       const showcaseTitles = Array.isArray(home.showcaseTitles)
         ? home.showcaseTitles.slice(0, 3).map(item => ({
           achievementCode: item.achievementCode || '',
@@ -102,6 +114,7 @@ Page({
       this.setData({
         userInfo,
         isSelf: home.self === true,
+        isTargetDisabled,
         isFollowing: home.following === true,
         isMutual: home.mutual === true,
         activeDayCountText: formatCount(home.activeDayCount),
@@ -123,6 +136,22 @@ Page({
 
   async toggleFollow() {
     if (this.data.followLoading || this.data.isSelf || !this.data.userInfo) return
+    if (this.data.isTargetDisabled) {
+      toastError('该用户已不可用')
+      return
+    }
+    if (this.data.isFollowing) {
+      const confirmed = await confirmAction({
+        title: '取消关注？',
+        content: '取消后将不再优先看到对方动态，可随时重新关注。',
+        confirmColor: '#b4474f',
+        confirmText: '取消关注',
+        cancelText: '再想想'
+      })
+      if (!confirmed) {
+        return
+      }
+    }
     this.setData({ followLoading: true })
     try {
       if (this.data.isFollowing) {
@@ -140,6 +169,10 @@ Page({
 
   async goChat() {
     if (this.data.chatLoading || this.data.isSelf || !this.data.userInfo) return
+    if (this.data.isTargetDisabled) {
+      toastError('该用户已不可用')
+      return
+    }
     this.setData({ chatLoading: true })
     try {
       const res = await request.post(`/conversations/${this.data.userInfo.userId}`)

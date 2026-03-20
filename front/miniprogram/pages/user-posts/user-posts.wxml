@@ -1,6 +1,7 @@
 <view class="user-posts-page {{themeClass}}">
-  <view class="user-posts-main">
-    <retro-empty wx:if="{{!loading && threads.length === 0}}" description="暂无帖子" />
+  <retro-empty wx:if="{{!loading && threads.length === 0}}" description="暂无帖子" />
+
+  <view wx:elif="{{threads.length > 0}}" class="thread-list">
     <view
       wx:for="{{threads}}"
       wx:key="threadId"
@@ -8,23 +9,56 @@
       bindtap="onTapThread"
       data-thread-id="{{item.threadId}}">
       <view class="thread-title-row">
-        <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag">[公告]</text>
-        <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag">[置顶]</text>
-        <text wx:if="{{item.isEssence}}" class="thread-tag">[精华]</text>
-        <text class="thread-title">{{item.title}}</text>
+        <view class="thread-title-main">
+          <text wx:if="{{item.threadType === 'STICKY'}}" class="thread-tag">[置顶]</text>
+          <text wx:if="{{item.isEssence}}" class="thread-tag">[精华]</text>
+          <text class="thread-title">{{item.title}}</text>
+        </view>
+        <view
+          wx:if="{{isSelf}}"
+          class="thread-sticky-action"
+          catchtap="onToggleSticky"
+          data-thread-id="{{item.threadId}}"
+          data-sticky="{{item.threadType === 'STICKY'}}">
+          {{item.threadType === 'STICKY' ? '[取消置顶]' : '[置顶到主页]'}}
+        </view>
       </view>
+
+      <view wx:if="{{item.contentPreview}}" class="thread-excerpt">{{item.contentPreview}}</view>
+
+      <view wx:if="{{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
+        <view wx:if="{{item.videoPosterUrl}}" class="thread-media-cell thread-media-video">
+          <image class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
+          <view class="thread-media-video-mask">
+            <view class="thread-media-video-icon"></view>
+          </view>
+        </view>
+        <view
+          wx:for="{{item.previewImageUrls}}"
+          wx:key="*this"
+          wx:for-item="previewUrl"
+          wx:for-index="previewIndex"
+          class="thread-media-cell">
+          <image class="thread-media-image" src="{{previewUrl}}" mode="aspectFill" />
+          <view
+            wx:if="{{item.hasMoreImages && previewIndex === item.previewImageUrls.length - 1}}"
+            class="thread-media-more">
+            +{{item.imageUrls.length - item.previewImageUrls.length}}
+          </view>
+        </view>
+      </view>
+
       <view class="thread-meta-row">
         <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
       </view>
       <view class="thread-time-row">
         <text>{{item.createTimeText}}</text>
-        <text>{{item.lastReplyTimeText || item.createTimeText}}</text>
       </view>
     </view>
+  </view>
 
-    <view wx:if="{{threads.length > 0}}" class="more-row">
-      <text wx:if="{{loadingMore}}" class="more-text">加载中...</text>
-      <text wx:elif="{{!hasMore}}" class="more-text">没有更多帖子</text>
-    </view>
+  <view wx:if="{{threads.length > 0}}" class="more-row">
+    <text wx:if="{{loadingMore}}" class="more-text">加载中...</text>
+    <text wx:elif="{{!hasMore}}" class="more-text">没有更多帖子</text>
   </view>
 </view>

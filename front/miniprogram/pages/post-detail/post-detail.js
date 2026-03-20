@@ -10,22 +10,129 @@ const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
 const imHelper = require('../../utils/im-helper')
+const replyMentionHelper = require('../../utils/reply-mention-helper')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const postReplyLayoutHelper = require('../../utils/post-reply-layout-helper')
+const { COMMON_KAOMOJI_LIST, appendKaomojiWithSpace } = require('../../utils/kaomoji')
 
-const EMPTY_QUOTE_DATA = {
-  quoteReplyId: null,
-  quoteHint: ''
+const EMPTY_REPLY_TARGET_DATA = {
+  replyTargetId: null,
+  replyTargetHint: ''
 }
 
-function buildQuoteHint(reply) {
+const REPLY_SORT_OPTIONS = [
+  { key: 'floor', text: '按楼层' },
+  { key: 'hot', text: '按热度' },
+  { key: 'author', text: '只看楼主' }
+]
+
+function buildReplyTargetHint(reply) {
   if (!reply) return ''
   const author = reply.author && (reply.author.displayName || reply.author.nickname || reply.author.wolfNo)
     ? (reply.author.displayName || reply.author.nickname || reply.author.wolfNo)
     : '行者'
-  const content = (reply.content || '').replace(/\s+/g, ' ').trim()
-  const contentPreview = content.length > 24 ? `${content.slice(0, 24)}...` : content
-  return `引用 #${reply.floorNo} ${author}: ${contentPreview}`
+  return `回复 @${author} #${reply.floorNo}`
+}
+
+function prependReplyMention(content, reply) {
+  if (!reply || !reply.author) {
+    return String(content || '').trim()
+  }
+  const displayName = reply.author.displayName || reply.author.nickname || reply.author.wolfNo
+  return replyMentionHelper.prependMention(content, displayName)
+}
+
+function removeLeadingReplyMention(content, reply) {
+  if (!reply || !reply.author) {
+    return String(content || '').trim().replace(/^@\S+\s*/, '').trim()
+  }
+  const displayName = reply.author.displayName || reply.author.nickname || reply.author.wolfNo
+  return replyMentionHelper.removeLeadingMention(content, displayName)
+}
+
+function normalizeReplySortKey(sortKey) {
+  const target = typeof sortKey === 'string' ? sortKey.trim().toLowerCase() : ''
+  if (REPLY_SORT_OPTIONS.some(item => item.key === target)) {
+    return target
+  }
+  return 'floor'
+}
+
+function findReplyById(replies, replyId) {
+  if (!Array.isArray(replies) || !replyId) {
+    return null
+  }
+  const targetId = Number(replyId)
+  if (!targetId) {
+    return null
+  }
+  return replies.find(item => Number(item.replyId) === targetId) || null
+}
+
+function resolveNextReplySort(currentSort) {
+  const index = REPLY_SORT_OPTIONS.findIndex(item => item.key === currentSort)
+  if (index < 0) {
+    return REPLY_SORT_OPTIONS[0]
+  }
+  return REPLY_SORT_OPTIONS[(index + 1) % REPLY_SORT_OPTIONS.length]
+}
+
+function buildReplyTree(replies) {
+  if (!Array.isArray(replies) || replies.length === 0) {
+    return []
+  }
+  const nodeMap = new Map()
+  replies.forEach(item => {
+    const node = {
+      ...item,
+      children: []
+    }
+    nodeMap.set(Number(item.replyId), node)
+  })
+
+  const childReplyIdSet = new Set()
+  replies.forEach(item => {
+    const node = nodeMap.get(Number(item.replyId))
+    const quoteReplyId = Number(item.quoteReplyId) || 0
+    if (!quoteReplyId) {
+      return
+    }
+
+    const directParent = nodeMap.get(quoteReplyId)
+    if (!directParent) {
+      return
+    }
+    directParent.children.push(node)
+    childReplyIdSet.add(Number(item.replyId))
+  })
+
+  const roots = []
+  replies.forEach(item => {
+    const replyId = Number(item.replyId)
+    if (childReplyIdSet.has(replyId)) {
+      return
+    }
+    const node = nodeMap.get(replyId)
+    if (node) {
+      roots.push(node)
+    }
+  })
+
+  return roots.map(item => withReplyNodeMeta(item, 0))
+}
+
+function withReplyNodeMeta(node, depth) {
+  const safeDepth = Number.isFinite(depth) ? Math.max(0, depth) : 0
+  const clampedDepth = Math.min(safeDepth, 6)
+  const children = Array.isArray(node.children)
+    ? node.children.map(child => withReplyNodeMeta(child, safeDepth + 1))
+    : []
+  return {
+    ...node,
+    depth: safeDepth,
+    indentRpx: clampedDepth * 20,
+    children
+  }
 }
 
 function confirmAction(options) {
@@ -57,8 +164,7 @@ function normalizeImageTempFile(file) {
 function resolveThreadPermission(thread, currentUserId) {
   const canManageThread = !!currentUserId && currentUserId === thread.author?.userId
   return {
-    canManageThread,
-    canStickyToggle: canManageThread && thread.threadType !== 'ANNOUNCEMENT'
+    canManageThread
   }
 }
 
@@ -69,14 +175,19 @@ Page({
     thread: null,
     content: '',
     replies: [],
+    replyTree: [],
     replyPage: 1,
     replySize: 20,
     replyHasMore: true,
     replyLoading: false,
     replyContent: '',
-    quoteReplyId: null,
-    quoteHint: '',
+    replyTargetId: null,
+    replyTargetHint: '',
+    replySort: 'floor',
+    replySortText: '按楼层',
     canReplySubmit: false,
+    replyEmojiPanelVisible: false,
+    replyEmojiList: COMMON_KAOMOJI_LIST,
     replyImage: null,
     replyFocused: false,
     keyboardHeightPx: 0,
@@ -84,7 +195,6 @@ Page({
     replyListBottomPx: 88,
     replyScrollIntoView: '',
     canManageThread: false,
-    canStickyToggle: false,
     replySubmitting: false,
     threadLikeLoading: false,
     replyLikeLoadingMap: {},
@@ -153,8 +263,7 @@ Page({
     this.setData({
       thread,
       content: detail.content || '',
-      canManageThread: permission.canManageThread,
-      canStickyToggle: permission.canStickyToggle
+      canManageThread: permission.canManageThread
     }, () => {
       this.syncReplySubmitState()
     })
@@ -167,11 +276,13 @@ Page({
     if (!reset && !this.data.replyHasMore) return
 
     const page = reset ? 1 : this.data.replyPage
+    const replySort = normalizeReplySortKey(this.data.replySort)
     this.setData({ replyLoading: true })
     try {
       const res = await request.get(`/forum/threads/${this.data.threadId}/replies`, {
         page,
-        size: this.data.replySize
+        size: this.data.replySize,
+        sort: replySort
       })
       const list = (res.data.list || []).map(item => (
         forumViewHelper.mapReply(item, normalizeUser, time, {
@@ -180,12 +291,17 @@ Page({
         })
       ))
       const mergedReplies = forumViewHelper.mergePagedList(this.data.replies, list, reset)
+      const replyTree = buildReplyTree(mergedReplies)
       const total = Number(res.data.total) || 0
       const hasMore = forumViewHelper.resolveHasMoreByTotal(mergedReplies.length, total)
+      const replyTarget = findReplyById(mergedReplies, this.data.replyTargetId)
       this.setData({
         replies: mergedReplies,
+        replyTree,
         replyHasMore: hasMore,
-        replyPage: hasMore ? page + 1 : page
+        replyPage: hasMore ? page + 1 : page,
+        replyTargetId: replyTarget ? replyTarget.replyId : null,
+        replyTargetHint: replyTarget ? buildReplyTargetHint(replyTarget) : ''
       }, () => {
         if (reset) {
           this.scrollReplyListToBottom()
@@ -227,23 +343,58 @@ Page({
     })
   },
 
-  chooseQuote(e) {
-    const reply = e.currentTarget.dataset.reply
-    if (!reply || !reply.replyId) {
+  chooseReplyTarget(e) {
+    const replyId = Number(e.currentTarget.dataset.replyId)
+    if (!replyId) {
       return
     }
+    const reply = findReplyById(this.data.replies, replyId)
+    if (!reply) {
+      return
+    }
+    const nextReplyContent = prependReplyMention(this.data.replyContent, reply)
     this.setData({
-      quoteReplyId: reply.replyId,
-      quoteHint: buildQuoteHint(reply)
+      replyTargetId: reply.replyId,
+      replyTargetHint: buildReplyTargetHint(reply),
+      replyContent: nextReplyContent,
+      canReplySubmit: this.resolveCanReplySubmit(nextReplyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)
     }, () => {
       postReplyLayoutHelper.measureReplyDockHeight(this)
     })
   },
 
-  clearQuote() {
-    this.setData(EMPTY_QUOTE_DATA, () => {
+  clearReplyTarget() {
+    const targetReply = this.data.replyTargetId
+      ? findReplyById(this.data.replies, this.data.replyTargetId)
+      : null
+    const nextReplyContent = removeLeadingReplyMention(this.data.replyContent, targetReply)
+    this.setData({
+      ...EMPTY_REPLY_TARGET_DATA,
+      replyContent: nextReplyContent,
+      canReplySubmit: this.resolveCanReplySubmit(
+        nextReplyContent,
+        this.data.replyImage,
+        this.data.replySubmitting,
+        this.data.thread
+      )
+    }, () => {
       postReplyLayoutHelper.measureReplyDockHeight(this)
     })
+  },
+
+  onSwitchReplySort() {
+    if (this.data.replyLoading) {
+      return
+    }
+    const selected = resolveNextReplySort(this.data.replySort)
+    if (!selected || selected.key === this.data.replySort) {
+      return
+    }
+    this.setData({
+      replySort: selected.key,
+      replySortText: selected.text
+    })
+    this.loadReplies({ reset: true, notifyError: true })
   },
 
   onTapUserElement(e) {
@@ -294,10 +445,19 @@ Page({
   },
 
   onReplyKeyboardHeightChange(e) {
+    const nextHeight = Number(e && e.detail ? e.detail.height : 0)
+    if (nextHeight > 0 && this.data.replyEmojiPanelVisible) {
+      this.setData({ replyEmojiPanelVisible: false }, () => {
+        postReplyLayoutHelper.measureReplyDockHeight(this)
+      })
+    }
     postReplyLayoutHelper.onReplyKeyboardHeightChange(this, e)
   },
 
   onReplyFocus(e) {
+    if (this.data.replyEmojiPanelVisible) {
+      this.setData({ replyEmojiPanelVisible: false })
+    }
     postReplyLayoutHelper.onReplyFocus(this, e)
   },
 
@@ -308,6 +468,43 @@ Page({
   onReplySubmitTap() {
     this.keepReplyFocusAfterSend = this.data.replyFocused || this.data.keyboardHeightPx > 0
     this.handleReply()
+  },
+
+  toggleReplyEmojiPanel() {
+    if (this.data.replySubmitting) {
+      return
+    }
+    const nextVisible = !this.data.replyEmojiPanelVisible
+    if (nextVisible) {
+      wx.hideKeyboard()
+      this.setData({
+        replyFocused: false,
+        keyboardHeightPx: 0,
+        replyListBottomPx: this.data.replyDockHeightPx,
+        replyEmojiPanelVisible: true
+      }, () => {
+        postReplyLayoutHelper.measureReplyDockHeight(this)
+      })
+      return
+    }
+    this.setData({
+      replyEmojiPanelVisible: false
+    }, () => {
+      postReplyLayoutHelper.measureReplyDockHeight(this)
+    })
+  },
+
+  onSelectReplyEmoji(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const emoji = String(dataset.emoji || '').trim()
+    if (!emoji) {
+      return
+    }
+    const nextReplyContent = appendKaomojiWithSpace(this.data.replyContent, emoji)
+    this.setData({
+      replyContent: nextReplyContent,
+      canReplySubmit: this.resolveCanReplySubmit(nextReplyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)
+    })
   },
 
   async chooseReplyImage() {
@@ -353,14 +550,21 @@ Page({
 
   async handleReply() {
     if (this.data.replySubmitting) return
-    const content = this.data.replyContent.trim()
+    let content = this.data.replyContent.trim()
     const replyImage = this.data.replyImage
     const hasImage = !!(replyImage && replyImage.path)
-    if (!content && !hasImage) {
+    if (this.data.thread && this.data.thread.status === 'LOCKED') {
       this.keepReplyFocusAfterSend = false
       return
     }
-    if (this.data.thread && this.data.thread.status === 'LOCKED') {
+
+    const targetReply = this.data.replyTargetId
+      ? findReplyById(this.data.replies, this.data.replyTargetId)
+      : null
+    if (targetReply) {
+      content = prependReplyMention(content, targetReply)
+    }
+    if (!content && !hasImage) {
       this.keepReplyFocusAfterSend = false
       return
     }
@@ -369,8 +573,8 @@ Page({
     this.keepReplyFocusAfterSend = keepFocused
 
     const payload = { content }
-    if (this.data.quoteReplyId) {
-      payload.quoteReplyId = this.data.quoteReplyId
+    if (this.data.replyTargetId) {
+      payload.quoteReplyId = this.data.replyTargetId
     }
 
     this.setData({
@@ -391,7 +595,7 @@ Page({
       this.setData({
         replyContent: '',
         replyImage: null,
-        ...EMPTY_QUOTE_DATA
+        ...EMPTY_REPLY_TARGET_DATA
       }, () => {
         postReplyLayoutHelper.measureReplyDockHeight(this)
       })
@@ -400,7 +604,7 @@ Page({
         this.loadReplies({ reset: true, notifyError: false })
       ])
     } catch (error) {
-      toastError(error, '回复失败')
+      toastError(error, hasImage ? '图片回帖失败' : '回帖失败')
     } finally {
       this.keepReplyFocusAfterSend = false
       this.setData({
@@ -454,6 +658,9 @@ Page({
       [`replies[${index}].likedByCurrentUser`]: nextLiked,
       [`replies[${index}].likeCount`]: nextLikeCount,
       [`replyLikeLoadingMap.${replyId}`]: true
+    }, () => {
+      const replyTree = buildReplyTree(this.data.replies)
+      this.setData({ replyTree })
     })
 
     try {
@@ -462,6 +669,9 @@ Page({
       this.setData({
         [`replies[${index}].likedByCurrentUser`]: currentReply.likedByCurrentUser,
         [`replies[${index}].likeCount`]: currentReply.likeCount
+      }, () => {
+        const replyTree = buildReplyTree(this.data.replies)
+        this.setData({ replyTree })
       })
       toastError(error, '更新回复点赞失败')
     } finally {
@@ -469,39 +679,6 @@ Page({
         [`replyLikeLoadingMap.${replyId}`]: false
       })
     }
-  },
-
-  async executeThreadAction(options) {
-    const confirmed = await confirmAction({
-      title: options.title,
-      content: options.confirmContent,
-      confirmText: options.confirmText || '确认',
-      confirmColor: options.confirmColor
-    })
-    if (!confirmed) return
-
-    try {
-      await request.put(options.url, options.payload || {})
-      await this.loadThreadDetail()
-      if (options.refreshReplies) {
-        await this.loadReplies({ reset: true, notifyError: false })
-      }
-    } catch (error) {
-      toastError(error, options.failText)
-    }
-  },
-
-  async handleToggleLock() {
-    if (!this.data.thread || !this.data.canManageThread) return
-    const nextLocked = this.data.thread.status !== 'LOCKED'
-    await this.executeThreadAction({
-      title: nextLocked ? '锁定主题' : '解锁主题',
-      confirmContent: nextLocked ? '确认锁定主题吗？' : '确认解锁主题吗？',
-      url: `/forum/threads/${this.data.threadId}/lock`,
-      payload: { locked: nextLocked },
-      failText: nextLocked ? '锁定主题失败' : '解锁主题失败',
-      refreshReplies: true
-    })
   },
 
   async handleDeleteThread() {
@@ -520,30 +697,6 @@ Page({
     } catch (error) {
       toastError(error, '删除主题失败')
     }
-  },
-
-  async handleToggleSticky() {
-    if (!this.data.thread || !this.data.canStickyToggle) return
-    const nextSticky = this.data.thread.threadType !== 'STICKY'
-    await this.executeThreadAction({
-      title: nextSticky ? '置顶主题' : '取消置顶',
-      confirmContent: nextSticky ? '确认置顶主题吗？' : '确认取消置顶吗？',
-      url: `/forum/threads/${this.data.threadId}/sticky`,
-      payload: { sticky: nextSticky },
-      failText: nextSticky ? '置顶主题失败' : '取消置顶失败'
-    })
-  },
-
-  async handleToggleEssence() {
-    if (!this.data.thread || !this.data.canManageThread) return
-    const nextEssence = !this.data.thread.isEssence
-    await this.executeThreadAction({
-      title: nextEssence ? '设为精华' : '取消精华',
-      confirmContent: nextEssence ? '确认设为精华吗？' : '确认取消精华吗？',
-      url: `/forum/threads/${this.data.threadId}/essence`,
-      payload: { essence: nextEssence },
-      failText: nextEssence ? '设精华失败' : '取消精华失败'
-    })
   },
 
   async handleDeleteReply(e) {

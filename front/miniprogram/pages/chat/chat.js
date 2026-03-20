@@ -5,7 +5,7 @@ const auth = require('../../utils/auth')
 const request = require('../../utils/request')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
-const { DEFAULT_AVATAR, normalizeUser } = require('../../utils/user')
+const { DEFAULT_AVATAR } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
 const { getSwipeActionStyles } = require('../../utils/theme')
 const { applyPageTheme } = require('../../utils/page-theme')
@@ -19,14 +19,30 @@ const { setChatBadge, refreshChatUnreadBadge } = require('../../utils/tab-badge'
 const pullRefreshHelper = require('../../utils/pull-refresh-helper')
 const PRESENCE_FLUSH_DELAY_MS = 80
 const CONVERSATION_RELOAD_DELAY_MS = 300
+const CHAT_FILTER_ITEMS = [
+  { value: 'all', label: '全部', mode: 'base' },
+  { value: 'friend', label: '好友', mode: 'base' },
+  { value: 'unread', label: '未读', mode: 'toggle' },
+  { value: 'online', label: '在线', mode: 'toggle' }
+]
 
 Page({
   data: {
     conversationList: [],
-    conversationSections: [],
+    displayConversationList: [],
+    filterItems: CHAT_FILTER_ITEMS.map(item => ({
+      ...item,
+      active: item.value === 'all'
+    })),
+    baseFilter: 'all',
+    unreadOnly: false,
+    onlineOnly: false,
+    searchKeyword: '',
+    noticeUnreadCount: 0,
     lobbyOnlineCount: 0,
     lobbyActiveText: '最近活跃 --',
-    recentUsersText: '最近在线 --',
+    lobbyLatestMessageText: '暂无消息',
+    displayEmptyDescription: '没有匹配会话',
     loading: false,
     themeClass: 'theme-retro-blue'
   },
@@ -45,18 +61,23 @@ Page({
       beforeShow: () => this.applyTheme(),
       afterShow: () => {
         this.syncPinnedConversationIds()
+        this.loadFriendUserIdSet()
         this.initSocket()
         this.loadLobbyMeta()
+        this.startLobbyMetaPolling()
         this.loadConversations()
+        this.loadNoticeUnreadCount()
       }
     })
   },
 
   onHide() {
-    this.cleanupPageState()
+    this.stopLobbyMetaPolling()
+    this.cleanupPageState({ clearLobbyMeta: true })
   },
 
   onUnload() {
+    this.stopLobbyMetaPolling()
     this.cleanupPageState({ clearLobbyMeta: true })
   },
 
@@ -84,6 +105,14 @@ Page({
         }
         this.setData({ loading: false })
       })
+  },
+
+  refreshDisplayConversationList() {
+    const displayConversationList = this.buildDisplayConversationList(this.data.conversationList || [])
+    this.setData({
+      displayConversationList,
+      displayEmptyDescription: this.buildDisplayEmptyDescription(displayConversationList)
+    })
   },
 
   /**
@@ -161,18 +190,21 @@ Page({
   loadLobbyMeta() {
     return lobbyMetaHelper.loadLobbyMeta(this, request, (meta) => {
       const onlineCount = Number(meta.onlineCount) || 0
-      const latestActiveAt = meta.latestActiveAt || ''
-      const activeText = this.buildLobbyActiveText(latestActiveAt)
-      const recentUsersText = this.buildRecentUsersText(Array.isArray(meta.recentUsers) ? meta.recentUsers : [])
+      const latestMessageAt = meta.latestMessageAt || ''
+      const activeText = this.buildLobbyActiveText(latestMessageAt)
+      const latestMessageText = this.buildLatestMessageText(
+        meta.latestMessageSenderName,
+        meta.latestMessagePreview
+      )
       if (onlineCount === this.data.lobbyOnlineCount
         && activeText === this.data.lobbyActiveText
-        && recentUsersText === this.data.recentUsersText) {
+        && latestMessageText === this.data.lobbyLatestMessageText) {
         return
       }
       this.setData({
         lobbyOnlineCount: onlineCount,
         lobbyActiveText: activeText,
-        recentUsersText
+        lobbyLatestMessageText: latestMessageText
       })
     })
   },
@@ -185,12 +217,20 @@ Page({
     lobbyMetaHelper.clearLobbyMetaTimer(this)
   },
 
-  buildLobbyActiveText(latestActiveAt) {
-    return lobbyMetaHelper.buildLobbyActiveText(latestActiveAt, time)
+  buildLobbyActiveText(latestMessageAt) {
+    return lobbyMetaHelper.buildLobbyActiveText(latestMessageAt, time)
   },
 
-  buildRecentUsersText(recentUsers) {
-    return lobbyMetaHelper.buildRecentUsersText(recentUsers, normalizeUser, time)
+  buildLatestMessageText(latestMessageSenderName, latestMessagePreview) {
+    return lobbyMetaHelper.buildLatestMessageText(latestMessageSenderName, latestMessagePreview)
+  },
+
+  startLobbyMetaPolling() {
+    lobbyMetaHelper.startLobbyMetaPolling(this, () => this.loadLobbyMeta(), 10000)
+  },
+
+  stopLobbyMetaPolling() {
+    lobbyMetaHelper.stopLobbyMetaPolling(this)
   },
 
   queuePresenceMessage(presence) {
@@ -266,6 +306,84 @@ Page({
       this.conversationReloadTimer = null
     }
     this.pendingPresenceMap = null
+  },
+
+  selectTab(e) {
+    const tab = String(e.currentTarget.dataset.tab || '')
+    if (!tab) {
+      return
+    }
+
+    const nextState = {
+      baseFilter: this.data.baseFilter,
+      unreadOnly: this.data.unreadOnly,
+      onlineOnly: this.data.onlineOnly
+    }
+
+    if (tab === 'all' || tab === 'friend') {
+      if (tab === nextState.baseFilter) {
+        return
+      }
+      nextState.baseFilter = tab
+    } else if (tab === 'unread') {
+      nextState.unreadOnly = !nextState.unreadOnly
+    } else if (tab === 'online') {
+      nextState.onlineOnly = !nextState.onlineOnly
+    } else {
+      return
+    }
+
+    this.setData({
+      ...nextState,
+      filterItems: this.buildFilterItemsByState(nextState)
+    }, () => {
+      this.refreshDisplayConversationList()
+    })
+  },
+
+  onSearchInput(e) {
+    this.setData({
+      searchKeyword: String(e.detail.value || '')
+    }, () => {
+      this.refreshDisplayConversationList()
+    })
+  },
+
+  onSearchConfirm() {
+    this.refreshDisplayConversationList()
+  },
+
+  onSearchTap() {
+    this.refreshDisplayConversationList()
+  },
+
+  async loadNoticeUnreadCount() {
+    try {
+      const res = await request.get('/notices/unread-count')
+      const unreadCount = Number(res && res.data) || 0
+      this.setData({
+        noticeUnreadCount: unreadCount > 0 ? unreadCount : 0
+      })
+    } catch (error) {
+      this.setData({
+        noticeUnreadCount: 0
+      })
+    }
+  },
+
+  async loadFriendUserIdSet() {
+    try {
+      const res = await request.get('/follow/mutual')
+      const list = Array.isArray(res && res.data) ? res.data : []
+      this.friendUserIdSet = new Set(
+        list.map(item => Number(item && item.userId))
+          .filter(id => Number.isFinite(id) && id > 0)
+      )
+    } catch (error) {
+      this.friendUserIdSet = new Set()
+    } finally {
+      this.refreshDisplayConversationList()
+    }
   },
 
   /**
@@ -383,15 +501,115 @@ Page({
   },
 
   buildConversationViewData(sourceList) {
-    const conversationList = this.sortConversationList(sourceList)
+    const conversationList = Array.isArray(sourceList) ? sourceList.slice() : []
+    const displayConversationList = this.buildDisplayConversationList(conversationList)
+    const displayEmptyDescription = this.buildDisplayEmptyDescription(displayConversationList)
     return {
       conversationList,
-      conversationSections: this.buildConversationSections(conversationList)
+      displayConversationList,
+      displayEmptyDescription,
+      filterItems: this.buildFilterItemsByState({
+        baseFilter: this.data.baseFilter,
+        unreadOnly: this.data.unreadOnly,
+        onlineOnly: this.data.onlineOnly
+      })
     }
   },
 
-  buildConversationSections(conversationList) {
-    return conversationViewHelper.buildConversationSections(conversationList)
+  buildDisplayEmptyDescription(displayConversationList) {
+    if ((displayConversationList || []).length > 0) {
+      return ''
+    }
+    if (String(this.data.searchKeyword || '').trim()) {
+      return '没有匹配会话'
+    }
+    if (this.data.unreadOnly && this.data.onlineOnly) {
+      if (this.data.baseFilter === 'friend') {
+        return '当前没有符合筛选的好友会话'
+      }
+      return '当前没有符合筛选的会话'
+    }
+    if (this.data.baseFilter === 'friend' && this.data.onlineOnly) {
+      return '当前没有好友在线'
+    }
+    if (this.data.baseFilter === 'friend' && this.data.unreadOnly) {
+      return '当前没有好友未读会话'
+    }
+    if (this.data.baseFilter === 'friend') {
+      return '当前没有好友会话'
+    }
+    if (this.data.onlineOnly) {
+      return '当前没有在线会话'
+    }
+    if (this.data.unreadOnly) {
+      return '当前没有未读会话'
+    }
+    return '没有匹配会话'
+  },
+
+  buildDisplayConversationList(conversationList) {
+    const keyword = String(this.data.searchKeyword || '').trim().toLowerCase()
+    let list = this.sortConversationList(conversationList)
+
+    if (this.data.baseFilter === 'friend') {
+      list = list.filter(item => this.isFriendConversation(item))
+    }
+    if (this.data.unreadOnly) {
+      list = list.filter(item => (Number(item.unreadCount) || 0) > 0)
+    }
+    if (this.data.onlineOnly) {
+      list = list.filter(item => item.isOnline)
+    }
+    if (!keyword) {
+      return list
+    }
+    return list.filter(item => this.matchConversationByKeyword(item, keyword))
+  },
+
+  sortConversationList(sourceList) {
+    return (sourceList || []).slice().sort((a, b) => {
+      const pinDiff = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))
+      if (pinDiff !== 0) return pinDiff
+
+      const aTime = a.lastMessageTime || ''
+      const bTime = b.lastMessageTime || ''
+      if (aTime !== bTime) return bTime.localeCompare(aTime)
+      return Number(b.conversationId) - Number(a.conversationId)
+    })
+  },
+
+  isFriendConversation(item) {
+    const targetUserId = Number(item && item.targetUserId)
+    if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+      return false
+    }
+    return Boolean(this.friendUserIdSet && this.friendUserIdSet.has(targetUserId))
+  },
+
+  buildFilterItemsByState(state) {
+    return CHAT_FILTER_ITEMS.map(item => {
+      if (item.mode === 'base') {
+        return {
+          ...item,
+          active: state.baseFilter === item.value
+        }
+      }
+      return {
+        ...item,
+        active: item.value === 'unread' ? Boolean(state.unreadOnly) : Boolean(state.onlineOnly)
+      }
+    })
+  },
+
+  matchConversationByKeyword(item, keyword) {
+    const fields = [
+      item.displayName,
+      item.targetNickname,
+      item.targetWolfNo,
+      item.lastMessage,
+      item.presenceText
+    ]
+    return fields.some(field => String(field || '').toLowerCase().includes(keyword))
   },
 
   buildSwipeActions(pinned, unreadCount) {
@@ -437,10 +655,6 @@ Page({
     return this.buildSwipeActions(Boolean(item.pinned), Number(item.unreadCount) || 0)
   },
 
-  sortConversationList(sourceList) {
-    return conversationViewHelper.sortConversationList(sourceList)
-  },
-
   syncChatUnreadBadge(list) {
     const conversationList = Array.isArray(list) ? list : (this.data.conversationList || [])
     const unreadTotal = conversationList.reduce((sum, item) => {
@@ -477,7 +691,10 @@ Page({
    * 下拉刷新
    */
   onPullDownRefresh() {
-    pullRefreshHelper.runPullDownRefresh(this, () => this.loadConversations())
+    pullRefreshHelper.runPullDownRefresh(this, async () => {
+      await this.loadConversations()
+      await this.loadNoticeUnreadCount()
+    })
   },
 
   /**
@@ -486,6 +703,12 @@ Page({
   goToMutual() {
     wx.switchTab({
       url: '/pages/follow/follow'
+    })
+  },
+
+  goNotice() {
+    wx.navigateTo({
+      url: '/pages/notice/notice'
     })
   },
 

@@ -28,7 +28,7 @@
         </view>
       </view>
 
-      <view wx:if="{{!isSelf}}" class="profile-actions">
+      <view wx:if="{{!isSelf && !isTargetDisabled}}" class="profile-actions">
         <retro-button
           size="small"
           theme="{{isFollowing ? 'default' : 'primary'}}"
@@ -46,7 +46,8 @@
           私聊
         </retro-button>
       </view>
-      <view wx:if="{{!isSelf && !isMutual}}" class="mutual-hint">未互关时单向最多发送 3 条消息，收到对方回复后解除限制</view>
+      <view wx:if="{{!isSelf && isTargetDisabled}}" class="mutual-hint">该用户已注销，当前展示为历史资料</view>
+      <view wx:if="{{!isSelf && !isMutual && !isTargetDisabled}}" class="mutual-hint">未互关时单向最多发送 3 条消息，收到对方回复后解除限制</view>
     </view>
 
     <view class="core-stats-card">
@@ -103,7 +104,7 @@
     <view class="latest-card">
       <view class="section-head">
         <view class="section-title">最近帖子</view>
-        <view class="section-link" bindtap="goAllThreads">[查看全部]</view>
+        <view class="section-link" bindtap="goAllThreads">{{isSelf ? '[管理置顶]' : '[查看全部]'}}</view>
       </view>
 
       <retro-empty wx:if="{{latestThreads.length === 0}}" description="暂无帖子" />
@@ -114,17 +115,37 @@
         bindtap="onTapThread"
         data-thread-id="{{item.threadId}}">
         <view class="thread-title-row">
-          <text wx:if="{{item.threadType === 'ANNOUNCEMENT'}}" class="thread-tag">[公告]</text>
-          <text wx:elif="{{item.threadType === 'STICKY'}}" class="thread-tag">[置顶]</text>
+          <text wx:if="{{item.threadType === 'STICKY'}}" class="thread-tag">[置顶]</text>
           <text wx:if="{{item.isEssence}}" class="thread-tag">[精华]</text>
           <text class="thread-title">{{item.title}}</text>
+        </view>
+        <view wx:if="{{item.contentPreview}}" class="thread-excerpt">{{item.contentPreview}}</view>
+        <view wx:if="{{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
+          <view wx:if="{{item.videoPosterUrl}}" class="thread-media-cell thread-media-video">
+            <image class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
+            <view class="thread-media-video-mask">
+              <view class="thread-media-video-icon"></view>
+            </view>
+          </view>
+          <view
+            wx:for="{{item.previewImageUrls}}"
+            wx:key="*this"
+            wx:for-item="previewUrl"
+            wx:for-index="previewIndex"
+            class="thread-media-cell">
+            <image class="thread-media-image" src="{{previewUrl}}" mode="aspectFill" />
+            <view
+              wx:if="{{item.hasMoreImages && previewIndex === item.previewImageUrls.length - 1}}"
+              class="thread-media-more">
+              +{{item.imageUrls.length - item.previewImageUrls.length}}
+            </view>
+          </view>
         </view>
         <view class="thread-meta-row">
           <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
         </view>
         <view class="thread-time-row">
           <text>{{item.createTimeText}}</text>
-          <text>{{item.lastReplyTimeText || item.createTimeText}}</text>
         </view>
       </view>
     </view>

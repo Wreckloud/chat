@@ -4,7 +4,7 @@
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const { normalizeUserList, openUserProfile } = require('../../utils/user')
-const { toastError } = require('../../utils/ui')
+const { toastError, confirmAction } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const { attachDisplayTitle } = require('../../utils/title')
@@ -81,6 +81,15 @@ Page({
   async handleUnfollow(e) {
     const userId = e.currentTarget.dataset.id
     if (!userId) return
+
+    const confirmed = await confirmAction({
+      title: '取消关注？',
+      content: '取消后将不再优先看到对方动态，可随时重新关注。',
+      confirmColor: '#b4474f',
+      confirmText: '取消关注',
+      cancelText: '再想想'
+    })
+    if (!confirmed) return
 
     try {
       await request.del(`/follow/${userId}`)

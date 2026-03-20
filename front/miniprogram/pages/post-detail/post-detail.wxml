@@ -1,3 +1,67 @@
+<template name="replyNode">
+  <view class="reply-item {{item.depth > 0 ? 'reply-item-nested' : ''}}" style="{{item.depth > 0 ? 'margin-left:' + item.indentRpx + 'rpx;' : ''}}">
+    <view class="reply-header">
+      <view
+        class="reply-author-main"
+        data-user-id="{{item.author.userId}}"
+        bindtap="onTapUserElement">
+        <retro-avatar
+          class="reply-avatar u-avatar-top"
+          size="small"
+          shape="square"
+          image="{{item.author.avatar}}">
+          {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
+        </retro-avatar>
+        <view class="reply-info">
+          <view class="reply-author-line u-name-line">
+            <view class="reply-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</view>
+            <view
+              wx:if="{{item.author.displayTitleName}}"
+              class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
+              style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
+              [{{item.author.displayTitleName}}]
+            </view>
+          </view>
+          <view class="reply-time">{{item.timeText}}</view>
+        </view>
+      </view>
+      <view class="reply-floor">#{{item.floorNo}}</view>
+    </view>
+
+    <view class="reply-content">{{item.content}}</view>
+    <image
+      wx:if="{{item.imageUrl}}"
+      class="reply-image"
+      src="{{item.imageUrl}}"
+      mode="widthFix"
+      data-url="{{item.imageUrl}}"
+      bindtap="previewReplyImage" />
+
+    <view class="reply-actions">
+      <view class="reply-primary-actions">
+        <view class="reply-action-btn reply-like-btn {{item.likedByCurrentUser ? 'reply-like-btn-liked' : ''}}" bindtap="handleToggleReplyLike" data-id="{{item.replyId}}">
+          <text class="reply-action-text">{{item.likedByCurrentUser ? '已赞' : '点赞'}}</text>
+          <text class="reply-action-count">{{item.likeCount || 0}}</text>
+        </view>
+        <view class="reply-action-btn quote-btn" bindtap="chooseReplyTarget" data-reply-id="{{item.replyId}}">
+          <text class="reply-action-text">回复</text>
+        </view>
+      </view>
+      <view wx:if="{{item.canDelete}}" class="reply-danger-actions">
+        <view class="reply-action-btn reply-delete-btn" bindtap="handleDeleteReply" data-id="{{item.replyId}}">
+          <text class="reply-action-text">删除</text>
+        </view>
+      </view>
+    </view>
+
+    <block wx:if="{{item.children && item.children.length > 0}}">
+      <block wx:for="{{item.children}}" wx:key="replyId" wx:for-item="child">
+        <template is="replyNode" data="{{item:child}}" />
+      </block>
+    </block>
+  </view>
+</template>
+
 <view class="post-detail-page {{themeClass}}">
   <retro-loading wx:if="{{loading && !thread}}" size="40rpx" text="加载中..." />
   <retro-empty wx:elif="{{!loading && !thread}}" description="主题不存在或已删除" />
@@ -14,8 +78,6 @@
       <view class="thread-card">
         <view class="thread-title-line">
           <text wx:if="{{thread.threadType === 'ANNOUNCEMENT'}}" class="thread-tag thread-tag-ann">[公告]</text>
-          <text wx:elif="{{thread.threadType === 'STICKY'}}" class="thread-tag thread-tag-sticky">[置顶]</text>
-          <text wx:if="{{thread.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
           <text wx:if="{{thread.status === 'LOCKED'}}" class="thread-tag thread-tag-locked">[锁]</text>
           <text class="thread-title">{{thread.title}}</text>
         </view>
@@ -27,7 +89,7 @@
             bindtap="onTapUserElement">
             <retro-avatar
               class="author-avatar u-avatar-top"
-              size="medium"
+              size="small"
               shape="square"
               image="{{thread.author.avatar}}">
               {{thread.author.nickname ? thread.author.nickname.charAt(0) : '行'}}
@@ -42,20 +104,11 @@
                   [{{thread.author.displayTitleName}}]
                 </view>
               </view>
-              <view class="thread-time">{{thread.createTimeText}}</view>
-            </view>
-          </view>
-          <view class="thread-stat-wrap">
-            <view class="thread-stat">回 {{thread.replyCount}} / 看 {{thread.viewCount}}</view>
-            <view class="thread-like-btn" bindtap="handleToggleThreadLike">
-              <text class="thread-like-label {{thread.likedByCurrentUser ? 'thread-like-label-liked' : ''}}">{{thread.likedByCurrentUser ? '已赞' : '点赞'}}</text>
-              <text class="thread-like-count">{{thread.likeCount || 0}}</text>
-            </view>
-            <view wx:if="{{canManageThread}}" class="thread-manage-actions">
-              <text class="manage-btn" bindtap="handleToggleLock">{{thread.status === 'LOCKED' ? '解锁' : '锁帖'}}</text>
-              <text wx:if="{{canStickyToggle}}" class="manage-btn" bindtap="handleToggleSticky">{{thread.threadType === 'STICKY' ? '取消置顶' : '置顶'}}</text>
-              <text class="manage-btn" bindtap="handleToggleEssence">{{thread.isEssence ? '取消精华' : '设精华'}}</text>
-              <text class="manage-btn danger" bindtap="handleDeleteThread">删帖</text>
+              <view class="thread-meta-line">
+                <text class="thread-time">{{thread.createTimeText}}</text>
+                <text class="thread-info-sep">/</text>
+                <text class="thread-stat">赞 {{thread.likeCount || 0}} / 回 {{thread.replyCount}} / 阅 {{thread.viewCount}}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -89,75 +142,29 @@
             <view class="thread-video-play-icon"></view>
           </view>
         </view>
+
+        <view class="thread-action-line">
+          <view class="thread-primary-actions">
+            <view class="thread-like-btn" bindtap="handleToggleThreadLike">
+              <text class="thread-like-label {{thread.likedByCurrentUser ? 'thread-like-label-liked' : ''}}">{{thread.likedByCurrentUser ? '已赞' : '点赞'}}</text>
+            </view>
+          </view>
+          <view wx:if="{{canManageThread}}" class="thread-danger-actions">
+            <text class="manage-btn danger" bindtap="handleDeleteThread">删帖</text>
+          </view>
+        </view>
       </view>
 
       <view>
-        <view class="section-title">楼层回复</view>
+        <view class="section-title-line">
+          <view class="section-title">楼层回复</view>
+          <view class="reply-sort-switch" bindtap="onSwitchReplySort">{{replySortText}}</view>
+        </view>
         <retro-empty wx:if="{{replies.length === 0}}" description="暂无回复" />
 
-        <view wx:for="{{replies}}" wx:key="replyId" class="reply-item">
-          <view class="reply-header">
-            <view
-              class="reply-author-main"
-              data-user-id="{{item.author.userId}}"
-              bindtap="onTapUserElement">
-              <retro-avatar
-                class="reply-avatar u-avatar-top"
-                size="small"
-                shape="square"
-                image="{{item.author.avatar}}">
-                {{item.author.nickname ? item.author.nickname.charAt(0) : '行'}}
-              </retro-avatar>
-              <view class="reply-info">
-                <view class="reply-author-line u-name-line">
-                  <view class="reply-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo}}</view>
-                  <view
-                    wx:if="{{item.author.displayTitleName}}"
-                    class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
-                    style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
-                    [{{item.author.displayTitleName}}]
-                  </view>
-                </view>
-                <view class="reply-time">{{item.timeText}}</view>
-              </view>
-            </view>
-            <view class="reply-floor">#{{item.floorNo}}</view>
-          </view>
-
-          <view wx:if="{{item.quoteReplyId}}" class="reply-quote">
-            引用 #{{item.quoteFloorNo}}
-            {{item.quoteAuthor.displayName || item.quoteAuthor.nickname || item.quoteAuthor.wolfNo}}
-            <text
-              wx:if="{{item.quoteAuthor.displayTitleName}}"
-              class="user-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
-              style="{{item.quoteAuthor.displayTitleColor ? 'color:' + item.quoteAuthor.displayTitleColor + ';' : ''}}">
-              [{{item.quoteAuthor.displayTitleName}}]
-            </text>
-            ：
-          </view>
-          <view wx:if="{{item.quoteReplyId}}" class="reply-quote-content">{{item.quoteContent}}</view>
-          <view class="reply-content">{{item.content}}</view>
-          <image
-            wx:if="{{item.imageUrl}}"
-            class="reply-image"
-            src="{{item.imageUrl}}"
-            mode="widthFix"
-            data-url="{{item.imageUrl}}"
-            bindtap="previewReplyImage" />
-
-          <view class="reply-actions">
-            <view class="reply-action-btn reply-like-btn {{item.likedByCurrentUser ? 'reply-like-btn-liked' : ''}}" bindtap="handleToggleReplyLike" data-id="{{item.replyId}}">
-              <text class="reply-action-text">{{item.likedByCurrentUser ? '已赞' : '点赞'}}</text>
-              <text class="reply-action-count">{{item.likeCount || 0}}</text>
-            </view>
-            <view class="reply-action-btn quote-btn" bindtap="chooseQuote" data-reply="{{item}}">
-              <text class="reply-action-text">引用</text>
-            </view>
-            <view wx:if="{{item.canDelete}}" class="reply-action-btn reply-delete-btn" bindtap="handleDeleteReply" data-id="{{item.replyId}}">
-              <text class="reply-action-text">删除</text>
-            </view>
-          </view>
-        </view>
+        <block wx:for="{{replyTree}}" wx:key="replyId" wx:for-item="root">
+          <template is="replyNode" data="{{item:root}}" />
+        </block>
 
         <view wx:if="{{replies.length > 0}}" class="reply-more-wrap">
           <retro-button
@@ -175,43 +182,66 @@
     </scroll-view>
 
     <view id="reply-dock" class="reply-dock" style="bottom: {{keyboardHeightPx}}px;">
-      <view wx:if="{{quoteHint}}" class="quote-hint" bindtap="clearQuote">
-        {{quoteHint}}（点此取消）
+      <view wx:if="{{replyTargetHint}}" class="quote-hint">
+        <text class="quote-hint-text">{{replyTargetHint}}</text>
+        <text class="quote-hint-close" bindtap="clearReplyTarget">x</text>
       </view>
 
       <view class="reply-input">
-        <input
-          class="reply-field"
-          placeholder="写下回复..."
-          value="{{replyContent}}"
-          focus="{{replyFocused}}"
-          maxlength="2000"
-          adjust-position="{{false}}"
-          hold-keyboard="{{true}}"
-          confirm-hold="{{true}}"
-          bindkeyboardheightchange="onReplyKeyboardHeightChange"
-          bindfocus="onReplyFocus"
-          bindblur="onReplyBlur"
-          bindinput="onReplyInput"
-          confirm-type="send"
-          bindconfirm="handleReply"
-        />
+        <view class="reply-emoji-trigger" bindtap="toggleReplyEmojiPanel">
+          <image class="reply-emoji-icon" src="/images/icon-kaomoji.svg" mode="aspectFit" />
+        </view>
+        <view class="reply-field-wrap">
+          <input
+            class="reply-field"
+            placeholder="写下回复..."
+            value="{{replyContent}}"
+            focus="{{replyFocused}}"
+            maxlength="2000"
+            adjust-position="{{false}}"
+            hold-keyboard="{{true}}"
+            confirm-hold="{{true}}"
+            bindkeyboardheightchange="onReplyKeyboardHeightChange"
+            bindfocus="onReplyFocus"
+            bindblur="onReplyBlur"
+            bindinput="onReplyInput"
+            confirm-type="send"
+            bindconfirm="handleReply"
+          />
+        </view>
         <view class="reply-action-bar">
           <retro-button
+            class="reply-compose-btn"
             theme="default"
-            size="small"
+            size="medium"
             disabled="{{replySubmitting}}"
-            bindtap="chooseReplyImage">
+            bind:tap="chooseReplyImage">
             图片
           </retro-button>
           <retro-button
+            class="reply-compose-btn"
             theme="primary"
-            size="small"
+            size="medium"
             disabled="{{!canReplySubmit}}"
-            bindtap="onReplySubmitTap">
+            bind:tap="onReplySubmitTap">
             {{replySubmitting ? '提交中' : '回帖'}}
           </retro-button>
         </view>
+      </view>
+
+      <view wx:if="{{replyEmojiPanelVisible}}" class="reply-emoji-panel">
+        <scroll-view class="reply-emoji-scroll" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="reply-emoji-grid">
+            <view
+              wx:for="{{replyEmojiList}}"
+              wx:key="*this"
+              class="reply-emoji-item"
+              data-emoji="{{item}}"
+              bindtap="onSelectReplyEmoji">
+              <text class="reply-emoji-item-text">{{item}}</text>
+            </view>
+          </view>
+        </scroll-view>
       </view>
 
       <view wx:if="{{replyImage}}" class="reply-media-box">

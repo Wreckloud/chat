@@ -23,6 +23,8 @@ Page({
     threads: [],
     tabs: FEED_TABS,
     activeTab: 'recommend',
+    searchKeyword: '',
+    noticeUnreadCount: 0,
     page: 1,
     size: 20,
     total: 0,
@@ -36,6 +38,7 @@ Page({
       afterShow: () => {
         this.applyTheme()
         this.loadThreads(true)
+        this.loadNoticeUnreadCount()
       }
     })
   },
@@ -51,11 +54,13 @@ Page({
     const nextPage = reset ? 1 : this.data.page
     this.setData({ loading: true })
     try {
-      const res = await request.get('/forum/feed', {
-        page: nextPage,
-        size: this.data.size,
-        tab: this.data.activeTab
-      })
+      const keyword = String(this.data.searchKeyword || '').trim()
+      const searching = !!keyword
+      const endpoint = searching ? '/forum/search' : '/forum/feed'
+      const params = searching
+        ? { keyword, page: nextPage, size: this.data.size }
+        : { tab: this.data.activeTab, page: nextPage, size: this.data.size }
+      const res = await request.get(endpoint, params)
       const payload = res.data || {}
       const list = forumViewHelper.mapThreadList(payload.list || [], normalizeUser, time)
       const mergedThreads = forumViewHelper.mergePagedList(this.data.threads, list, reset)
@@ -82,6 +87,7 @@ Page({
     }
     this.setData({
       activeTab: tab,
+      searchKeyword: '',
       page: 1,
       total: 0,
       hasMore: true,
@@ -94,18 +100,55 @@ Page({
     this.loadThreads(false)
   },
 
+  onSearchInput(e) {
+    this.setData({
+      searchKeyword: String(e.detail.value || '')
+    })
+  },
+
+  onSearchConfirm() {
+    this.loadThreads(true)
+  },
+
+  onSearchTap() {
+    this.loadThreads(true)
+  },
+
   onReachBottom() {
     this.loadMoreThreads()
   },
 
   onPullDownRefresh() {
-    pullRefreshHelper.runPullDownRefresh(this, () => this.loadThreads(true))
+    pullRefreshHelper.runPullDownRefresh(this, async () => {
+      await this.loadThreads(true)
+      await this.loadNoticeUnreadCount()
+    })
   },
 
   goCreatePost() {
     wx.navigateTo({
       url: '/pages/post-create/post-create'
     })
+  },
+
+  goNotice() {
+    wx.navigateTo({
+      url: '/pages/notice/notice'
+    })
+  },
+
+  async loadNoticeUnreadCount() {
+    try {
+      const res = await request.get('/notices/unread-count')
+      const unreadCount = Number(res && res.data) || 0
+      this.setData({
+        noticeUnreadCount: unreadCount > 0 ? unreadCount : 0
+      })
+    } catch (error) {
+      this.setData({
+        noticeUnreadCount: 0
+      })
+    }
   },
 
   goPostDetail(e) {

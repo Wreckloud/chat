@@ -1,21 +1,13 @@
 @import "../../styles/im-chat-common.wxss";
+@import "../../styles/topbar.wxss";
 
 .im-page {
-  --im-message-list-top: 82rpx;
+  --im-message-list-top: 88rpx;
 }
 
 .im-header {
   position: relative;
   z-index: 10;
-  height: 82rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 14rpx;
-  border-top: 1rpx solid var(--retro-toolbar-top-border);
-  border-bottom: 1rpx solid var(--retro-toolbar-border);
-  background: var(--retro-toolbar-bg);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
 .im-header-main {
@@ -35,10 +27,6 @@
 
 .im-header-name {
   display: block;
-  font-size: 29rpx;
-  font-weight: 600;
-  color: var(--retro-strong-text);
-  white-space: nowrap;
 }
 
 .im-header-actions {

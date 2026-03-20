@@ -219,13 +219,76 @@
   white-space: nowrap;
 }
 
+.thread-excerpt {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.42;
+  color: var(--retro-body-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.thread-media-line {
+  margin-top: 8rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.thread-media-cell {
+  position: relative;
+  width: 124rpx;
+  height: 92rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+}
+
+.thread-media-video {
+  width: 158rpx;
+}
+
+.thread-media-image {
+  width: 100%;
+  height: 100%;
+}
+
+.thread-media-video-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 23, 30, 0.28);
+}
+
+.thread-media-video-icon {
+  width: 0;
+  height: 0;
+  margin-left: 4rpx;
+  border-top: 11rpx solid transparent;
+  border-bottom: 11rpx solid transparent;
+  border-left: 16rpx solid rgba(255, 255, 255, 0.88);
+}
+
+.thread-media-more {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #ffffff;
+  background: rgba(14, 20, 28, 0.55);
+}
+
 .thread-meta-row,
 .thread-time-row {
   margin-top: 6rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10rpx;
   font-size: 20rpx;
   color: var(--retro-muted-text);
 }

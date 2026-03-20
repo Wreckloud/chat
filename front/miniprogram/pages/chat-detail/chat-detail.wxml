@@ -1,11 +1,11 @@
 <import src="../../templates/im-chat-body.wxml" />
 
 <view class="im-page {{themeClass}}">
-  <view class="im-header">
+  <view class="im-header retro-topbar">
     <view class="im-header-main" catchtap="goUserProfile">
       <view class="im-header-meta">
         <view class="im-header-name-line u-name-line">
-          <view class="im-header-name u-name">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</view>
+          <view class="im-header-name u-name retro-topbar-title">{{targetUser.displayName || targetUser.nickname || targetUser.wolfNo || '聊天会话'}}</view>
           <view
             wx:if="{{targetUser.displayTitleName}}"
             class="im-header-title-badge u-title-badge retro-title-badge retro-title-badge-md"
@@ -22,5 +22,5 @@
 
   <template
     is="imChatBody"
-    data="{{messageListBottomPx: messageListBottomPx, scrollIntoView: scrollIntoView, loading: loading, messages: messages, messageBlocks: messageBlocks, keyboardHeightPx: keyboardHeightPx, morePanelVisible: morePanelVisible, inputMessage: inputMessage, composerFocused: composerFocused, sending: sending, canSendText: canSendText, moreActions: moreActions, replyDraft: replyDraft, highlightMessageId: highlightMessageId, emptyText: '暂无消息', inputPlaceholder: '输入消息...'}}" />
+    data="{{messageListBottomPx: messageListBottomPx, scrollIntoView: scrollIntoView, loading: loading, messages: messages, messageBlocks: messageBlocks, keyboardHeightPx: keyboardHeightPx, morePanelVisible: morePanelVisible, emojiPanelVisible: emojiPanelVisible, emojiList: emojiList, inputMessage: inputMessage, composerFocused: composerFocused, sending: sending, canSendText: canSendText, moreActions: moreActions, replyDraft: replyDraft, highlightMessageId: highlightMessageId, emptyText: '', inputPlaceholder: '输入消息...'}}" />
 </view>

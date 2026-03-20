@@ -8,6 +8,7 @@ const { toastError } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
 const imHelper = require('../../utils/im-helper')
 const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
+const { COMMON_KAOMOJI_LIST, appendKaomojiWithSpace } = require('../../utils/kaomoji')
 
 const THREAD_IMAGE_MAX_COUNT = 9
 
@@ -53,6 +54,8 @@ Page({
   data: {
     title: '',
     content: '',
+    emojiPanelVisible: false,
+    emojiList: COMMON_KAOMOJI_LIST,
     mediaImages: [],
     mediaVideo: null,
     canSubmit: false,
@@ -87,6 +90,24 @@ Page({
   onContentInput(e) {
     this.setData({
       content: e.detail.value || ''
+    }, () => {
+      this.syncCanSubmitState()
+    })
+  },
+
+  toggleEmojiPanel() {
+    this.setData({ emojiPanelVisible: !this.data.emojiPanelVisible })
+  },
+
+  onSelectEmoji(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const emoji = String(dataset.emoji || '').trim()
+    if (!emoji) {
+      return
+    }
+    const nextContent = appendKaomojiWithSpace(this.data.content, emoji)
+    this.setData({
+      content: nextContent
     }, () => {
       this.syncCanSubmitState()
     })

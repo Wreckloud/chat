@@ -54,14 +54,6 @@
   color: #a24f2a;
 }
 
-.thread-tag-sticky {
-  color: #235e94;
-}
-
-.thread-tag-essence {
-  color: #5f5321;
-}
-
 .thread-tag-locked {
   color: #7a4258;
 }
@@ -69,7 +61,7 @@
 .thread-title {
   flex: 1;
   min-width: 0;
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -77,47 +69,69 @@
 }
 
 .thread-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 14rpx;
   margin-bottom: 12rpx;
 }
 
 .thread-author-main {
   min-width: 0;
-  flex: 1;
   display: flex;
   align-items: flex-start;
 }
 
 .thread-info {
   min-width: 0;
-  margin-left: 12rpx;
+  margin-left: 10rpx;
   flex: 1;
 }
 
 .thread-name {
-  font-size: 28rpx;
+  font-size: 26rpx;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .thread-time {
-  margin-top: 2rpx;
-  font-size: 22rpx;
+  font-size: 21rpx;
   color: var(--retro-muted-text);
 }
 
 .thread-stat {
-  font-size: 22rpx;
+  font-size: 21rpx;
   color: var(--retro-muted-text);
 }
 
-.thread-stat-wrap {
+.thread-meta-line {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6rpx;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 2rpx;
+}
+
+.thread-info-sep {
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+}
+
+.thread-action-line {
+  margin-top: 12rpx;
+  padding-top: 10rpx;
+  border-top: 1rpx dashed var(--retro-panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12rpx;
+}
+
+.thread-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.thread-danger-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 
 .thread-like-btn {
@@ -137,18 +151,6 @@
 
 .thread-like-label-liked {
   color: var(--retro-accent-text);
-}
-
-.thread-like-count {
-  color: var(--retro-muted-text);
-}
-
-.thread-manage-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 12rpx;
 }
 
 .manage-btn {
@@ -232,8 +234,24 @@
   margin: 8rpx 0 14rpx;
 }
 
+.section-title-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reply-sort-switch {
+  font-size: 23rpx;
+  color: var(--retro-accent-color);
+  margin-bottom: 10rpx;
+}
+
 .reply-item {
   margin-bottom: 12rpx;
+}
+
+.reply-item-nested {
+  background: var(--retro-thread-reply-bg, rgba(211, 224, 218, 0.86));
 }
 
 .reply-item:last-child {
@@ -296,18 +314,6 @@
   color: var(--retro-muted-text);
 }
 
-.reply-quote {
-  margin-top: 8rpx;
-  font-size: 21rpx;
-  color: var(--retro-muted-text);
-}
-
-.reply-quote-content {
-  margin-top: 2rpx;
-  font-size: 20rpx;
-  color: var(--retro-muted-text);
-}
-
 .reply-content {
   margin-top: 8rpx;
   font-size: 25rpx;
@@ -326,11 +332,25 @@
 }
 
 .reply-actions {
-  margin-top: 8rpx;
+  margin-top: 10rpx;
+  padding-top: 10rpx;
+  border-top: 1rpx dashed var(--retro-panel-border);
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.reply-primary-actions {
+  display: flex;
   align-items: center;
   gap: 16rpx;
+}
+
+.reply-danger-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 
 .reply-action-btn {
@@ -362,12 +382,32 @@
 }
 
 .quote-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
   margin-bottom: 10rpx;
   padding: 10rpx 14rpx;
-  border: 1rpx dashed var(--retro-panel-border);
-  background: rgba(255, 255, 255, 0.75);
+  border: 1rpx solid var(--retro-theme-item-active-border);
+  background: var(--retro-theme-item-active-bg);
   font-size: 21rpx;
   color: var(--retro-muted-text);
+}
+
+.quote-hint-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.quote-hint-close {
+  flex-shrink: 0;
+  width: 30rpx;
+  height: 30rpx;
+  line-height: 28rpx;
+  text-align: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--retro-accent-color);
 }
 
 .reply-dock {
@@ -383,26 +423,104 @@
 }
 
 .reply-input {
+  --reply-compose-height: var(--retro-chat-composer-input-height, 64rpx);
+  --reply-compose-btn-min-width: var(--retro-chat-composer-btn-min-width, 96rpx);
+  --reply-compose-icon-size: 30rpx;
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  gap: var(--retro-chat-row-gap, 10rpx);
+}
+
+.reply-emoji-trigger {
+  width: var(--reply-compose-height);
+  height: var(--reply-compose-height);
+  flex-shrink: 0;
+  border: 1rpx solid var(--retro-panel-border);
+  background: #ffffff;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-emoji-icon {
+  width: var(--reply-compose-icon-size);
+  height: var(--reply-compose-icon-size);
+}
+
+.reply-field-wrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .reply-field {
-  flex: 1;
-  height: 64rpx;
+  width: 100%;
+  height: var(--reply-compose-height);
   box-sizing: border-box;
-  padding: 0 16rpx;
+  padding: 0 18rpx;
   border: 1rpx solid var(--retro-panel-border);
   background: #ffffff;
   font-size: 24rpx;
   color: var(--retro-page-text);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.82);
 }
 
 .reply-action-bar {
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  flex-shrink: 0;
+  gap: var(--retro-chat-row-gap, 10rpx);
+}
+
+.reply-compose-btn {
+  min-width: var(--reply-compose-btn-min-width);
+}
+
+.reply-compose-btn .retro-btn {
+  min-height: var(--reply-compose-height);
+}
+
+.reply-emoji-panel {
+  margin-top: 10rpx;
+  padding: 0;
+  border: 0;
+  background: var(--retro-composer-bg);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.reply-emoji-scroll {
+  height: 376rpx;
+  box-sizing: border-box;
+  padding: 0;
+  overflow: hidden;
+}
+
+.reply-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8rpx;
+  align-content: start;
+}
+
+.reply-emoji-item {
+  height: 56rpx;
+  padding: 8rpx 10rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-page-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-emoji-item-text {
+  max-width: 100%;
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: var(--retro-strong-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .reply-media-box {

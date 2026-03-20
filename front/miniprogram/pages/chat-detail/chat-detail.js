@@ -14,9 +14,11 @@ const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
 const imConfig = require('../../utils/im-config')
 const chatPolicyHelper = require('../../utils/chat-policy-helper')
+const replyMentionHelper = require('../../utils/reply-mention-helper')
 const { resolveDisplayName, attachDisplayTitle } = require('../../utils/title')
 const { refreshChatUnreadBadge } = require('../../utils/tab-badge')
 const buildCommonImPageMethods = require('../../utils/im-page-methods')
+const { COMMON_KAOMOJI_LIST } = require('../../utils/kaomoji')
 
 const commonImPageMethods = buildCommonImPageMethods({
   imPageHelper,
@@ -48,9 +50,9 @@ Page({
     targetUser: {},
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
+    emojiPanelVisible: false,
+    emojiList: COMMON_KAOMOJI_LIST,
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
-    messagePolicy: null,
-    systemNoticeBlocks: [],
     replyDraft: null,
     highlightMessageId: 0
   },
@@ -82,11 +84,9 @@ Page({
         imUserHelper.initCurrentUserContext(this, auth, normalizeUser, {
           enableLoadingUserGuard: true
         })
-        this.applyMessagePolicy(null)
         this.markConversationRead(true)
         this.loadCurrentUserProfile()
         this.loadConversation()
-        this.loadMessagePolicy()
         this.loadMessages()
         this.initSocket()
       }
@@ -185,27 +185,6 @@ Page({
     })
   },
 
-  loadMessagePolicy() {
-    if (!this.data.conversationId) {
-      return Promise.resolve()
-    }
-    return request.get(`/conversations/${this.data.conversationId}/messages/policy`)
-      .then(res => {
-        this.applyMessagePolicy(res.data || null)
-      })
-      .catch(() => {})
-  },
-
-  applyMessagePolicy(policy) {
-    const systemNoticeBlocks = this.buildSystemNoticeBlocks(policy)
-    const messageBlocks = this.buildMessageBlocks(this.data.messages, systemNoticeBlocks)
-    this.setData({
-      messagePolicy: policy,
-      systemNoticeBlocks,
-      messageBlocks
-    })
-  },
-
   ...commonImPageMethods,
 
   async sendMessage() {
@@ -216,9 +195,6 @@ Page({
       },
       onSuccess: () => {
         this.clearReplyDraft()
-        if (!this.data.messagePolicy || !this.data.messagePolicy.canSendFreely) {
-          this.loadMessagePolicy()
-        }
       }
     })
   },
@@ -238,9 +214,6 @@ Page({
       this.appendMessage(payload.data)
       if (payload.data && Number(payload.data.senderId) !== Number(this.currentUserId)) {
         this.markConversationRead()
-        if (!this.data.messagePolicy || !this.data.messagePolicy.canSendFreely) {
-          this.loadMessagePolicy()
-        }
       }
     }
   },
@@ -319,8 +292,11 @@ Page({
     if (!replyDraft) {
       return
     }
+    const nextInput = replyMentionHelper.prependMention(this.data.inputMessage, replyDraft.mentionName)
     this.setData({
       replyDraft,
+      inputMessage: nextInput,
+      canSendText: nextInput.trim().length > 0,
       composerFocused: true
     })
     if (this.data.morePanelVisible) {
@@ -333,7 +309,15 @@ Page({
     if (!this.data.replyDraft) {
       return
     }
-    this.setData({ replyDraft: null })
+    const nextInput = replyMentionHelper.removeLeadingMention(
+      this.data.inputMessage,
+      this.data.replyDraft.mentionName
+    )
+    this.setData({
+      replyDraft: null,
+      inputMessage: nextInput,
+      canSendText: nextInput.trim().length > 0
+    })
   },
 
   buildReplyPayload() {
@@ -342,6 +326,10 @@ Page({
 
   handleTapReplyQuote(e) {
     const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const targetDisabled = Number(dataset.replyTargetDisabled) === 1
+    if (targetDisabled) {
+      return
+    }
     const targetMessageId = Number(dataset.replyTargetId)
     if (!targetMessageId) {
       return
@@ -354,6 +342,21 @@ Page({
       return false
     }
     return (this.data.messages || []).some(item => Number(item.messageId) === Number(messageId))
+  },
+
+  findMessageById(messageId) {
+    if (!messageId) {
+      return null
+    }
+    return (this.data.messages || []).find(item => Number(item.messageId) === Number(messageId)) || null
+  },
+
+  isMessageRecalled(messageId) {
+    const target = this.findMessageById(messageId)
+    if (!target) {
+      return false
+    }
+    return String(target.msgType || '').toUpperCase() === 'RECALL'
   },
 
   async jumpToMessage(messageId) {
@@ -369,6 +372,9 @@ Page({
       loopCount += 1
     }
     if (!loaded) {
+      return
+    }
+    if (this.isMessageRecalled(messageId)) {
       return
     }
     this.scrollToMessageAnchor(messageId)
@@ -431,19 +437,18 @@ Page({
     }
   },
 
-  buildMessageBlocks(messages, systemNoticeBlocks = this.data.systemNoticeBlocks) {
+  buildMessageBlocks(messages) {
     const messageBlocks = imHelper.buildMessageBlocks(messages, {
       currentUserId: this.currentUserId,
       messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
       cacheUserProfile: (user) => this.cacheUserProfile(user),
       resolveSenderProfile: (senderId, isSelf) => this.resolveSenderProfile(senderId, isSelf)
     })
-    return this.prependSystemNoticeBlocks(messageBlocks, systemNoticeBlocks)
+    return messageBlocks
   },
 
   appendMessageBlock({ messageBlocks, message, previousMessage, messageIndex }) {
-    const pureBlocks = this.stripSystemNoticeBlocks(messageBlocks)
-    const nextBlocks = imHelper.appendMessageBlock(pureBlocks, message, {
+    return imHelper.appendMessageBlock(messageBlocks, message, {
       currentUserId: this.currentUserId,
       messageMergeGapMs: this.MESSAGE_MERGE_GAP_MS,
       cacheUserProfile: (user) => this.cacheUserProfile(user),
@@ -451,19 +456,6 @@ Page({
       previousMessage,
       messageIndex
     })
-    return this.prependSystemNoticeBlocks(nextBlocks)
-  },
-
-  buildSystemNoticeBlocks(policy) {
-    return chatPolicyHelper.buildSystemNoticeBlocks(policy)
-  },
-
-  prependSystemNoticeBlocks(messageBlocks, systemNoticeBlocks = this.data.systemNoticeBlocks) {
-    return chatPolicyHelper.prependSystemNoticeBlocks(systemNoticeBlocks, messageBlocks)
-  },
-
-  stripSystemNoticeBlocks(messageBlocks) {
-    return chatPolicyHelper.stripSystemNoticeBlocks(messageBlocks)
   },
 
   resolveSenderProfile(senderId, isSelf) {

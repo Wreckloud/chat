@@ -1,70 +1,136 @@
+@import "../../styles/topbar.wxss";
+
 /* Layout layer */
 .chat-page {
   min-height: 100vh;
   background: var(--retro-page-bg);
   color: var(--retro-page-text);
-}
-
-.session-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18rpx 22rpx;
-  border-top: 1rpx solid var(--retro-toolbar-top-border);
-  border-bottom: 1rpx solid var(--retro-toolbar-border);
-  background: var(--retro-toolbar-bg);
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+  --chat-side-gap: 12rpx;
+  --retro-topbar-side-gap: var(--chat-side-gap);
 }
 
 .lobby-entry-wrap {
-  margin: 12rpx 12rpx 0;
+  margin: 12rpx var(--chat-side-gap) 0;
   border: 1rpx solid var(--retro-panel-border);
-  background: var(--retro-panel-bg);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0) 100%
+  ), var(--retro-panel-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
-.session-title {
-  font-size: 27rpx;
-  font-weight: 600;
-  letter-spacing: 1rpx;
-}
-
-.session-total {
-  font-size: 22rpx;
-  color: var(--retro-muted-text-2);
-}
-
-.session-board {
-  margin: 14rpx 12rpx 20rpx;
-  border: 1rpx solid var(--retro-panel-border);
-  background: var(--retro-panel-bg);
-  box-shadow: var(--retro-panel-shadow);
-}
-
-.session-section-head {
+.tab-strip {
   display: flex;
   align-items: center;
-  padding: 12rpx 14rpx 10rpx;
-  border-top: 1rpx solid var(--retro-board-head-top-border);
-  border-bottom: 1rpx solid var(--retro-board-head-bottom-border);
-  background: var(--retro-board-head-bg);
+  gap: 10rpx;
+  margin: 0 var(--chat-side-gap);
+  padding: 10rpx 0 6rpx;
+  border-bottom: 0;
 }
 
-.session-section-title {
-  font-size: 24rpx;
-  color: var(--retro-board-head-text);
-  font-weight: 600;
+.tab-list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
 }
 
-.session-section-empty {
-  padding: 16rpx 14rpx;
-  font-size: 22rpx;
+.tab-item {
+  height: 50rpx;
+  padding: 0 16rpx;
+  line-height: 50rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  font-size: 23rpx;
   color: var(--retro-muted-text);
 }
 
-.session-divider {
-  height: 1rpx;
-  background: var(--retro-tab-divider);
+.tab-item-active {
+  border-color: var(--retro-accent-color);
+  color: var(--retro-page-text);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.tab-tools {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.tab-search {
+  width: 250rpx;
+  height: 50rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  display: flex;
+  align-items: center;
+}
+
+.tab-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 50rpx;
+  padding: 0 10rpx;
+  font-size: 22rpx;
+  color: var(--retro-page-text);
+}
+
+.tab-search-action {
+  width: 52rpx;
+  height: 50rpx;
+  border-left: 1rpx solid var(--retro-panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-tool {
+  position: relative;
+  height: 50rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-tool-notice {
+  width: 62rpx;
+}
+
+.tab-tool-icon {
+  width: 26rpx;
+  height: 26rpx;
+  opacity: 0.9;
+}
+
+.tab-tool-icon-search {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.tab-tool-badge {
+  position: absolute;
+  right: -8rpx;
+  top: -12rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2rpx;
+  line-height: 1.15;
+  font-size: 19rpx;
+  color: var(--retro-accent-text);
+  background: var(--retro-chip-bg);
+}
+
+.session-board {
+  margin: 12rpx var(--chat-side-gap) 20rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-panel-bg);
+  box-shadow: var(--retro-panel-shadow);
 }
 
 .session-row {
@@ -82,7 +148,86 @@
 
 .session-row-lobby {
   border-bottom: 0;
-  background: var(--retro-record-peer-bg);
+  min-height: 0;
+  align-items: flex-start;
+  padding-top: 12rpx;
+  padding-bottom: 12rpx;
+  padding-left: calc(var(--session-padding-x) + var(--session-pin-width));
+  padding-right: var(--session-padding-x);
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.025) 0rpx,
+      rgba(0, 0, 0, 0.025) 2rpx,
+      rgba(0, 0, 0, 0) 2rpx,
+      rgba(0, 0, 0, 0) 8rpx
+    ),
+    var(--retro-record-peer-bg);
+}
+
+.session-row-lobby .session-user {
+  width: auto;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.lobby-main {
+  width: 100%;
+  min-width: 0;
+}
+
+.lobby-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.lobby-side {
+  width: var(--retro-session-time-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.lobby-online-badge {
+  font-size: 20rpx;
+  line-height: 1.15;
+  color: var(--retro-accent-text);
+  white-space: nowrap;
+}
+
+.lobby-preview-line {
+  margin-top: 8rpx;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+.lobby-preview-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.lobby-channel-tag {
+  margin-left: 6rpx;
+  margin-top: 1rpx;
+  font-size: 20rpx;
+  line-height: 1.15;
+  color: var(--retro-accent-text);
+}
+
+.session-row-lobby .session-user-meta {
+  margin-left: 0;
+  text-align: left;
+}
+
+.session-row-lobby .session-name-line {
+  justify-content: flex-start;
 }
 
 .session-row-offline {
@@ -177,6 +322,7 @@
 .session-preview {
   display: block;
   font-size: var(--retro-session-preview-font-size);
+  line-height: 1.15;
   color: var(--retro-body-text);
   white-space: nowrap;
   overflow: hidden;
@@ -186,6 +332,8 @@
 .session-preview-col {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
   margin-left: var(--retro-session-inline-gap);
 }
 
@@ -194,6 +342,7 @@
   width: var(--retro-session-time-width);
   text-align: right;
   font-size: var(--retro-session-time-font-size);
+  line-height: 1.15;
   color: var(--retro-muted-text-2);
   white-space: nowrap;
   overflow: hidden;

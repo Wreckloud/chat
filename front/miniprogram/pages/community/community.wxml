@@ -1,49 +1,99 @@
 <view class="community-page {{themeClass}}">
-  <view class="community-toolbar">
-    <view class="community-title">社区广场</view>
-    <view class="community-total">共 {{total}}</view>
+  <view class="community-toolbar retro-topbar">
+    <view class="community-title retro-topbar-title">社区广场</view>
+    <view class="community-total retro-topbar-meta">共 {{total}}</view>
     <retro-button size="small" theme="primary" bindtap="goCreatePost">发主题</retro-button>
   </view>
 
   <view class="tab-strip">
-    <view
-      wx:for="{{tabs}}"
-      wx:key="value"
-      class="tab-item {{item.value === activeTab ? 'tab-item-active' : ''}}"
-      bindtap="selectTab"
-      data-tab="{{item.value}}">
-      {{item.label}}
+    <view class="tab-list">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="value"
+        class="tab-item {{item.value === activeTab ? 'tab-item-active' : ''}}"
+        bindtap="selectTab"
+        data-tab="{{item.value}}">
+        {{item.label}}
+      </view>
+    </view>
+    <view class="tab-tools">
+      <view class="tab-search">
+        <input
+          class="tab-search-input"
+          placeholder="搜索帖子"
+          maxlength="40"
+          confirm-type="search"
+          value="{{searchKeyword}}"
+          bindinput="onSearchInput"
+          bindconfirm="onSearchConfirm"
+        />
+        <view class="tab-search-action" bindtap="onSearchTap">
+          <image class="tab-tool-icon tab-tool-icon-search" src="/images/icon-search.svg" mode="aspectFit" />
+        </view>
+      </view>
+      <view class="tab-tool tab-tool-notice" bindtap="goNotice">
+        <image class="tab-tool-icon tab-tool-icon-notice" src="/images/icon-notice.svg" mode="aspectFit" />
+        <view wx:if="{{noticeUnreadCount > 0}}" class="tab-tool-badge u-unread-blink">
+          [{{noticeUnreadCount > 99 ? '99+' : noticeUnreadCount}}]
+        </view>
+      </view>
     </view>
   </view>
 
   <retro-empty wx:if="{{threads.length === 0}}" description="暂无主题" />
 
-  <view wx:else class="thread-list">
-    <view
-      wx:for="{{threads}}"
-      wx:key="threadId"
-      class="thread-row"
-      bindtap="goPostDetail"
-      data-id="{{item.threadId}}">
-      <view class="thread-title-line">
-        <text class="thread-title">{{item.title}}</text>
-      </view>
+  <view wx:else>
+    <view class="thread-list">
+      <view
+        wx:for="{{threads}}"
+        wx:key="threadId"
+        class="thread-row"
+        bindtap="goPostDetail"
+        data-id="{{item.threadId}}">
+        <view class="thread-title-line">
+          <text wx:if="{{item.isEssence}}" class="thread-tag thread-tag-essence">[精华]</text>
+          <text class="thread-title">{{item.title}}</text>
+        </view>
 
-      <view class="thread-meta-line">
-        <view class="thread-author-line u-name-line">
-          <view class="thread-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</view>
+        <view wx:if="{{item.contentPreview}}" class="thread-excerpt">
+          {{item.contentPreview}}
+        </view>
+
+        <view wx:if="{{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
+          <view wx:if="{{item.videoPosterUrl}}" class="thread-media-cell thread-media-video">
+            <image class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
+            <view class="thread-media-video-mask">
+              <view class="thread-media-video-icon"></view>
+            </view>
+          </view>
           <view
-            wx:if="{{item.author.displayTitleName}}"
-            class="thread-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
-            style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
-            [{{item.author.displayTitleName}}]
+            wx:for="{{item.previewImageUrls}}"
+            wx:key="*this"
+            wx:for-item="previewUrl"
+            wx:for-index="previewIndex"
+            class="thread-media-cell">
+            <image class="thread-media-image" src="{{previewUrl}}" mode="aspectFill" />
+            <view
+              wx:if="{{item.hasMoreImages && previewIndex === item.previewImageUrls.length - 1}}"
+              class="thread-media-more">
+              +{{item.imageUrls.length - item.previewImageUrls.length}}
+            </view>
           </view>
         </view>
-        <text class="thread-stat">回 {{item.replyCount}} / 阅 {{item.viewCount}}</text>
-      </view>
 
-      <view class="thread-time-line">
-        <text class="thread-time">{{item.createTimeText || '--'}}</text>
+        <view class="thread-meta-line">
+          <view class="thread-author-line u-name-line">
+            <view class="thread-author u-name">{{item.author.displayName || item.author.nickname || item.author.wolfNo || '行者'}}</view>
+            <view
+              wx:if="{{item.author.displayTitleName}}"
+              class="thread-title-badge u-title-badge retro-title-badge retro-title-badge-sm"
+              style="{{item.author.displayTitleColor ? 'color:' + item.author.displayTitleColor + ';' : ''}}">
+              [{{item.author.displayTitleName}}]
+            </view>
+            <text class="thread-author-time">发布于 {{item.createTimeRelativeText || item.createTimeText || '--'}}</text>
+          </view>
+          <text class="thread-stat">回 {{item.replyCount}} / 阅 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
+        </view>
       </view>
     </view>
 

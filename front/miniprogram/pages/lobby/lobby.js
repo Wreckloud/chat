@@ -15,7 +15,9 @@ const imMessageHelper = require('../../utils/im-message-helper')
 const lobbyMetaHelper = require('../../utils/lobby-meta-helper')
 const imConfig = require('../../utils/im-config')
 const chatPolicyHelper = require('../../utils/chat-policy-helper')
+const replyMentionHelper = require('../../utils/reply-mention-helper')
 const buildCommonImPageMethods = require('../../utils/im-page-methods')
+const { COMMON_KAOMOJI_LIST } = require('../../utils/kaomoji')
 
 const commonImPageMethods = buildCommonImPageMethods({
   imPageHelper,
@@ -45,6 +47,8 @@ Page({
     canSendText: false,
     themeClass: 'theme-retro-blue',
     morePanelVisible: false,
+    emojiPanelVisible: false,
+    emojiList: COMMON_KAOMOJI_LIST,
     moreActions: imSendHelper.DEFAULT_MORE_ACTIONS,
     replyDraft: null,
     highlightMessageId: 0,
@@ -80,13 +84,22 @@ Page({
   onShow() {
     imPageHelper.handlePageShow(this, auth, {
       beforeShow: () => this.applyTheme(),
-      afterShow: () => this.loadLobbyMeta()
+      afterShow: () => {
+        this.loadLobbyMeta()
+        this.startLobbyMetaPolling()
+      }
     })
+  },
+
+  onHide() {
+    this.stopLobbyMetaPolling()
+    this.clearLobbyMetaTimer()
   },
 
   onUnload() {
     imPageHelper.cleanupPage(this, ws, {
       beforeTeardown: () => {
+        this.stopLobbyMetaPolling()
         this.clearLobbyMetaTimer()
         if (this.highlightTimer) {
           clearTimeout(this.highlightTimer)
@@ -103,10 +116,10 @@ Page({
   loadLobbyMeta() {
     return lobbyMetaHelper.loadLobbyMeta(this, request, (meta) => {
         const onlineCount = Number(meta.onlineCount) || 0
-        const latestActiveAt = meta.latestActiveAt || ''
+        const latestMessageAt = meta.latestMessageAt || ''
         const recentUsers = Array.isArray(meta.recentUsers) ? meta.recentUsers : []
         recentUsers.forEach(item => this.cacheUserProfile(item))
-        const lobbyActiveText = this.buildLobbyActiveText(latestActiveAt)
+        const lobbyActiveText = this.buildLobbyActiveText(latestMessageAt)
         const recentUsersText = this.buildRecentUsersText(recentUsers)
 
         if (onlineCount === this.data.lobbyOnlineCount
@@ -123,8 +136,8 @@ Page({
       })
   },
 
-  buildLobbyActiveText(latestActiveAt) {
-    return lobbyMetaHelper.buildLobbyActiveText(latestActiveAt, time)
+  buildLobbyActiveText(latestMessageAt) {
+    return lobbyMetaHelper.buildLobbyActiveText(latestMessageAt, time)
   },
 
   buildRecentUsersText(recentUsers) {
@@ -134,6 +147,14 @@ Page({
   scheduleLobbyMetaRefresh() {
     // Presence 推送可能很密，短暂防抖后再拉一次 meta。
     lobbyMetaHelper.scheduleLobbyMetaRefresh(this, () => this.loadLobbyMeta(), 600)
+  },
+
+  startLobbyMetaPolling() {
+    lobbyMetaHelper.startLobbyMetaPolling(this, () => this.loadLobbyMeta(), 10000)
+  },
+
+  stopLobbyMetaPolling() {
+    lobbyMetaHelper.stopLobbyMetaPolling(this)
   },
 
   clearLobbyMetaTimer() {
@@ -299,8 +320,11 @@ Page({
     if (!replyDraft) {
       return
     }
+    const nextInput = replyMentionHelper.prependMention(this.data.inputMessage, replyDraft.mentionName)
     this.setData({
       replyDraft,
+      inputMessage: nextInput,
+      canSendText: nextInput.trim().length > 0,
       composerFocused: true
     })
     if (this.data.morePanelVisible) {
@@ -313,7 +337,15 @@ Page({
     if (!this.data.replyDraft) {
       return
     }
-    this.setData({ replyDraft: null })
+    const nextInput = replyMentionHelper.removeLeadingMention(
+      this.data.inputMessage,
+      this.data.replyDraft.mentionName
+    )
+    this.setData({
+      replyDraft: null,
+      inputMessage: nextInput,
+      canSendText: nextInput.trim().length > 0
+    })
   },
 
   buildReplyPayload() {
@@ -322,6 +354,10 @@ Page({
 
   handleTapReplyQuote(e) {
     const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const targetDisabled = Number(dataset.replyTargetDisabled) === 1
+    if (targetDisabled) {
+      return
+    }
     const targetMessageId = Number(dataset.replyTargetId)
     if (!targetMessageId) {
       return
@@ -336,6 +372,21 @@ Page({
     return (this.data.messages || []).some(item => Number(item.messageId) === Number(messageId))
   },
 
+  findMessageById(messageId) {
+    if (!messageId) {
+      return null
+    }
+    return (this.data.messages || []).find(item => Number(item.messageId) === Number(messageId)) || null
+  },
+
+  isMessageRecalled(messageId) {
+    const target = this.findMessageById(messageId)
+    if (!target) {
+      return false
+    }
+    return String(target.msgType || '').toUpperCase() === 'RECALL'
+  },
+
   async jumpToMessage(messageId) {
     if (!messageId) {
       return
@@ -348,6 +399,9 @@ Page({
       loopCount += 1
     }
     if (!loaded) {
+      return
+    }
+    if (this.isMessageRecalled(messageId)) {
       return
     }
     this.scrollToMessageAnchor(messageId)
