@@ -76,7 +76,7 @@ function resetKeyboardHeight(page) {
   updateKeyboardLayout(page, 0)
 }
 
-function handleKeyboardHeightChange(page, event, closeMorePanel) {
+function handleKeyboardHeightChange(page, event, closeMorePanel, closeEmojiPanel) {
   if (!page || !page.data) {
     return
   }
@@ -88,6 +88,9 @@ function handleKeyboardHeightChange(page, event, closeMorePanel) {
   if (nextHeight > 0 && page.data.morePanelVisible && typeof closeMorePanel === 'function') {
     closeMorePanel()
   }
+  if (nextHeight > 0 && page.data.emojiPanelVisible && typeof closeEmojiPanel === 'function') {
+    closeEmojiPanel()
+  }
 
   if (nextHeight === 0 && page.keepComposerOpenUntilSendFinish) {
     return
@@ -98,7 +101,7 @@ function handleKeyboardHeightChange(page, event, closeMorePanel) {
   })
 }
 
-function handleComposerFocus(page, event, closeMorePanel) {
+function handleComposerFocus(page, event, closeMorePanel, closeEmojiPanel) {
   if (!page || !page.data) {
     return
   }
@@ -122,9 +125,15 @@ function handleComposerFocus(page, event, closeMorePanel) {
   }
 
   if (!page.data.morePanelVisible || typeof closeMorePanel !== 'function') {
+    if (page.data.emojiPanelVisible && typeof closeEmojiPanel === 'function') {
+      closeEmojiPanel()
+    }
     return
   }
   closeMorePanel()
+  if (page.data.emojiPanelVisible && typeof closeEmojiPanel === 'function') {
+    closeEmojiPanel()
+  }
 }
 
 function handleComposerBlur(page) {

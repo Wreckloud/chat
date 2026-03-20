@@ -1,13 +1,14 @@
 /**
  * 统一 UI 提示
  */
-const LOGIN_ERROR_CODES = new Set([2004, 2005, 2006, 2007, 2011, 2012])
+const LOGIN_ERROR_CODES = new Set([2004, 2005, 2006, 2011, 2012])
 const SYSTEM_ERROR_CODES = new Set([1002, 1003])
 const ACTIONABLE_BUSINESS_MESSAGE_BY_CODE = {
   1001: '请求参数有误，请检查后重试',
   2001: '登录状态已失效，请重新登录',
   2002: '登录状态已失效，请重新登录',
   2003: '登录状态已失效，请重新登录',
+  2007: '该用户已不可用',
   2008: '原密码错误',
   2009: '两次输入的新密码不一致',
   2010: '邮箱已被占用',
@@ -104,7 +105,22 @@ function toastSuccess(message = '操作成功', options = {}) {
   })
 }
 
+function confirmAction(options = {}) {
+  return new Promise(resolve => {
+    wx.showModal({
+      ...options,
+      success(res) {
+        resolve(!!(res && res.confirm))
+      },
+      fail() {
+        resolve(false)
+      }
+    })
+  })
+}
+
 module.exports = {
   toastError,
-  toastSuccess
+  toastSuccess,
+  confirmAction
 }

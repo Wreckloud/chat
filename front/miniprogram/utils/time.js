@@ -189,11 +189,50 @@ function formatPostTime(dateStr) {
   return `${formatYYYYMMDD(date)} ${hm}`
 }
 
+/**
+ * 社区时间文案：
+ * N秒前 / N分钟前 / N小时前 / 昨天 HH:mm / MM-DD HH:mm / YYYY-MM-DD HH:mm
+ */
+function formatRelativeTime(dateStr) {
+  const date = parseDateTime(dateStr)
+  if (!date) return ''
+
+  const now = new Date()
+  let diffMs = now.getTime() - date.getTime()
+  if (diffMs < 0) {
+    diffMs = 0
+  }
+
+  const dayDiff = getDayDiff(date, now)
+  if (dayDiff === 0 && diffMs < ONE_MINUTE_MS) {
+    const seconds = Math.max(1, Math.floor(diffMs / 1000))
+    return `${seconds} 秒前`
+  }
+  if (dayDiff === 0 && diffMs < ONE_HOUR_MS) {
+    const minutes = Math.max(1, Math.floor(diffMs / ONE_MINUTE_MS))
+    return `${minutes} 分钟前`
+  }
+  if (dayDiff === 0) {
+    const hours = Math.max(1, Math.floor(diffMs / ONE_HOUR_MS))
+    return `${hours} 小时前`
+  }
+
+  const hm = formatHHmm(date)
+  if (dayDiff === 1) {
+    return `昨天 ${hm}`
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${formatMMDD(date)} ${hm}`
+  }
+  return `${formatYYYYMMDD(date)} ${hm}`
+}
+
 module.exports = {
   parseDateTime,
   formatConversationTime,
   formatMessageDividerDate,
   formatMessageMetaTime,
   formatLastSeenText,
-  formatPostTime
+  formatPostTime,
+  formatRelativeTime
 }

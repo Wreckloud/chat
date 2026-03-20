@@ -48,6 +48,18 @@ function buildCommonImPageMethods(options) {
       imPageHelper.toggleMorePanel(this)
     },
 
+    setEmojiPanelVisible(visible) {
+      imPageHelper.setEmojiPanelVisible(this, visible)
+    },
+
+    onToggleEmojiPanel() {
+      imPageHelper.toggleEmojiPanel(this)
+    },
+
+    onSelectEmoji(e) {
+      imPageHelper.onSelectEmoji(this, e)
+    },
+
     async onMoreActionTap(e) {
       await imPageHelper.onDefaultMoreActionTap(this, e, imSendHelper, {
         uploadImage,

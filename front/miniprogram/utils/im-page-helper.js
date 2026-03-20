@@ -1,6 +1,7 @@
 const imHelper = require('./im-helper')
 const imMessageHelper = require('./im-message-helper')
 const pageLifecycleHelper = require('./page-lifecycle-helper')
+const { appendKaomojiWithSpace } = require('./kaomoji')
 
 function initSocket(page, ws, onMessage) {
   if (page.wsHandler) {
@@ -162,11 +163,21 @@ function onMessageInput(page, event) {
 }
 
 function onKeyboardHeightChange(page, event) {
-  imHelper.handleKeyboardHeightChange(page, event, () => setMorePanelVisible(page, false))
+  imHelper.handleKeyboardHeightChange(
+    page,
+    event,
+    () => setMorePanelVisible(page, false),
+    () => setEmojiPanelVisible(page, false)
+  )
 }
 
 function onComposerFocus(page, event) {
-  imHelper.handleComposerFocus(page, event, () => setMorePanelVisible(page, false))
+  imHelper.handleComposerFocus(
+    page,
+    event,
+    () => setMorePanelVisible(page, false),
+    () => setEmojiPanelVisible(page, false)
+  )
 }
 
 function onComposerBlur(page) {
@@ -185,16 +196,60 @@ function setMorePanelVisible(page, visible) {
   })
 }
 
+function setEmojiPanelVisible(page, visible) {
+  const nextVisible = Boolean(visible)
+  if (nextVisible === page.data.emojiPanelVisible) {
+    return
+  }
+  page.setData({
+    emojiPanelVisible: nextVisible
+  }, () => {
+    imHelper.measureDockHeight(page)
+  })
+}
+
 function toggleMorePanel(page) {
   if (page.data.sending) {
     return
   }
   const nextVisible = !page.data.morePanelVisible
+  if (nextVisible && page.data.emojiPanelVisible) {
+    setEmojiPanelVisible(page, false)
+  }
   if (nextVisible) {
     wx.hideKeyboard()
     imHelper.resetKeyboardHeight(page)
   }
   setMorePanelVisible(page, nextVisible)
+}
+
+function toggleEmojiPanel(page) {
+  if (page.data.sending) {
+    return
+  }
+  const nextVisible = !page.data.emojiPanelVisible
+  if (nextVisible && page.data.morePanelVisible) {
+    setMorePanelVisible(page, false)
+  }
+  if (nextVisible) {
+    wx.hideKeyboard()
+    page.setData({ composerFocused: false })
+    imHelper.resetKeyboardHeight(page)
+  }
+  setEmojiPanelVisible(page, nextVisible)
+}
+
+function onSelectEmoji(page, event) {
+  const dataset = event && event.currentTarget ? (event.currentTarget.dataset || {}) : {}
+  const emoji = String(dataset.emoji || '').trim()
+  if (!emoji) {
+    return
+  }
+  const nextInput = appendKaomojiWithSpace(page.data.inputMessage, emoji)
+  page.setData({
+    inputMessage: nextInput,
+    canSendText: nextInput.trim().length > 0
+  })
 }
 
 function getSendDeps(page, depsFactory) {
@@ -376,6 +431,10 @@ function onTapMessageList(page) {
   if (!page || !page.data) {
     return
   }
+  if (page.data.emojiPanelVisible) {
+    setEmojiPanelVisible(page, false)
+    return
+  }
   if (page.data.morePanelVisible) {
     setMorePanelVisible(page, false)
     return
@@ -402,7 +461,10 @@ module.exports = {
   onComposerFocus,
   onComposerBlur,
   setMorePanelVisible,
+  setEmojiPanelVisible,
   toggleMorePanel,
+  toggleEmojiPanel,
+  onSelectEmoji,
   onDefaultMoreActionTap,
   onSendButtonTap,
   sendComposerTextMessage,

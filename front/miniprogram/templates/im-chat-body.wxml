@@ -11,7 +11,7 @@
     enable-back-to-top>
     <view wx:if="{{loading && messages.length === 0}}" class="im-state-text">加载中...</view>
 
-    <view wx:elif="{{messages.length === 0}}" class="im-state-text">{{emptyText}}</view>
+    <view wx:elif="{{messages.length === 0 && emptyText}}" class="im-state-text">{{emptyText}}</view>
 
     <view wx:else class="im-message-stream">
       <block wx:for="{{messageBlocks}}" wx:key="key" wx:for-item="blockItem">
@@ -81,6 +81,7 @@
               data-msg-type="{{lineItem.msgType}}"
               data-message-content="{{lineItem.content}}"
               data-sender-id="{{blockItem.senderId}}"
+              data-sender-name="{{blockItem.senderName}}"
               data-create-time="{{lineItem.createTime}}"
               data-is-self="{{blockItem.isSelf ? 1 : 0}}"
               data-recalled="{{lineItem.recalled ? 1 : 0}}"
@@ -90,11 +91,12 @@
               bindlongpress="onLongPressMessageRow">
               <view
                 wx:if="{{lineItem.replyToMessageId && lineItem.replyToPreview}}"
-                class="im-reply-quote {{lineItem.repliedToMe ? 'is-replied-to-me' : ''}}"
+                class="im-reply-quote {{lineItem.repliedToMe ? 'is-replied-to-me' : ''}} {{lineItem.replyTargetDisabled ? 'is-disabled' : ''}}"
                 data-reply-target-id="{{lineItem.replyToMessageId}}"
+                data-reply-target-disabled="{{lineItem.replyTargetDisabled ? 1 : 0}}"
                 bindtap="onTapReplyQuote">
-                <text class="im-reply-quote-label">{{lineItem.repliedToMe ? '回你' : '回复'}}</text>
-                <text class="im-reply-quote-text">{{lineItem.replyToPreview}}</text>
+                <view class="im-reply-quote-label">{{lineItem.repliedToMe ? '回你' : '回复'}}</view>
+                <view class="im-reply-quote-text">{{lineItem.replyToPreview}}</view>
               </view>
               <image
                 wx:if="{{lineItem.msgType === 'IMAGE' && lineItem.mediaUrl}}"
@@ -144,6 +146,7 @@
                 class="im-text"
                 selectable="{{true}}">{{lineItem.content}}</text>
               <text wx:else class="im-media-missing">[媒体不可用]</text>
+              <text wx:if="{{lineItem.deliveryFailed && blockItem.isSelf}}" class="im-send-failed">发送失败</text>
             </view>
           </view>
         </view>
@@ -153,13 +156,16 @@
   </scroll-view>
 
   <view id="im-dock" class="im-dock" style="bottom: {{keyboardHeightPx}}px;">
-    <view id="im-composer" class="im-composer {{morePanelVisible ? 'is-panel-open' : ''}} {{keyboardHeightPx > 0 ? 'is-keyboard-open' : ''}}">
+    <view id="im-composer" class="im-composer {{(morePanelVisible || emojiPanelVisible) ? 'is-panel-open' : ''}} {{keyboardHeightPx > 0 ? 'is-keyboard-open' : ''}}">
       <view wx:if="{{replyDraft && replyDraft.messageId}}" class="im-reply-draft">
         <text class="im-reply-draft-label">回复</text>
         <text class="im-reply-draft-content">{{replyDraft.preview || '[消息]'}}</text>
         <text class="im-reply-draft-close" bindtap="onClearReplyDraft">×</text>
       </view>
       <view class="im-composer-main-row">
+        <view class="im-emoji-trigger" bindtap="onToggleEmojiPanel">
+          <image class="im-emoji-icon" src="/images/icon-kaomoji.svg" mode="aspectFit" />
+        </view>
         <input
           class="im-composer-input"
           type="text"
@@ -198,6 +204,21 @@
           </retro-button>
         </view>
       </view>
+    </view>
+
+    <view wx:if="{{emojiPanelVisible}}" class="im-emoji-panel">
+      <scroll-view class="im-emoji-scroll" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="im-emoji-grid">
+          <view
+            wx:for="{{emojiList}}"
+            wx:key="*this"
+            class="im-emoji-item"
+            data-emoji="{{item}}"
+            bindtap="onSelectEmoji">
+            <text class="im-emoji-item-text">{{item}}</text>
+          </view>
+        </view>
+      </scroll-view>
     </view>
 
     <view wx:if="{{morePanelVisible}}" class="im-more-panel">

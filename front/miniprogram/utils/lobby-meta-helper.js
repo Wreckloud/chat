@@ -1,10 +1,10 @@
 const { formatNameWithTitle, normalizeTitleName } = require('./title')
 
-function buildLobbyActiveText(latestActiveAt, time) {
-  if (!latestActiveAt) {
+function buildLobbyActiveText(latestMessageAt, time) {
+  if (!latestMessageAt) {
     return '最近活跃 --'
   }
-  return `最近活跃 ${time.formatConversationTime(latestActiveAt)}`
+  return `最近活跃 ${time.formatConversationTime(latestMessageAt)}`
 }
 
 function buildRecentUsersText(recentUsers, normalizeUser, time) {
@@ -30,6 +30,18 @@ function buildRecentUsersText(recentUsers, normalizeUser, time) {
     })
     .join(' · ')
   return text || '最近在线 --'
+}
+
+function buildLatestMessageText(latestMessageSenderName, latestMessagePreview) {
+  const senderName = String(latestMessageSenderName || '').trim()
+  const text = String(latestMessagePreview || '').trim()
+  if (!text) {
+    return '暂无消息'
+  }
+  if (!senderName) {
+    return text
+  }
+  return `${senderName}: ${text}`
 }
 
 function loadLobbyMeta(page, request, onMeta) {
@@ -64,10 +76,31 @@ function clearLobbyMetaTimer(page) {
   page.lobbyMetaTimer = null
 }
 
+function startLobbyMetaPolling(page, refreshFn, intervalMs = 10000) {
+  stopLobbyMetaPolling(page)
+  if (typeof refreshFn !== 'function' || intervalMs <= 0) {
+    return
+  }
+  page.lobbyMetaPollTimer = setInterval(() => {
+    refreshFn()
+  }, intervalMs)
+}
+
+function stopLobbyMetaPolling(page) {
+  if (!page.lobbyMetaPollTimer) {
+    return
+  }
+  clearInterval(page.lobbyMetaPollTimer)
+  page.lobbyMetaPollTimer = null
+}
+
 module.exports = {
   buildLobbyActiveText,
   buildRecentUsersText,
+  buildLatestMessageText,
   loadLobbyMeta,
   scheduleLobbyMetaRefresh,
-  clearLobbyMetaTimer
+  clearLobbyMetaTimer,
+  startLobbyMetaPolling,
+  stopLobbyMetaPolling
 }

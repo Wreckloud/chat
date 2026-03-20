@@ -1,59 +1,5 @@
-const STRANGER_MESSAGE_LIMIT = 3
 const REPLY_PREVIEW_MAX_LENGTH = 60
-
-function buildSystemNoticeBlocks(policy) {
-  const notices = [
-    {
-      type: 'system-notice',
-      key: 'sys_safety',
-      text: '系统提示：以下内容均由用户发布，请注意甄别与财产安全。'
-    }
-  ]
-
-  if (policy && policy.mutualFollow) {
-    notices.push({
-      type: 'system-notice',
-      key: 'sys_friend',
-      text: '系统提示：你们已经是好友了。'
-    })
-    return notices
-  }
-
-  if (policy && policy.canSendFreely) {
-    notices.push({
-      type: 'system-notice',
-      key: 'sys_interaction',
-      text: '系统提示：你们已产生互动，可继续聊天。'
-    })
-    return notices
-  }
-
-  if (policy) {
-    const limit = Number(policy.strangerMessageLimit) || STRANGER_MESSAGE_LIMIT
-    const remaining = Math.max(0, Number(policy.strangerMessageRemaining) || 0)
-    notices.push({
-      type: 'system-notice',
-      key: 'sys_limit',
-      text: `系统提示：未互关时单向最多发送 ${limit} 条消息，当前剩余 ${remaining} 条，等待对方回复后解除限制。`
-    })
-  }
-
-  return notices
-}
-
-function prependSystemNoticeBlocks(systemNoticeBlocks, messageBlocks) {
-  const notices = Array.isArray(systemNoticeBlocks) ? systemNoticeBlocks : []
-  const blocks = Array.isArray(messageBlocks) ? messageBlocks : []
-  if (notices.length === 0) {
-    return blocks
-  }
-  return [...notices, ...blocks]
-}
-
-function stripSystemNoticeBlocks(messageBlocks) {
-  const blocks = Array.isArray(messageBlocks) ? messageBlocks : []
-  return blocks.filter(item => item && item.type !== 'system-notice')
-}
+const replyMentionHelper = require('./reply-mention-helper')
 
 function buildReplyDraft(dataset) {
   const data = dataset || {}
@@ -78,10 +24,15 @@ function buildReplyDraft(dataset) {
   if (preview.length > REPLY_PREVIEW_MAX_LENGTH) {
     preview = `${preview.slice(0, REPLY_PREVIEW_MAX_LENGTH)}...`
   }
+  const senderName = String(data.senderName || '').trim()
+  const isSelf = Number(data.isSelf) === 1
+  const mentionName = !isSelf ? senderName : ''
 
   return {
     messageId,
-    preview
+    preview,
+    mentionName,
+    mentionPrefix: replyMentionHelper.buildMentionPrefix(mentionName)
   }
 }
 
@@ -96,9 +47,7 @@ function buildReplyPayload(replyDraft) {
 }
 
 module.exports = {
-  buildSystemNoticeBlocks,
-  prependSystemNoticeBlocks,
-  stripSystemNoticeBlocks,
   buildReplyDraft,
   buildReplyPayload
 }
+

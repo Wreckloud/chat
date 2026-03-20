@@ -14,6 +14,8 @@ const VIDEO_MAX_HEIGHT_RPX = 520
 const VIDEO_MIN_WIDTH_RPX = 220
 const VIDEO_MIN_HEIGHT_RPX = 180
 const FILE_NAME_MAX_LENGTH = 120
+const REPLY_RECALLED_TEXT = '原消息已被撤回'
+const DELIVERY_STATUS_FAILED = 2
 
 function normalizeSharedLink(value) {
   const raw = String(value || '').trim()
@@ -283,8 +285,53 @@ function getLastDividerLabel(blocks) {
   return ''
 }
 
-function createMessageRow(message, indexToken, currentUserId = 0) {
+function buildMessageLookup(messages) {
+  const lookup = new Map()
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return lookup
+  }
+  for (let index = 0; index < messages.length; index++) {
+    const item = messages[index]
+    const messageId = Number(item && item.messageId)
+    if (!messageId) {
+      continue
+    }
+    lookup.set(messageId, item)
+  }
+  return lookup
+}
+
+function resolveReplyQuoteState(message, messageLookup) {
+  const replyToMessageId = Number(message.replyToMessageId) || 0
+  if (!replyToMessageId) {
+    return {
+      replyToMessageId: 0,
+      replyToPreview: '',
+      replyTargetDisabled: false
+    }
+  }
+
+  let replyToPreview = String(message.replyToPreview || '').trim()
+  let replyTargetDisabled = false
+  if (messageLookup instanceof Map) {
+    const targetMessage = messageLookup.get(replyToMessageId)
+    if (targetMessage && String(targetMessage.msgType || '').toUpperCase() === 'RECALL') {
+      replyToPreview = REPLY_RECALLED_TEXT
+      replyTargetDisabled = true
+    }
+  }
+
+  return {
+    replyToMessageId,
+    replyToPreview,
+    replyTargetDisabled
+  }
+}
+
+function createMessageRow(message, indexToken, currentUserId = 0, messageLookup = null) {
   const msgType = message.msgType || 'TEXT'
+  const deliveryStatus = Number(message.deliveryStatus)
+  const deliveryFailed = Number.isFinite(deliveryStatus) && deliveryStatus === DELIVERY_STATUS_FAILED
   const textContent = typeof message.content === 'string' ? message.content : ''
   const mediaUrl = message.mediaUrl || ''
   const linkUrl = extractStandaloneLink(textContent)
@@ -294,6 +341,7 @@ function createMessageRow(message, indexToken, currentUserId = 0) {
   } else if (linkUrl) {
     copyContent = linkUrl
   }
+  const replyQuoteState = resolveReplyQuoteState(message, messageLookup)
   const replyToSenderId = Number(message.replyToSenderId) || 0
   return {
     key: `m_${message.messageId || indexToken}`,
@@ -310,17 +358,38 @@ function createMessageRow(message, indexToken, currentUserId = 0) {
     mediaHeight: message.mediaHeight || 0,
     mediaSize: Number(message.mediaSize) || 0,
     mediaMimeType: message.mediaMimeType || '',
+    deliveryStatus: Number.isFinite(deliveryStatus) ? deliveryStatus : 0,
+    deliveryFailed,
     imageRenderStyle: buildImageRenderStyle(message.mediaWidth, message.mediaHeight),
-    replyToMessageId: Number(message.replyToMessageId) || 0,
+    replyToMessageId: replyQuoteState.replyToMessageId,
     replyToSenderId,
     repliedToMe: replyToSenderId > 0 && Number(currentUserId) > 0 && replyToSenderId === Number(currentUserId),
-    replyToPreview: String(message.replyToPreview || '').trim(),
+    replyToPreview: replyQuoteState.replyToPreview,
+    replyTargetDisabled: replyQuoteState.replyTargetDisabled,
     videoRenderStyle: buildVideoRenderStyle(message.mediaWidth, message.mediaHeight),
     fileLabel: buildFileLabel(message.content || '', message.mediaSize)
   }
 }
 
-function createClusterBlock(message, indexToken, sender, isSelf, currentUserId = 0) {
+function isSystemNoticeMessage(message) {
+  const msgType = String(message && message.msgType ? message.msgType : '').toUpperCase()
+  return msgType === 'SYSTEM'
+}
+
+function createSystemNoticeBlock(message, indexToken) {
+  const text = String(message && message.content ? message.content : '').trim()
+  if (!text) {
+    return null
+  }
+  return {
+    type: 'system-notice',
+    key: `s_${message.messageId || indexToken}`,
+    text,
+    createTime: message.createTime || ''
+  }
+}
+
+function createClusterBlock(message, indexToken, sender, isSelf, currentUserId = 0, messageLookup = null) {
   const senderName = sender.nickname || sender.wolfNo || '未知用户'
   const senderTitleName = String(sender.equippedTitleName || '').trim()
   const senderTitleColor = String(sender.equippedTitleColor || '').trim()
@@ -335,7 +404,7 @@ function createClusterBlock(message, indexToken, sender, isSelf, currentUserId =
     senderTitleName,
     senderTitleColor,
     headerTimeText: time.formatMessageMetaTime(message.createTime),
-    rows: [createMessageRow(message, indexToken, currentUserId)]
+    rows: [createMessageRow(message, indexToken, currentUserId, messageLookup)]
   }
 }
 
@@ -354,6 +423,9 @@ function appendMessageBlock(messageBlocks, message, context = {}) {
     : () => ({})
   const currentUserId = Number(context.currentUserId)
   const gapMs = Number(context.messageMergeGapMs) || DEFAULT_MESSAGE_MERGE_GAP_MS
+  const messageLookup = context.messageLookup instanceof Map
+    ? context.messageLookup
+    : buildMessageLookup([message])
 
   cacheUserProfile(buildSenderProfileFromMessage(message))
 
@@ -367,6 +439,14 @@ function appendMessageBlock(messageBlocks, message, context = {}) {
     })
   }
 
+  if (isSystemNoticeMessage(message)) {
+    const systemNoticeBlock = createSystemNoticeBlock(message, indexToken)
+    if (systemNoticeBlock) {
+      blocks.push(systemNoticeBlock)
+    }
+    return blocks
+  }
+
   const isSelf = Number(message.senderId) === currentUserId
   const sender = resolveSenderProfile(message.senderId, isSelf)
   const lastBlock = blocks.length > 0 ? blocks[blocks.length - 1] : null
@@ -378,13 +458,13 @@ function appendMessageBlock(messageBlocks, message, context = {}) {
   if (canMergeLastCluster) {
     const mergedCluster = {
       ...lastBlock,
-      rows: [...(lastBlock.rows || []), createMessageRow(message, indexToken, currentUserId)]
+      rows: [...(lastBlock.rows || []), createMessageRow(message, indexToken, currentUserId, messageLookup)]
     }
     blocks[blocks.length - 1] = mergedCluster
     return blocks
   }
 
-  blocks.push(createClusterBlock(message, indexToken, sender, isSelf, currentUserId))
+  blocks.push(createClusterBlock(message, indexToken, sender, isSelf, currentUserId, messageLookup))
   return blocks
 }
 
@@ -404,6 +484,7 @@ function buildMessageBlocks(messages, context) {
     : () => ({})
   const currentUserId = Number(context.currentUserId)
   const gapMs = Number(context.messageMergeGapMs) || DEFAULT_MESSAGE_MERGE_GAP_MS
+  const messageLookup = buildMessageLookup(messages)
 
   for (let index = 0; index < messages.length; index++) {
     const message = messages[index]
@@ -419,15 +500,26 @@ function buildMessageBlocks(messages, context) {
       currentCluster = null
     }
 
+    if (isSystemNoticeMessage(message)) {
+      const systemNoticeBlock = createSystemNoticeBlock(message, index)
+      if (systemNoticeBlock) {
+        blocks.push(systemNoticeBlock)
+      }
+      previousDateLabel = currentDateLabel
+      previousMessage = message
+      currentCluster = null
+      continue
+    }
+
     const isSelf = Number(message.senderId) === currentUserId
     const sender = resolveSenderProfile(message.senderId, isSelf)
     const senderChanged = !currentCluster || Number(currentCluster.senderId) !== Number(message.senderId)
     const splitByGap = isMessageMergeGapExceeded(previousMessage, message, gapMs)
     if (!currentCluster || senderChanged || splitByGap) {
-      currentCluster = createClusterBlock(message, index, sender, isSelf, currentUserId)
+      currentCluster = createClusterBlock(message, index, sender, isSelf, currentUserId, messageLookup)
       blocks.push(currentCluster)
     } else {
-      currentCluster.rows.push(createMessageRow(message, index, currentUserId))
+      currentCluster.rows.push(createMessageRow(message, index, currentUserId, messageLookup))
     }
 
     previousDateLabel = currentDateLabel

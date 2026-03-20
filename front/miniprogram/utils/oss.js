@@ -34,6 +34,18 @@ const FILE_MIME_MAPPING = {
 }
 const FILE_EXTENSION_PATTERN = /^[a-z0-9]{1,20}$/
 
+function toExposedUploadError(error, fallbackMessage) {
+  if (error && (error.kind === 'business' || error.kind === 'network' || error.kind === 'http' || error.code)) {
+    return error
+  }
+  const message = error && typeof error.message === 'string' && error.message.trim()
+    ? error.message.trim()
+    : fallbackMessage
+  const exposedError = new Error(message)
+  exposedError.expose = true
+  return exposedError
+}
+
 function getPathExtension(filePath) {
   if (!filePath || filePath.lastIndexOf('.') < 0) {
     return null
@@ -328,117 +340,141 @@ async function applyUploadPolicy(path, meta) {
 }
 
 async function uploadChatImage(tempFile) {
-  const meta = await resolveImageUploadMeta(tempFile)
-  const policy = await applyUploadPolicy('/media/chat/image/upload-policy', meta)
-  await uploadFileToOss(policy, meta.filePath, '图片')
+  try {
+    const meta = await resolveImageUploadMeta(tempFile)
+    const policy = await applyUploadPolicy('/media/chat/image/upload-policy', meta)
+    await uploadFileToOss(policy, meta.filePath, '图片')
 
-  return {
-    mediaKey: policy.objectKey,
-    mediaWidth: meta.width,
-    mediaHeight: meta.height,
-    mediaSize: meta.size,
-    mediaMimeType: meta.mimeType
+    return {
+      mediaKey: policy.objectKey,
+      mediaWidth: meta.width,
+      mediaHeight: meta.height,
+      mediaSize: meta.size,
+      mediaMimeType: meta.mimeType
+    }
+  } catch (error) {
+    throw toExposedUploadError(error, '图片上传失败')
   }
 }
 
 async function uploadChatVideo(tempFile) {
-  const meta = await resolveVideoUploadMeta(tempFile)
-  const policy = await applyUploadPolicy('/media/chat/video/upload-policy', meta)
-  await uploadFileToOss(policy, meta.filePath, '视频')
+  try {
+    const meta = await resolveVideoUploadMeta(tempFile)
+    const policy = await applyUploadPolicy('/media/chat/video/upload-policy', meta)
+    await uploadFileToOss(policy, meta.filePath, '视频')
 
-  let mediaPosterKey = ''
-  const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
-  if (posterTempFilePath) {
-    try {
-      const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
-      const posterPolicy = await applyUploadPolicy('/media/chat/image/upload-policy', posterMeta)
-      await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
-      mediaPosterKey = posterPolicy.objectKey
-    } catch (error) {
-      // 封面上传失败不阻断视频消息发送，客户端会退回无封面样式。
-      mediaPosterKey = ''
+    let mediaPosterKey = ''
+    const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
+    if (posterTempFilePath) {
+      try {
+        const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
+        const posterPolicy = await applyUploadPolicy('/media/chat/image/upload-policy', posterMeta)
+        await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
+        mediaPosterKey = posterPolicy.objectKey
+      } catch (error) {
+        // 封面上传失败不阻断视频消息发送，客户端会退回无封面样式。
+        mediaPosterKey = ''
+      }
     }
-  }
 
-  return {
-    mediaKey: policy.objectKey,
-    mediaPosterKey,
-    mediaWidth: meta.width || null,
-    mediaHeight: meta.height || null,
-    mediaSize: meta.size,
-    mediaMimeType: meta.mimeType
+    return {
+      mediaKey: policy.objectKey,
+      mediaPosterKey,
+      mediaWidth: meta.width || null,
+      mediaHeight: meta.height || null,
+      mediaSize: meta.size,
+      mediaMimeType: meta.mimeType
+    }
+  } catch (error) {
+    throw toExposedUploadError(error, '视频上传失败')
   }
 }
 
 async function uploadChatFile(tempFile) {
-  const filePath = resolveLocalFilePath(tempFile)
-  const meta = await resolveFileUploadMeta({
-    ...tempFile,
-    tempFilePath: filePath
-  })
-  const policy = await applyUploadPolicy('/media/chat/file/upload-policy', meta)
-  await uploadFileToOss(policy, meta.filePath, '文件')
+  try {
+    const filePath = resolveLocalFilePath(tempFile)
+    const meta = await resolveFileUploadMeta({
+      ...tempFile,
+      tempFilePath: filePath
+    })
+    const policy = await applyUploadPolicy('/media/chat/file/upload-policy', meta)
+    await uploadFileToOss(policy, meta.filePath, '文件')
 
-  return {
-    mediaKey: policy.objectKey,
-    mediaSize: meta.size,
-    mediaMimeType: meta.mimeType,
-    fileName: meta.fileName
+    return {
+      mediaKey: policy.objectKey,
+      mediaSize: meta.size,
+      mediaMimeType: meta.mimeType,
+      fileName: meta.fileName
+    }
+  } catch (error) {
+    throw toExposedUploadError(error, '文件上传失败')
   }
 }
 
 async function uploadForumThreadImage(tempFile) {
-  const meta = await resolveImageUploadMeta(tempFile)
-  const policy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', meta)
-  await uploadFileToOss(policy, meta.filePath, '图片')
-  return {
-    mediaKey: policy.objectKey,
-    mediaWidth: meta.width,
-    mediaHeight: meta.height,
-    mediaSize: meta.size,
-    mediaMimeType: meta.mimeType
+  try {
+    const meta = await resolveImageUploadMeta(tempFile)
+    const policy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', meta)
+    await uploadFileToOss(policy, meta.filePath, '图片')
+    return {
+      mediaKey: policy.objectKey,
+      mediaWidth: meta.width,
+      mediaHeight: meta.height,
+      mediaSize: meta.size,
+      mediaMimeType: meta.mimeType
+    }
+  } catch (error) {
+    throw toExposedUploadError(error, '图片上传失败')
   }
 }
 
 async function uploadForumThreadVideo(tempFile) {
-  const meta = await resolveVideoUploadMeta(tempFile)
-  const policy = await applyUploadPolicy('/media/forum/thread/video/upload-policy', meta)
-  await uploadFileToOss(policy, meta.filePath, '视频')
+  try {
+    const meta = await resolveVideoUploadMeta(tempFile)
+    const policy = await applyUploadPolicy('/media/forum/thread/video/upload-policy', meta)
+    await uploadFileToOss(policy, meta.filePath, '视频')
 
-  let mediaPosterKey = ''
-  const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
-  if (posterTempFilePath) {
-    try {
-      const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
-      const posterPolicy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', posterMeta)
-      await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
-      mediaPosterKey = posterPolicy.objectKey
-    } catch (error) {
-      // 封面上传失败不阻断视频发帖，详情页会退回无封面样式。
-      mediaPosterKey = ''
+    let mediaPosterKey = ''
+    const posterTempFilePath = resolveVideoPosterTempFilePath(tempFile)
+    if (posterTempFilePath) {
+      try {
+        const posterMeta = await resolveImageUploadMeta({ tempFilePath: posterTempFilePath })
+        const posterPolicy = await applyUploadPolicy('/media/forum/thread/image/upload-policy', posterMeta)
+        await uploadFileToOss(posterPolicy, posterMeta.filePath, '视频封面')
+        mediaPosterKey = posterPolicy.objectKey
+      } catch (error) {
+        // 封面上传失败不阻断视频发帖，详情页会退回无封面样式。
+        mediaPosterKey = ''
+      }
     }
-  }
 
-  return {
-    mediaKey: policy.objectKey,
-    mediaPosterKey,
-    mediaWidth: meta.width || null,
-    mediaHeight: meta.height || null,
-    mediaSize: meta.size,
-    mediaMimeType: meta.mimeType
+    return {
+      mediaKey: policy.objectKey,
+      mediaPosterKey,
+      mediaWidth: meta.width || null,
+      mediaHeight: meta.height || null,
+      mediaSize: meta.size,
+      mediaMimeType: meta.mimeType
+    }
+  } catch (error) {
+    throw toExposedUploadError(error, '视频上传失败')
   }
 }
 
 async function uploadForumReplyImage(tempFile) {
-  const meta = await resolveImageUploadMeta(tempFile)
-  const policy = await applyUploadPolicy('/media/forum/reply/image/upload-policy', meta)
-  await uploadFileToOss(policy, meta.filePath, '图片')
-  return {
-    mediaKey: policy.objectKey,
-    mediaWidth: meta.width,
-    mediaHeight: meta.height,
-    mediaSize: meta.size,
-    mediaMimeType: meta.mimeType
+  try {
+    const meta = await resolveImageUploadMeta(tempFile)
+    const policy = await applyUploadPolicy('/media/forum/reply/image/upload-policy', meta)
+    await uploadFileToOss(policy, meta.filePath, '图片')
+    return {
+      mediaKey: policy.objectKey,
+      mediaWidth: meta.width,
+      mediaHeight: meta.height,
+      mediaSize: meta.size,
+      mediaMimeType: meta.mimeType
+    }
+  } catch (error) {
+    throw toExposedUploadError(error, '图片上传失败')
   }
 }
 

@@ -9,14 +9,19 @@ function mapThread(rawThread, normalizeUser, time) {
     : []
   const videoUrl = typeof rawThread.videoUrl === 'string' ? rawThread.videoUrl : ''
   const videoPosterUrl = typeof rawThread.videoPosterUrl === 'string' ? rawThread.videoPosterUrl : ''
+  const contentPreview = typeof rawThread.contentPreview === 'string' ? rawThread.contentPreview.trim() : ''
+  const previewImageUrls = imageUrls.slice(0, videoUrl ? 2 : 3)
   return {
     ...rawThread,
     viewCount,
     replyCount,
     likeCount,
     imageUrls,
+    previewImageUrls,
+    hasMoreImages: imageUrls.length > previewImageUrls.length,
     videoUrl,
     videoPosterUrl,
+    contentPreview,
     likedByCurrentUser: rawThread.likedByCurrentUser === true,
     author: attachDisplayTitle(
       normalizeUser(rawThread.author) || {},
@@ -28,6 +33,7 @@ function mapThread(rawThread, normalizeUser, time) {
       rawThread.lastReplyUser && rawThread.lastReplyUser.equippedTitleName,
       rawThread.lastReplyUser && rawThread.lastReplyUser.equippedTitleColor
     ),
+    createTimeRelativeText: time.formatRelativeTime(rawThread.createTime),
     createTimeText: time.formatPostTime(rawThread.createTime),
     lastReplyTimeText: time.formatPostTime(rawThread.lastReplyTime)
   }
@@ -60,17 +66,14 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
   const currentUserId = Number(options.currentUserId) || 0
   const canManageThread = options.canManageThread === true
   const likeCount = Number(rawReply.likeCount) || 0
+  const quoteReplyId = Number(rawReply.quoteReplyId) || 0
   return {
     ...rawReply,
     likeCount,
     imageUrl: typeof rawReply.imageUrl === 'string' ? rawReply.imageUrl : '',
     likedByCurrentUser: rawReply.likedByCurrentUser === true,
+    quoteReplyId,
     author,
-    quoteAuthor: attachDisplayTitle(
-      normalizeUser(rawReply.quoteAuthor) || {},
-      rawReply.quoteAuthor && rawReply.quoteAuthor.equippedTitleName,
-      rawReply.quoteAuthor && rawReply.quoteAuthor.equippedTitleColor
-    ),
     timeText: time.formatPostTime(rawReply.createTime),
     canDelete: currentUserId > 0 && (currentUserId === Number(author.userId) || canManageThread)
   }

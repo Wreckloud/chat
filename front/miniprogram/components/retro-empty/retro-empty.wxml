@@ -1,7 +1,7 @@
 <view class="retro-empty">
   <view class="retro-empty-icon">{{icon || 'EMPTY'}}</view>
   <view class="retro-empty-desc">{{description}}</view>
-  <view class="retro-empty-actions">
+  <view wx:if="{{showActions}}" class="retro-empty-actions">
     <slot name="actions"></slot>
   </view>
 </view>
