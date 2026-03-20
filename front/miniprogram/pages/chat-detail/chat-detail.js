@@ -2,7 +2,7 @@ const request = require('../../utils/request')
 const auth = require('../../utils/auth')
 const time = require('../../utils/time')
 const ws = require('../../utils/ws')
-const { uploadChatImage, uploadChatVideo, uploadChatFile } = require('../../utils/media-upload')
+const { uploadChatImage, uploadChatVideo, uploadChatFile } = require('../../utils/oss')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
 const { applyPageTheme } = require('../../utils/page-theme')
@@ -573,5 +573,6 @@ Page({
   }
 
 })
+
 
 

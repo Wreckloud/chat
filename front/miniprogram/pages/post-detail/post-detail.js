@@ -3,7 +3,7 @@
  */
 const request = require('../../utils/request')
 const auth = require('../../utils/auth')
-const { uploadForumReplyImage } = require('../../utils/media-upload')
+const { uploadForumReplyImage } = require('../../utils/oss')
 const { normalizeUser, openUserProfile } = require('../../utils/user')
 const { toastError } = require('../../utils/ui')
 const time = require('../../utils/time')
@@ -764,3 +764,4 @@ Page({
     return true
   }
 })
+
