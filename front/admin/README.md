@@ -44,6 +44,18 @@ npm run dev
 npm run build
 ```
 
+### 4. 嵌入后端静态资源（后端启动即可访问）
+
+```bash
+npm run build:embed
+```
+
+执行后会输出到：
+`chat/backend/src/main/resources/static/admin-console/`
+
+后端启动后访问：
+`http://localhost:8080/api/admin-console/`
+
 ## 📁 项目结构
 
 ```
