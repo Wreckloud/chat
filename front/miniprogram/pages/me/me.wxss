@@ -143,7 +143,12 @@
 
 .theme-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.theme-row {
+  display: flex;
   gap: 8rpx;
 }
 
@@ -221,6 +226,10 @@
   cursor: pointer;
 }
 
+.theme-item-placeholder {
+  width: 100%;
+}
+
 .theme-bars-dark {
   background: #1b2330;
 }
@@ -235,6 +244,22 @@
 
 .theme-bar-dark-3 {
   background: #0f1620;
+}
+
+.theme-bars-placeholder {
+  background: #2d3a48;
+}
+
+.theme-bar-placeholder-1 {
+  background: #3f5268;
+}
+
+.theme-bar-placeholder-2 {
+  background: #697f97;
+}
+
+.theme-bar-placeholder-3 {
+  background: #98acc4;
 }
 
 .danger-card {

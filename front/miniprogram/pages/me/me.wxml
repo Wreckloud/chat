@@ -60,41 +60,56 @@
       </view>
 
       <view class="theme-list">
-        <view
-          wx:for="{{themeOptions}}"
-          wx:key="name"
-          class="theme-item {{themeName === item.name ? 'theme-item-active' : ''}}"
-          bindtap="onSelectTheme"
-          data-theme="{{item.name}}">
-          <view wx:if="{{themeName === item.name}}" class="theme-selected">[已选]</view>
-          <view class="theme-bars">
-            <view
-              wx:for="{{item.preview}}"
-              wx:key="*this"
-              wx:for-item="color"
-              class="theme-bar"
-              style="background-color: {{color}};"></view>
+        <view class="theme-row">
+          <view
+            wx:if="{{defaultThemeOption}}"
+            class="theme-item {{themeName === defaultThemeOption.name ? 'theme-item-active' : ''}}"
+            bindtap="onSelectTheme"
+            data-theme="{{defaultThemeOption.name}}">
+            <view wx:if="{{themeName === defaultThemeOption.name}}" class="theme-selected">[已选]</view>
+            <view class="theme-bars">
+              <view
+                wx:for="{{defaultThemeOption.preview}}"
+                wx:key="*this"
+                wx:for-item="color"
+                class="theme-bar"
+                style="background-color: {{color}};"></view>
+            </view>
+            <view class="theme-main">
+              <view class="theme-name">{{defaultThemeOption.label}}</view>
+              <view class="theme-desc">{{defaultThemeOption.description}}</view>
+            </view>
           </view>
-          <view class="theme-main">
-            <view class="theme-name">{{item.label}}</view>
-            <view class="theme-desc">{{item.description}}</view>
+
+          <view
+            class="theme-item theme-item-dark {{darkModeEnabled ? 'theme-item-active' : ''}}"
+            bindtap="onToggleDarkMode">
+            <view class="theme-selected {{darkModeEnabled ? '' : 'theme-selected-muted'}}">
+              {{darkModeEnabled ? '[已开]' : '[关闭]'}}
+            </view>
+            <view class="theme-bars theme-bars-dark">
+              <view class="theme-bar theme-bar-dark-1"></view>
+              <view class="theme-bar theme-bar-dark-2"></view>
+              <view class="theme-bar theme-bar-dark-3"></view>
+            </view>
+            <view class="theme-main">
+              <view class="theme-name">夜行模式</view>
+              <view class="theme-desc">整站随主题一起变暗</view>
+            </view>
           </view>
         </view>
 
-        <view
-          class="theme-item theme-item-dark {{darkModeEnabled ? 'theme-item-active' : ''}}"
-          bindtap="onToggleDarkMode">
-          <view class="theme-selected {{darkModeEnabled ? '' : 'theme-selected-muted'}}">
-            {{darkModeEnabled ? '[已开]' : '[关闭]'}}
-          </view>
-          <view class="theme-bars theme-bars-dark">
-            <view class="theme-bar theme-bar-dark-1"></view>
-            <view class="theme-bar theme-bar-dark-2"></view>
-            <view class="theme-bar theme-bar-dark-3"></view>
-          </view>
-          <view class="theme-main">
-            <view class="theme-name">夜行模式</view>
-            <view class="theme-desc">随主题变暗</view>
+        <view class="theme-row">
+          <view class="theme-item theme-item-placeholder">
+            <view class="theme-bars theme-bars-placeholder">
+              <view class="theme-bar theme-bar-placeholder-1"></view>
+              <view class="theme-bar theme-bar-placeholder-2"></view>
+              <view class="theme-bar theme-bar-placeholder-3"></view>
+            </view>
+            <view class="theme-main">
+              <view class="theme-name">施工中</view>
+              <view class="theme-desc">尽请期待 comming soon.</view>
+            </view>
           </view>
         </view>
       </view>

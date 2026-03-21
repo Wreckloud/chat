@@ -76,11 +76,11 @@ Page({
   data: {
     userInfo: null,
     loading: false,
-    themeName: 'retro_blue',
-    themeClass: 'theme-retro-blue',
+    themeName: 'retro_steel',
+    themeClass: 'theme-retro-steel',
     darkModeEnabled: false,
     noticeUnreadCount: 0,
-    themeOptions: [],
+    defaultThemeOption: null,
     quickActions: QUICK_ACTIONS,
     accountActions: ACCOUNT_ACTIONS
   },
@@ -89,9 +89,9 @@ Page({
     pageLifecycleHelper.handleProtectedPageLoad(auth, {
       afterInit: () => {
         this.setData({
-          themeOptions: listThemes({
+          defaultThemeOption: listThemes({
             darkModeEnabled: this.data.darkModeEnabled
-          })
+          })[0] || null
         })
       }
     })
@@ -255,9 +255,9 @@ Page({
       extraData: (themeContext) => ({
         themeName: themeContext.themeName,
         darkModeEnabled: themeContext.darkModeEnabled,
-        themeOptions: listThemes({
+        defaultThemeOption: listThemes({
           darkModeEnabled: themeContext.darkModeEnabled
-        })
+        })[0] || null
       })
     })
   },
