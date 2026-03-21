@@ -38,9 +38,19 @@ function clampProgress(progress) {
   return Math.max(0, Math.min(100, Math.round(value)))
 }
 
-function resolveUploadStatusText(uploadStatus, uploadProgress) {
+function resolveUploadFailureMessage(error, fallback = '视频上传失败') {
+  if (typeof error === 'string' && error.trim()) {
+    return error.trim()
+  }
+  if (error && typeof error.message === 'string' && error.message.trim()) {
+    return error.message.trim()
+  }
+  return fallback
+}
+
+function resolveUploadStatusText(uploadStatus, uploadProgress, uploadErrorMessage) {
   if (uploadStatus === MEDIA_UPLOAD_STATUS_FAILED) {
-    return '视频上传失败'
+    return resolveUploadFailureMessage(uploadErrorMessage, '视频上传失败')
   }
   if (uploadStatus === MEDIA_UPLOAD_STATUS_SENDING) {
     return '视频上传完成，正在发送'
@@ -88,6 +98,7 @@ function upsertVideoUploadPlaceholder(page, options = {}) {
   const draft = ensureUploadPlaceholderDraft(page, clientMsgId, options.tempFile || {})
   const uploadStatus = String(options.uploadStatus || MEDIA_UPLOAD_STATUS_UPLOADING).toUpperCase()
   const uploadProgress = clampProgress(options.uploadProgress)
+  const uploadErrorMessage = resolveUploadFailureMessage(options.uploadErrorMessage, '')
   const sendType = String(page.IM_SEND_TYPE || 'SEND').toUpperCase()
   const conversationId = sendType === 'SEND'
     ? (Number(page.data && page.data.conversationId) || 0)
@@ -103,13 +114,14 @@ function upsertVideoUploadPlaceholder(page, options = {}) {
     senderEquippedTitleName: draft.senderEquippedTitleName,
     senderEquippedTitleColor: draft.senderEquippedTitleColor,
     msgType: 'VIDEO',
-    content: resolveUploadStatusText(uploadStatus, uploadProgress),
+    content: resolveUploadStatusText(uploadStatus, uploadProgress, uploadErrorMessage),
     mediaWidth: draft.mediaWidth,
     mediaHeight: draft.mediaHeight,
     mediaSize: draft.mediaSize,
     mediaMimeType: 'video/mp4',
     uploadProgress,
     uploadStatus,
+    uploadErrorMessage,
     deliveryStatus: uploadStatus === MEDIA_UPLOAD_STATUS_FAILED ? 2 : 0,
     createTime: draft.createTime
   })
@@ -178,6 +190,7 @@ function applyUploadProgressPayload(page, payload) {
 
   const uploadStatus = String(payload.uploadStatus || MEDIA_UPLOAD_STATUS_UPLOADING).toUpperCase()
   const uploadProgress = clampProgress(payload.uploadProgress)
+  const uploadErrorMessage = resolveUploadFailureMessage(payload.uploadErrorMessage, '')
   const conversationId = sendType === 'SEND' ? (Number(payload.conversationId) || 0) : 0
   if (!page.remoteUploadPlaceholderTimeMap) {
     page.remoteUploadPlaceholderTimeMap = {}
@@ -196,9 +209,10 @@ function applyUploadProgressPayload(page, payload) {
     senderEquippedTitleName: String(payload.senderEquippedTitleName || ''),
     senderEquippedTitleColor: String(payload.senderEquippedTitleColor || ''),
     msgType: 'VIDEO',
-    content: resolveUploadStatusText(uploadStatus, uploadProgress),
+    content: resolveUploadStatusText(uploadStatus, uploadProgress, uploadErrorMessage),
     uploadProgress,
     uploadStatus,
+    uploadErrorMessage,
     deliveryStatus: uploadStatus === MEDIA_UPLOAD_STATUS_FAILED ? 2 : 0,
     createTime
   })
@@ -361,21 +375,24 @@ async function chooseVideoFromAlbum(page, deps) {
         )
         clearUploadPlaceholderDraft(page, clientMsgId)
       })
-      .catch(() => {
+      .catch((error) => {
         if (page.pageUnloaded) {
           return
         }
+        const failureMessage = resolveUploadFailureMessage(error, '视频上传失败')
         upsertVideoUploadPlaceholder(page, {
           clientMsgId,
           uploadProgress: 100,
-          uploadStatus: MEDIA_UPLOAD_STATUS_FAILED
+          uploadStatus: MEDIA_UPLOAD_STATUS_FAILED,
+          uploadErrorMessage: failureMessage
         })
         emitUploadProgress(page, {
           clientMsgId,
           uploadProgress: 100,
           uploadStatus: MEDIA_UPLOAD_STATUS_FAILED
         })
-        imBatchSendHelper.showBatchFailureToast(1, 1)
+        toastError(error, failureMessage)
+        clearUploadPlaceholderDraft(page, clientMsgId)
       })
   } catch (error) {
     if (page.pageUnloaded) {
@@ -384,7 +401,7 @@ async function chooseVideoFromAlbum(page, deps) {
     if (imHelper.isUserCancelError(error)) {
       return
     }
-    imBatchSendHelper.showBatchFailureToast(1, 1)
+    toastError(error, '视频上传失败')
   }
 }
 
@@ -486,40 +503,6 @@ function onTapLink(e) {
   })
 }
 
-function onTapVideo(page, e, toastError) {
-  if (page.previewingVideo) {
-    return
-  }
-  const dataset = e && e.currentTarget ? e.currentTarget.dataset || {} : {}
-  const url = String(dataset.url || '')
-  const posterUrl = String(dataset.posterUrl || '')
-  if (!url) {
-    toastError('视频地址无效')
-    return
-  }
-
-  page.previewingVideo = true
-  wx.previewMedia({
-    current: 0,
-    sources: [
-      {
-        url,
-        type: 'video',
-        poster: posterUrl || undefined
-      }
-    ],
-    fail: (error) => {
-      if (page.pageUnloaded) {
-        return
-      }
-      toastError(error, '视频打开失败')
-    },
-    complete: () => {
-      page.previewingVideo = false
-    }
-  })
-}
-
 function onTapFile(page, e, toastError) {
   const dataset = e && e.currentTarget ? e.currentTarget.dataset || {} : {}
   const url = String(dataset.url || '')
@@ -582,7 +565,6 @@ module.exports = {
   chooseFileForShare,
   shareLinkAsText,
   onTapLink,
-  onTapVideo,
   onTapFile,
   onMoreActionTap,
   applyUploadProgressPayload

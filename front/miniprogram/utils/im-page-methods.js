@@ -72,10 +72,6 @@ function buildCommonImPageMethods(options) {
       imSendHelper.onTapLink(e)
     },
 
-    onTapVideo(e) {
-      imSendHelper.onTapVideo(this, e, toastError)
-    },
-
     onTapFile(e) {
       imSendHelper.onTapFile(this, e, toastError)
     },
@@ -118,10 +114,6 @@ function buildCommonImPageMethods(options) {
 
     previewImage(e) {
       imPageHelper.previewImage(this, e)
-    },
-
-    onVideoPosterError(e) {
-      imPageHelper.onVideoPosterError(this, e)
     },
 
     onTapReplyQuote(e) {

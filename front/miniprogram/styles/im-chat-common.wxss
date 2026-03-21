@@ -288,13 +288,14 @@ page {
   box-shadow: var(--retro-panel-shadow);
 }
 
-.im-video-card {
-  position: relative;
+.im-video-player {
+  display: block;
   width: var(--retro-chat-video-width);
-  background: #0f1828;
+  height: 236rpx;
   border: 1rpx solid var(--retro-avatar-border);
+  background: var(--retro-theme-item-bg);
   box-shadow: var(--retro-panel-shadow);
-  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .im-upload-placeholder {
@@ -350,44 +351,6 @@ page {
   font-size: 20rpx;
   line-height: 1.3;
   color: var(--retro-muted-text-2);
-}
-
-.im-video-poster {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.im-video-play-mask {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.im-video-play-icon {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.52);
-  position: relative;
-}
-
-.im-video-play-icon::after {
-  content: '';
-  position: absolute;
-  left: 28rpx;
-  top: 20rpx;
-  width: 0;
-  height: 0;
-  border-top: 16rpx solid transparent;
-  border-bottom: 16rpx solid transparent;
-  border-left: 22rpx solid var(--retro-strong-text);
 }
 
 .im-media-missing {

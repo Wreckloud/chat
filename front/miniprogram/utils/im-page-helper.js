@@ -374,39 +374,6 @@ function previewImage(page, event) {
   })
 }
 
-function onVideoPosterError(page, event) {
-  if (!page || !page.data || !Array.isArray(page.data.messages)) {
-    return
-  }
-  const dataset = event && event.currentTarget ? (event.currentTarget.dataset || {}) : {}
-  const messageId = Number(dataset.messageId)
-  if (!messageId) {
-    return
-  }
-
-  const currentMessages = page.data.messages
-  const targetIndex = currentMessages.findIndex(item => Number(item.messageId) === messageId)
-  if (targetIndex < 0) {
-    return
-  }
-  const targetMessage = currentMessages[targetIndex]
-  if (!targetMessage || !targetMessage.mediaPosterUrl) {
-    return
-  }
-
-  const nextMessages = currentMessages.slice()
-  nextMessages[targetIndex] = {
-    ...targetMessage,
-    mediaPosterUrl: ''
-  }
-  page.setData({
-    messages: nextMessages,
-    messageBlocks: typeof page.buildMessageBlocks === 'function'
-      ? page.buildMessageBlocks(nextMessages)
-      : (page.data.messageBlocks || [])
-  })
-}
-
 function onLongPressMessage(page, event) {
   if (!page || !event || !event.currentTarget || !event.currentTarget.dataset) {
     return
@@ -473,6 +440,5 @@ module.exports = {
   onLongPressMessage,
   onMessageListUpper,
   onTapMessageList,
-  previewImage,
-  onVideoPosterError
+  previewImage
 }

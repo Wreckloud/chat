@@ -103,7 +103,7 @@
                 class="im-image"
                 style="{{lineItem.imageRenderStyle}}"
                 src="{{lineItem.mediaUrl}}"
-                mode="aspectFill"
+                mode="aspectFit"
                 lazy-load="{{true}}"
                 data-url="{{lineItem.mediaUrl}}"
                 bindtap="previewImage" />
@@ -121,25 +121,22 @@
                 </view>
                 <text class="im-upload-placeholder-tip">{{lineItem.content}}</text>
               </view>
-              <view
+              <video
                 wx:elif="{{lineItem.msgType === 'VIDEO' && lineItem.mediaUrl}}"
-                class="im-video-card"
+                class="im-video-player"
                 style="{{lineItem.videoRenderStyle}}"
-                data-url="{{lineItem.mediaUrl}}"
-                data-poster-url="{{lineItem.mediaPosterUrl}}"
-                bindtap="onTapVideo">
-                <image
-                  wx:if="{{lineItem.mediaPosterUrl}}"
-                  class="im-video-poster"
-                  src="{{lineItem.mediaPosterUrl}}"
-                  mode="aspectFill"
-                  data-message-id="{{lineItem.messageId}}"
-                  binderror="onVideoPosterError"
-                  lazy-load="{{true}}" />
-                <view class="im-video-play-mask">
-                  <view class="im-video-play-icon"></view>
-                </view>
-              </view>
+                src="{{lineItem.mediaUrl}}"
+                poster="{{lineItem.mediaPosterUrl}}"
+                controls="{{true}}"
+                autoplay="{{false}}"
+                show-center-play-btn="{{true}}"
+                show-play-btn="{{true}}"
+                show-fullscreen-btn="{{true}}"
+                enable-progress-gesture="{{true}}"
+                object-fit="contain"
+                data-message-id="{{lineItem.messageId}}"
+                bindloadedmetadata="onMessageVideoLoadedMetadata"
+                binderror="onMessageVideoError" />
               <text
                 wx:elif="{{lineItem.msgType === 'FILE' && lineItem.mediaUrl}}"
                 class="im-text im-file"

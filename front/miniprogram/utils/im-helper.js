@@ -4,9 +4,10 @@ const imRequestHelper = require('./im-request-helper')
 
 const DEFAULT_MESSAGE_MERGE_GAP_MS = 5 * 60 * 1000
 const IMAGE_MAX_WIDTH_RPX = 320
-const IMAGE_MAX_HEIGHT_RPX = 420
+const IMAGE_MAX_HEIGHT_RPX = 620
 const IMAGE_MIN_WIDTH_RPX = 120
 const IMAGE_MIN_HEIGHT_RPX = 96
+const IMAGE_TALL_MIN_WIDTH_RPX = 160
 const IMAGE_FALLBACK_WIDTH_RPX = 280
 const IMAGE_FALLBACK_HEIGHT_RPX = 210
 const VIDEO_MAX_WIDTH_RPX = 420
@@ -119,7 +120,7 @@ function buildImageRenderStyle(mediaWidth, mediaHeight) {
   }
   if (ratio <= 1 / 3) {
     const renderWidth = Math.max(
-      IMAGE_MIN_WIDTH_RPX,
+      IMAGE_TALL_MIN_WIDTH_RPX,
       Math.min(IMAGE_MAX_WIDTH_RPX, Math.round(IMAGE_MAX_HEIGHT_RPX * ratio))
     )
     return `width:${renderWidth}rpx;height:${IMAGE_MAX_HEIGHT_RPX}rpx;`

@@ -175,6 +175,14 @@ function resolveVideoPosterTempFilePath(tempFile) {
   if (!tempFile) {
     return ''
   }
+  const posterTempPath = String(tempFile.posterTempFilePath || '').trim()
+  if (posterTempPath) {
+    return posterTempPath
+  }
+  const posterPath = String(tempFile.posterPath || '').trim()
+  if (posterPath) {
+    return posterPath
+  }
   const thumbPath = String(tempFile.thumbTempFilePath || '').trim()
   if (thumbPath) {
     return thumbPath
@@ -451,8 +459,13 @@ function uploadFileByPolicy(policy, filePath, mediaLabel, options = {}) {
       success(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const responseBody = parseUploadResponseBody(res.data)
-          if (responseBody && typeof responseBody.code === 'number' && responseBody.code !== 0) {
-            reject(new Error(responseBody.message || `${mediaLabel}上传失败`))
+          const responseCode = Number(responseBody && responseBody.code)
+          if (responseBody && Number.isFinite(responseCode) && responseCode !== 0) {
+            const backendError = new Error(responseBody.message || `${mediaLabel}上传失败`)
+            backendError.code = responseCode
+            backendError.kind = 'business'
+            backendError.raw = responseBody
+            reject(backendError)
             return
           }
           resolve()

@@ -484,6 +484,54 @@ Page({
     })
   },
 
+  onMessageVideoLoadedMetadata(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const messageId = Number(dataset.messageId)
+    if (!messageId) {
+      return
+    }
+    const detail = e && e.detail ? e.detail : {}
+    const width = Number(detail.width || detail.videoWidth || 0)
+    const height = Number(detail.height || detail.videoHeight || 0)
+    if (!width || !height) {
+      return
+    }
+
+    const messages = Array.isArray(this.data.messages) ? this.data.messages : []
+    const targetIndex = messages.findIndex(item => Number(item.messageId) === messageId)
+    if (targetIndex < 0) {
+      return
+    }
+    const targetMessage = messages[targetIndex]
+    if (!targetMessage) {
+      return
+    }
+    const normalizedWidth = Math.max(0, Math.round(width))
+    const normalizedHeight = Math.max(0, Math.round(height))
+    if (Number(targetMessage.mediaWidth) === normalizedWidth
+      && Number(targetMessage.mediaHeight) === normalizedHeight) {
+      return
+    }
+
+    const nextMessages = messages.slice()
+    nextMessages[targetIndex] = {
+      ...targetMessage,
+      mediaWidth: normalizedWidth,
+      mediaHeight: normalizedHeight
+    }
+    this.setData({
+      messages: nextMessages,
+      messageBlocks: this.buildMessageBlocks(nextMessages)
+    })
+  },
+
+  onMessageVideoError(e) {
+    const dataset = e && e.currentTarget ? (e.currentTarget.dataset || {}) : {}
+    const messageId = Number(dataset.messageId)
+    const detail = e && e.detail ? e.detail : {}
+    console.warn('[chat-detail] 视频播放失败', { messageId, detail })
+  },
+
   resolveSenderProfile(senderId, isSelf) {
     return imUserHelper.resolveSenderProfile(this, senderId, isSelf, {
       targetUser: this.data.targetUser
