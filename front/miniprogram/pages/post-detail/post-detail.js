@@ -77,7 +77,7 @@ function resolveNextReplySort(currentSort) {
   return REPLY_SORT_OPTIONS[(index + 1) % REPLY_SORT_OPTIONS.length]
 }
 
-function buildReplyTree(replies) {
+function buildReplyRows(replies) {
   if (!Array.isArray(replies) || replies.length === 0) {
     return []
   }
@@ -95,57 +95,81 @@ function buildReplyTree(replies) {
   }
 
   const nodeMap = new Map()
+  const childIdMap = new Map()
+  const hasParentSet = new Set()
   normalizedReplies.forEach(item => {
-    const node = {
-      ...item,
-      children: []
-    }
-    nodeMap.set(Number(item.replyId), node)
+    nodeMap.set(Number(item.replyId), item)
+    childIdMap.set(Number(item.replyId), [])
   })
 
-  const childReplyIdSet = new Set()
   normalizedReplies.forEach(item => {
-    const node = nodeMap.get(Number(item.replyId))
+    const replyId = Number(item.replyId)
     const quoteReplyId = Number(item.quoteReplyId) || 0
     if (!quoteReplyId) {
       return
     }
-
-    const directParent = nodeMap.get(quoteReplyId)
-    if (!directParent) {
+    if (quoteReplyId === replyId) {
       return
     }
-    directParent.children.push(node)
-    childReplyIdSet.add(Number(item.replyId))
+
+    if (!nodeMap.has(quoteReplyId)) {
+      return
+    }
+    childIdMap.get(quoteReplyId).push(replyId)
+    hasParentSet.add(replyId)
   })
 
-  const roots = []
+  const rootIds = normalizedReplies
+    .map(item => Number(item.replyId))
+    .filter(replyId => !hasParentSet.has(replyId))
+
+  const rows = []
+  const visited = new Set()
+
+  function walk(rootReplyId, depth) {
+    const stack = [{ replyId: rootReplyId, depth }]
+    while (stack.length > 0) {
+      const current = stack.pop()
+      if (!current || visited.has(current.replyId)) {
+        continue
+      }
+      const source = nodeMap.get(current.replyId)
+      if (!source) {
+        continue
+      }
+      visited.add(current.replyId)
+
+      const safeDepth = Number.isFinite(current.depth) ? Math.max(0, current.depth) : 0
+      const clampedDepth = Math.min(safeDepth, 6)
+      rows.push({
+        ...source,
+        depth: safeDepth,
+        indentRpx: clampedDepth * 20
+      })
+
+      const childIds = childIdMap.get(current.replyId) || []
+      for (let i = childIds.length - 1; i >= 0; i -= 1) {
+        const childId = childIds[i]
+        if (childId === current.replyId || visited.has(childId)) {
+          continue
+        }
+        stack.push({
+          replyId: childId,
+          depth: safeDepth + 1
+        })
+      }
+    }
+  }
+
+  rootIds.forEach(replyId => walk(replyId, 0))
   normalizedReplies.forEach(item => {
     const replyId = Number(item.replyId)
-    if (childReplyIdSet.has(replyId)) {
-      return
-    }
-    const node = nodeMap.get(replyId)
-    if (node) {
-      roots.push(node)
+    if (!visited.has(replyId)) {
+      walk(replyId, 0)
     }
   })
 
-  return roots.map(item => withReplyNodeMeta(item, 0))
-}
-
-function withReplyNodeMeta(node, depth) {
-  const safeDepth = Number.isFinite(depth) ? Math.max(0, depth) : 0
-  const clampedDepth = Math.min(safeDepth, 6)
-  const children = Array.isArray(node.children)
-    ? node.children.map(child => withReplyNodeMeta(child, safeDepth + 1))
-    : []
-  return {
-    ...node,
-    depth: safeDepth,
-    indentRpx: clampedDepth * 20,
-    children
-  }
+  return rows
 }
 
 function confirmAction(options) {
@@ -188,7 +212,7 @@ Page({
     thread: null,
     content: '',
     replies: [],
-    replyTree: [],
+    replyRows: [],
     replyPage: 1,
     replySize: 20,
     replyHasMore: true,
@@ -308,13 +332,13 @@ Page({
         })
       ))
       const mergedReplies = forumViewHelper.mergePagedList(this.data.replies, list, reset)
-      const replyTree = buildReplyTree(mergedReplies)
+      const replyRows = buildReplyRows(mergedReplies)
       const total = Number(payload.total) || 0
       const hasMore = forumViewHelper.resolveHasMoreByTotal(mergedReplies.length, total)
       const replyTarget = findReplyById(mergedReplies, this.data.replyTargetId)
       this.setData({
         replies: mergedReplies,
-        replyTree,
+        replyRows,
         replyHasMore: hasMore,
         replyPage: hasMore ? page + 1 : page,
         replyTargetId: replyTarget ? replyTarget.replyId : null,
@@ -483,6 +507,9 @@ Page({
   },
 
   onReplySubmitTap() {
+    if (!this.resolveCanReplySubmit(this.data.replyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)) {
+      return
+    }
     this.keepReplyFocusAfterSend = this.data.replyFocused || this.data.keyboardHeightPx > 0
     this.handleReply()
   },
@@ -685,8 +712,8 @@ Page({
       [`replies[${index}].likeCount`]: nextLikeCount,
       [`replyLikeLoadingMap.${replyId}`]: true
     }, () => {
-      const replyTree = buildReplyTree(this.data.replies)
-      this.setData({ replyTree })
+      const replyRows = buildReplyRows(this.data.replies)
+      this.setData({ replyRows })
     })
 
     try {
@@ -696,8 +723,8 @@ Page({
         [`replies[${index}].likedByCurrentUser`]: currentReply.likedByCurrentUser,
         [`replies[${index}].likeCount`]: currentReply.likeCount
       }, () => {
-        const replyTree = buildReplyTree(this.data.replies)
-        this.setData({ replyTree })
+        const replyRows = buildReplyRows(this.data.replies)
+        this.setData({ replyRows })
       })
       toastError(error, '更新回复点赞失败')
     } finally {
@@ -777,10 +804,10 @@ Page({
       nextReplies = [...deduped, createdReply]
     }
 
-    const nextReplyTree = buildReplyTree(nextReplies)
+    const nextReplyRows = buildReplyRows(nextReplies)
     this.setData({
       replies: nextReplies,
-      replyTree: nextReplyTree
+      replyRows: nextReplyRows
     }, () => {
       this.scrollReplyListToBottom()
     })
