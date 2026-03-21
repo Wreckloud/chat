@@ -11,10 +11,12 @@ import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.follow.domain.enums.FollowStatus;
 import com.wreckloud.wolfchat.follow.api.vo.FollowUserVO;
+import com.wreckloud.wolfchat.follow.application.event.UserFollowedEvent;
 import com.wreckloud.wolfchat.follow.domain.entity.WfFollow;
 import com.wreckloud.wolfchat.follow.infra.mapper.WfFollowMapper;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,7 @@ public class FollowService {
     private final UserNoticeService userNoticeService;
     private final ConversationService conversationService;
     private final ChatSystemNoticeService chatSystemNoticeService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 关注行者
@@ -61,6 +64,7 @@ public class FollowService {
             userAchievementService.grantFirstFollowAchievement(followerId);
             userNoticeService.notifyFollowReceived(followeeId);
             notifyChatFollowEvents(followerId, followeeId);
+            applicationEventPublisher.publishEvent(new UserFollowedEvent(followerId, followeeId));
             return;
         }
 
@@ -75,6 +79,7 @@ public class FollowService {
         userAchievementService.grantFirstFollowAchievement(followerId);
         userNoticeService.notifyFollowReceived(followeeId);
         notifyChatFollowEvents(followerId, followeeId);
+        applicationEventPublisher.publishEvent(new UserFollowedEvent(followerId, followeeId));
     }
 
     /**

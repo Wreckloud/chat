@@ -17,6 +17,8 @@ import com.wreckloud.wolfchat.community.api.vo.ForumThreadEditorVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadPageVO;
 import com.wreckloud.wolfchat.community.api.vo.ForumThreadVO;
 import com.wreckloud.wolfchat.community.api.dto.UpdateThreadDTO;
+import com.wreckloud.wolfchat.community.application.event.ForumReplyCreatedEvent;
+import com.wreckloud.wolfchat.community.application.event.ForumThreadCreatedEvent;
 import com.wreckloud.wolfchat.community.application.support.ForumPayloadSupport;
 import com.wreckloud.wolfchat.community.domain.constant.ForumModerationLogConstants;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
@@ -35,14 +37,17 @@ import com.wreckloud.wolfchat.community.infra.mapper.WfForumThreadMapper;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 论坛门面服务：读操作委托给查询服务，写操作在此统一编排。
@@ -68,6 +73,7 @@ public class ForumService {
     private final UserAchievementService userAchievementService;
     private final UserService userService;
     private final UserNoticeService userNoticeService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public ForumThreadPageVO listFeedThreads(Long userId, long page, long size, String tab) {
         return forumQueryService.listFeedThreads(userId, page, size, tab);
@@ -120,6 +126,12 @@ public class ForumService {
         assertSingleRow(wfForumThreadMapper.insert(thread));
         updateBoardOnThreadCreate(board.getId(), thread.getId(), now);
         userAchievementService.grantFirstPostAchievement(userId);
+        applicationEventPublisher.publishEvent(new ForumThreadCreatedEvent(
+                thread.getId(),
+                userId,
+                payload.title,
+                payload.content
+        ));
         return forumQueryService.buildThreadVO(userId, thread.getId());
     }
 
@@ -218,6 +230,12 @@ public class ForumService {
         updatePublishedThreadContent(userId, thread, payload, true);
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
         userAchievementService.grantFirstPostAchievement(userId);
+        applicationEventPublisher.publishEvent(new ForumThreadCreatedEvent(
+                threadId,
+                userId,
+                payload.title,
+                payload.content
+        ));
         return forumQueryService.buildThreadVO(userId, threadId);
     }
 
@@ -240,6 +258,12 @@ public class ForumService {
 
         restoreDeletedThreadContent(userId, thread, payload);
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
+        applicationEventPublisher.publishEvent(new ForumThreadCreatedEvent(
+                threadId,
+                userId,
+                payload.title,
+                payload.content
+        ));
         return forumQueryService.buildThreadVO(userId, threadId);
     }
 
@@ -313,6 +337,13 @@ public class ForumService {
         userNoticeService.notifyThreadReplied(thread.getAuthorId(), thread.getId(), userId);
         notifyReplyTargetIfNeeded(thread, targetReply, userId);
         log.info("回帖发布成功: userId={}, threadId={}, replyId={}", userId, threadId, reply.getId());
+        applicationEventPublisher.publishEvent(new ForumReplyCreatedEvent(
+                reply.getId(),
+                threadId,
+                userId,
+                reply.getQuoteReplyId(),
+                reply.getContent()
+        ));
         return forumQueryService.buildReplyVO(userId, reply.getId());
     }
 
@@ -432,11 +463,15 @@ public class ForumService {
         WfForumThread thread = forumQueryService.getVisibleThreadOrThrow(reply.getThreadId());
         validateReplyDeletePermission(userId, reply, thread);
 
+        Set<Long> cascadeDeleteReplyIds = collectCascadeDeleteReplyIds(reply.getThreadId(), replyId);
         LambdaUpdateWrapper<WfForumReply> replyUpdateWrapper = new LambdaUpdateWrapper<>();
-        replyUpdateWrapper.eq(WfForumReply::getId, replyId)
+        replyUpdateWrapper.in(WfForumReply::getId, cascadeDeleteReplyIds)
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .set(WfForumReply::getStatus, ForumReplyStatus.DELETED);
-        assertSingleRow(wfForumReplyMapper.update(null, replyUpdateWrapper));
+        int affectedRows = wfForumReplyMapper.update(null, replyUpdateWrapper);
+        if (affectedRows <= 0) {
+            throw new BaseException(ErrorCode.FORUM_REPLY_NOT_FOUND);
+        }
 
         forumContentMaintenanceService.refreshThreadLastReply(thread.getId());
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
@@ -447,6 +482,36 @@ public class ForumService {
                 ForumModerationLogConstants.ACTION_DELETE_REPLY,
                 ForumModerationLogConstants.REASON_AUTHOR_OPERATION
         );
+    }
+
+    private Set<Long> collectCascadeDeleteReplyIds(Long threadId, Long replyId) {
+        LambdaQueryWrapper<WfForumReply> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(WfForumReply::getThreadId, threadId)
+                .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
+                .select(WfForumReply::getId, WfForumReply::getQuoteReplyId);
+        List<WfForumReply> visibleReplies = wfForumReplyMapper.selectList(queryWrapper);
+        Set<Long> deleteReplyIds = new HashSet<>();
+        deleteReplyIds.add(replyId);
+        if (visibleReplies.isEmpty()) {
+            return deleteReplyIds;
+        }
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (WfForumReply currentReply : visibleReplies) {
+                Long currentReplyId = currentReply.getId();
+                Long parentReplyId = currentReply.getQuoteReplyId();
+                if (currentReplyId == null || deleteReplyIds.contains(currentReplyId)) {
+                    continue;
+                }
+                if (parentReplyId != null && deleteReplyIds.contains(parentReplyId)) {
+                    deleteReplyIds.add(currentReplyId);
+                    changed = true;
+                }
+            }
+        }
+        return deleteReplyIds;
     }
 
     private boolean likeThread(Long userId, Long threadId) {

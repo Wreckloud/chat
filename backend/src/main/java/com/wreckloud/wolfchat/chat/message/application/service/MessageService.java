@@ -8,6 +8,7 @@ import com.wreckloud.wolfchat.chat.media.application.service.ChatMediaService;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
 import com.wreckloud.wolfchat.chat.message.api.vo.MessagePolicyVO;
 import com.wreckloud.wolfchat.chat.message.application.support.MessageRuleSupport;
+import com.wreckloud.wolfchat.chat.message.application.event.PrivateMessageSentEvent;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
@@ -19,6 +20,7 @@ import com.wreckloud.wolfchat.follow.application.service.UserBlockService;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +58,7 @@ public class MessageService {
     private final MessageMediaService messageMediaService;
     private final ChatSystemNoticeService chatSystemNoticeService;
     private final UserNoticeService userNoticeService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 发送消息
@@ -152,6 +155,14 @@ public class MessageService {
                     userId
             );
         }
+        applicationEventPublisher.publishEvent(new PrivateMessageSentEvent(
+                message.getId(),
+                conversationId,
+                userId,
+                receiverId,
+                message.getMsgType(),
+                message.getContent()
+        ));
 
         return message;
     }

@@ -9,6 +9,7 @@ import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyMessageVO;
 import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyMetaVO;
 import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyRecentUserVO;
 import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
+import com.wreckloud.wolfchat.chat.lobby.application.event.LobbyMessageSentEvent;
 import com.wreckloud.wolfchat.chat.lobby.domain.entity.WfLobbyMessage;
 import com.wreckloud.wolfchat.chat.lobby.infra.mapper.WfLobbyMessageMapper;
 import com.wreckloud.wolfchat.chat.media.application.service.ChatMediaService;
@@ -23,6 +24,7 @@ import com.wreckloud.wolfchat.common.storage.service.MediaStorageService;
 import com.wreckloud.wolfchat.notice.application.service.UserNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +58,7 @@ public class LobbyService {
     private final UserPresenceService userPresenceService;
     private final MediaStorageService mediaStorageService;
     private final UserNoticeService userNoticeService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 发送大厅消息
@@ -116,6 +119,12 @@ public class LobbyService {
         if (replyToMessage != null) {
             userNoticeService.notifyLobbyMessageReplied(replyToMessage.getSenderId(), userId);
         }
+        applicationEventPublisher.publishEvent(new LobbyMessageSentEvent(
+                message.getId(),
+                userId,
+                message.getMsgType(),
+                message.getContent()
+        ));
 
         WfUser sender = userService.getByIdOrThrow(userId);
         return fillMedia(LobbyMessageConverter.toLobbyMessageVO(message, sender));
