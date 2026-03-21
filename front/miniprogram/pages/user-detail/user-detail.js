@@ -22,8 +22,11 @@ function mapThread(item) {
   const videoUrl = typeof item.videoUrl === 'string' ? item.videoUrl : ''
   const videoPosterUrl = typeof item.videoPosterUrl === 'string' ? item.videoPosterUrl : ''
   const hasVideo = !!videoUrl
+  const hasSingleImagePreview = !hasVideo && imageUrls.length === 1
+  const singleImagePreviewUrl = hasSingleImagePreview ? imageUrls[0] : ''
   const previewImageUrls = imageUrls.slice(0, hasVideo ? 2 : 3)
   const editTimeText = time.formatPostTime(item.editTime)
+  const editTimeRelativeText = time.formatRelativeTime(item.editTime)
   const hasEditTime = !!editTimeText
   return {
     ...item,
@@ -35,13 +38,18 @@ function mapThread(item) {
     videoUrl,
     hasVideo,
     videoPosterUrl,
+    hasSingleImagePreview,
+    singleImagePreviewUrl,
     previewImageUrls,
     hasMoreImages: imageUrls.length > previewImageUrls.length,
     createTimeText: time.formatPostTime(item.createTime),
+    createTimeRelativeText: time.formatRelativeTime(item.createTime),
     editTimeText,
+    editTimeRelativeText,
     hasEditTime,
     timePrefix: hasEditTime ? '编辑于' : '发布于',
     timeText: hasEditTime ? editTimeText : time.formatPostTime(item.createTime),
+    timeRelativeText: hasEditTime ? editTimeRelativeText : time.formatRelativeTime(item.createTime),
     lastReplyTimeText: time.formatPostTime(item.lastReplyTime)
   }
 }

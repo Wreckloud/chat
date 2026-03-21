@@ -51,35 +51,46 @@
         </view>
       </view>
 
-      <view wx:if="{{item.contentPreview}}" class="thread-excerpt">{{item.contentPreview}}</view>
-
-      <view wx:if="{{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0)}}" class="thread-media-line">
+      <view
+        wx:if="{{item.videoPosterUrl || item.hasSingleImagePreview || (item.previewImageUrls && item.previewImageUrls.length > 0)}}"
+        class="thread-media-line {{item.hasSingleImagePreview ? 'thread-media-line-single' : ''}}">
         <view wx:if="{{item.videoPosterUrl}}" class="thread-media-cell thread-media-video">
           <image class="thread-media-image" src="{{item.videoPosterUrl}}" mode="aspectFill" />
           <view class="thread-media-video-mask">
             <view class="thread-media-video-icon"></view>
           </view>
         </view>
-        <view
-          wx:for="{{item.previewImageUrls}}"
-          wx:key="*this"
-          wx:for-item="previewUrl"
-          wx:for-index="previewIndex"
-          class="thread-media-cell">
-          <image class="thread-media-image" src="{{previewUrl}}" mode="aspectFill" />
-          <view
-            wx:if="{{item.hasMoreImages && previewIndex === item.previewImageUrls.length - 1}}"
-            class="thread-media-more">
-            +{{item.imageUrls.length - item.previewImageUrls.length}}
-          </view>
+        <view wx:elif="{{item.hasSingleImagePreview}}" class="thread-media-single-cell">
+          <image class="thread-media-single-image" src="{{item.singleImagePreviewUrl}}" mode="aspectFill" />
         </view>
+        <block wx:else>
+          <view
+            wx:for="{{item.previewImageUrls}}"
+            wx:key="*this"
+            wx:for-item="previewUrl"
+            wx:for-index="previewIndex"
+            class="thread-media-cell">
+            <image class="thread-media-image" src="{{previewUrl}}" mode="aspectFill" />
+            <view
+              wx:if="{{item.hasMoreImages && previewIndex === item.previewImageUrls.length - 1}}"
+              class="thread-media-more">
+              +{{item.imageUrls.length - item.previewImageUrls.length}}
+            </view>
+          </view>
+        </block>
+      </view>
+      <view
+        wx:if="{{item.contentPreview}}"
+        class="thread-excerpt {{item.videoPosterUrl || (item.previewImageUrls && item.previewImageUrls.length > 0) ? 'thread-excerpt-media' : 'thread-excerpt-text'}}">
+        {{item.contentPreview}}
       </view>
 
-      <view class="thread-meta-row">
-        <text>回 {{item.replyCount}} / 看 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
-      </view>
-      <view class="thread-time-row">
-        <text>{{item.timePrefix}} {{item.timeRelativeText || item.timeText || '--'}}</text>
+      <view class="thread-info-line">
+        <view class="thread-time-group">
+          <text class="thread-time-prefix">{{item.timePrefix}}</text>
+          <text class="thread-time-text">{{item.timeRelativeText || item.timeText || '--'}}</text>
+        </view>
+        <text class="thread-stat">回 {{item.replyCount}} / 阅 {{item.viewCount}} / 赞 {{item.likeCount}}</text>
       </view>
 
       <view wx:if="{{isSelf}}" class="thread-action-row">

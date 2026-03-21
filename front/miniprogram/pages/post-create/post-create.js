@@ -56,7 +56,13 @@ function normalizeVideoTempFile(file) {
   if (!file || !file.tempFilePath) {
     return null
   }
-  const posterPath = String(file.thumbTempFilePath || file.coverTempFilePath || '').trim()
+  const posterPath = String(
+    file.posterTempFilePath
+      || file.posterPath
+      || file.thumbTempFilePath
+      || file.coverTempFilePath
+      || ''
+  ).trim()
   return {
     source: 'local',
     key: '',
@@ -174,6 +180,8 @@ Page({
 
     title: '',
     content: '',
+    contentFocused: false,
+    keyboardHeightPx: 0,
     emojiPanelVisible: false,
     emojiList: COMMON_KAOMOJI_LIST,
     mediaImages: [],
@@ -320,8 +328,45 @@ Page({
     })
   },
 
+  onContentFocus() {
+    if (this.data.emojiPanelVisible) {
+      this.setData({ emojiPanelVisible: false })
+    }
+    if (!this.data.contentFocused) {
+      this.setData({ contentFocused: true })
+    }
+  },
+
+  onContentBlur() {
+    if (this.data.contentFocused) {
+      this.setData({ contentFocused: false })
+    }
+  },
+
+  onContentKeyboardHeightChange(e) {
+    const detail = e && e.detail ? e.detail : {}
+    const nextHeight = Math.max(0, Number(detail.height) || 0)
+    const payload = { keyboardHeightPx: nextHeight }
+    if (nextHeight > 0 && this.data.emojiPanelVisible) {
+      payload.emojiPanelVisible = false
+    }
+    this.setData(payload)
+  },
+
   toggleEmojiPanel() {
-    this.setData({ emojiPanelVisible: !this.data.emojiPanelVisible })
+    const nextVisible = !this.data.emojiPanelVisible
+    if (nextVisible) {
+      if (typeof wx.hideKeyboard === 'function') {
+        wx.hideKeyboard()
+      }
+      this.setData({
+        emojiPanelVisible: true,
+        contentFocused: false,
+        keyboardHeightPx: 0
+      })
+      return
+    }
+    this.setData({ emojiPanelVisible: false })
   },
 
   onSelectEmoji(e) {
@@ -436,16 +481,34 @@ Page({
     })
   },
 
+  clearSelectedMedia() {
+    if (this.data.loading) {
+      return
+    }
+    if (this.data.mediaVideo) {
+      this.clearThreadVideo()
+      return
+    }
+    if (this.data.mediaImages.length === 0) {
+      return
+    }
+    this.setData({ mediaImages: [] }, () => {
+      this.syncCanSubmitState()
+    })
+  },
+
   previewThreadVideo() {
     const mediaVideo = this.data.mediaVideo
     if (!mediaVideo || !mediaVideo.previewUrl) {
       return
     }
+    const posterUrl = String(mediaVideo.posterPreviewUrl || '').trim()
     wx.previewMedia({
       current: 0,
       sources: [{
         url: mediaVideo.previewUrl,
-        type: 'video'
+        type: 'video',
+        poster: posterUrl || undefined
       }]
     })
   },
@@ -676,6 +739,10 @@ Page({
         const videoSize = Number(mediaVideo.size) || 0
         const uploadRes = await uploadForumThreadVideo({
           tempFilePath: mediaVideo.path,
+          posterTempFilePath: mediaVideo.posterPath,
+          posterPath: mediaVideo.posterPath,
+          thumbTempFilePath: mediaVideo.posterPath,
+          coverTempFilePath: mediaVideo.posterPath,
           size: mediaVideo.size,
           width: mediaVideo.width,
           height: mediaVideo.height,

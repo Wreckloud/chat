@@ -175,6 +175,20 @@
   gap: 10rpx;
 }
 
+.thread-media-single {
+  margin-top: 12rpx;
+  width: 100%;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-theme-item-bg);
+  box-shadow: var(--retro-panel-shadow);
+  overflow: hidden;
+}
+
+.thread-media-single-image {
+  display: block;
+  width: 100%;
+}
+
 .thread-media-image {
   width: 100%;
   height: 194rpx;
@@ -183,38 +197,37 @@
   box-shadow: var(--retro-panel-shadow);
 }
 
-.thread-video-card {
+.thread-video-box {
   position: relative;
   margin-top: 12rpx;
-  height: 360rpx;
+  height: 420rpx;
   overflow: hidden;
   border: 1rpx solid var(--retro-panel-border);
-  background: var(--retro-panel-bg);
+  background: var(--retro-theme-item-bg);
   box-shadow: var(--retro-panel-shadow);
 }
 
-.thread-video-poster {
+.thread-video-box-landscape {
+  height: 360rpx;
+}
+
+.thread-video-box-portrait {
+  height: 560rpx;
+}
+
+.thread-video-box-square {
+  height: 420rpx;
+}
+
+.thread-video-box-default {
+  height: 420rpx;
+}
+
+.thread-video-player {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.thread-video-play-mask {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.06));
-}
-
-.thread-video-play-icon {
-  width: 0;
-  height: 0;
-  border-top: 16rpx solid transparent;
-  border-bottom: 16rpx solid transparent;
-  border-left: 24rpx solid var(--retro-strong-text);
-  filter: drop-shadow(0 0 6rpx rgba(0, 0, 0, 0.35));
+  background: var(--retro-theme-item-bg);
 }
 
 .section-title {
@@ -237,10 +250,6 @@
 
 .reply-item {
   margin-bottom: 12rpx;
-}
-
-.reply-item-nested {
-  background: var(--retro-thread-reply-bg, rgba(211, 224, 218, 0.86));
 }
 
 .reply-item:last-child {
@@ -286,14 +295,14 @@
 
 .reply-floor {
   flex-shrink: 0;
-  font-size: 23rpx;
+  font-size: 21rpx;
   color: var(--retro-muted-text);
   text-align: right;
 }
 
 .reply-author {
   white-space: nowrap;
-  font-size: 24rpx;
+  font-size: 26rpx;
   font-weight: 600;
 }
 
@@ -305,7 +314,7 @@
 
 .reply-content {
   margin-top: 8rpx;
-  font-size: 25rpx;
+  font-size: 26rpx;
   line-height: 1.5;
   color: var(--retro-body-text);
 }
@@ -347,7 +356,7 @@
   align-items: center;
   gap: 8rpx;
   line-height: 1;
-  font-size: 21rpx;
+  font-size: 20rpx;
   color: var(--retro-accent-color);
 }
 
@@ -368,6 +377,121 @@
 
 .reply-delete-btn {
   color: var(--retro-btn-danger-border);
+}
+
+.sub-reply-list {
+  margin-top: 10rpx;
+  padding: 8rpx 10rpx 8rpx 10rpx;
+  border-left: 4rpx solid var(--retro-theme-item-active-border);
+  background: var(--retro-thread-reply-bg, rgba(211, 224, 218, 0.86));
+}
+
+.sub-reply-item {
+  padding: 8rpx 6rpx 8rpx 8rpx;
+}
+
+.sub-reply-item + .sub-reply-item {
+  margin-top: 6rpx;
+  padding-top: 8rpx;
+}
+
+.sub-reply-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.sub-reply-floor {
+  flex-shrink: 0;
+  font-size: 19rpx;
+  line-height: 1.3;
+  color: var(--retro-muted-text);
+}
+
+.sub-reply-author-wrap {
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.sub-reply-author-line {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.sub-reply-author {
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sub-reply-time {
+  flex-shrink: 0;
+  font-size: 19rpx;
+  line-height: 1.3;
+  color: var(--retro-muted-text);
+}
+
+.sub-reply-content {
+  font-size: 22rpx;
+  line-height: 1.3;
+  color: var(--retro-body-text);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
+}
+
+.sub-reply-content-line {
+  margin-top: 2rpx;
+  min-width: 0;
+}
+
+.sub-reply-image {
+  margin-top: 8rpx;
+  display: block;
+  width: 320rpx;
+  max-width: 100%;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-theme-item-bg);
+  box-shadow: var(--retro-panel-shadow);
+}
+
+.sub-reply-actions {
+  margin-top: 5rpx;
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.sub-reply-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.sub-reply-danger-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.sub-reply-toggle-row {
+  margin-top: 4rpx;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding-left: 10rpx;
+}
+
+.sub-reply-toggle {
+  font-size: 20rpx;
+  color: var(--retro-accent-color);
+}
+
+.sub-reply-toggle-collapse {
+  color: var(--retro-muted-text);
 }
 
 .quote-hint {

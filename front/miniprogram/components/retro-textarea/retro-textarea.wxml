@@ -6,5 +6,14 @@
     maxlength="{{maxlength}}"
     disabled="{{disabled}}"
     auto-height="{{autoHeight}}"
+    focus="{{focus}}"
+    adjust-position="{{adjustPosition}}"
+    hold-keyboard="{{holdKeyboard}}"
+    confirm-hold="{{confirmHold}}"
+    confirm-type="{{confirmType}}"
+    bindfocus="onFocus"
+    bindblur="onBlur"
+    bindkeyboardheightchange="onKeyboardHeightChange"
+    bindconfirm="onConfirm"
     bindinput="onInput" />
 </view>

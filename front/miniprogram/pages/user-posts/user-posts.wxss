@@ -121,8 +121,9 @@
 .thread-title {
   flex: 1;
   min-width: 0;
-  font-size: 25rpx;
-  color: var(--retro-body-text);
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--retro-strong-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -142,33 +143,60 @@
 
 .thread-excerpt {
   margin-top: 6rpx;
-  font-size: 22rpx;
-  line-height: 1.4;
-  color: var(--retro-body-text);
+  font-size: 21rpx;
+  line-height: 1.48;
+  color: var(--retro-muted-text);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .thread-media-line {
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8rpx;
+}
+
+.thread-media-line-single {
+  align-items: flex-start;
+}
+
+.thread-excerpt-media {
+  -webkit-line-clamp: 1;
+}
+
+.thread-excerpt-text {
+  -webkit-line-clamp: 3;
 }
 
 .thread-media-cell {
   position: relative;
-  width: 128rpx;
-  height: 96rpx;
+  width: 116rpx;
+  height: 88rpx;
   border: 1rpx solid var(--retro-panel-border);
   background: var(--retro-theme-item-bg);
   overflow: hidden;
 }
 
 .thread-media-video {
-  width: 162rpx;
+  width: 212rpx;
+  height: 120rpx;
+}
+
+.thread-media-single-cell {
+  width: 160rpx;
+  height: 120rpx;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-theme-item-bg);
+  overflow: hidden;
+}
+
+.thread-media-single-image {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .thread-media-image {
@@ -205,11 +233,42 @@
   background: rgba(14, 20, 28, 0.55);
 }
 
-.thread-meta-row,
-.thread-time-row {
+.thread-info-line {
   margin-top: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+}
+
+.thread-time-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.thread-time-prefix {
+  flex-shrink: 0;
   font-size: 20rpx;
   color: var(--retro-muted-text);
+}
+
+.thread-time-text {
+  min-width: 0;
+  font-size: 20rpx;
+  color: var(--retro-muted-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-stat {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: var(--retro-muted-text);
+  white-space: nowrap;
 }
 
 .thread-action-row {

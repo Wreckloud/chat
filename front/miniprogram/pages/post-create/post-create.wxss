@@ -13,7 +13,7 @@
 }
 
 .editor-body {
-  padding: 12rpx;
+  padding: 12rpx 12rpx 188rpx;
 }
 
 .editor-card {
@@ -49,42 +49,18 @@
   color: var(--retro-muted-text);
 }
 
-.content-toolbar {
-  display: flex;
-  align-items: center;
-  margin: -4rpx 0 10rpx;
-}
-
-.content-emoji-trigger {
-  width: 64rpx;
-  height: 64rpx;
-  border: 1rpx solid var(--retro-panel-border);
-  background: var(--retro-theme-item-bg);
-  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.content-emoji-icon {
-  width: 36rpx;
-  height: 36rpx;
-}
-
 .content-emoji-panel {
-  margin-top: 10rpx;
-  margin-bottom: 14rpx;
   padding: 0;
   border: 0;
-  background: var(--retro-composer-bg);
+  background: var(--retro-composer-bg, var(--retro-page-bg));
   box-shadow: none;
   overflow: hidden;
 }
 
 .content-emoji-scroll {
-  height: 376rpx;
+  height: calc(376rpx + env(safe-area-inset-bottom));
+  padding: 0 0 10rpx;
   box-sizing: border-box;
-  padding: 0;
   overflow: hidden;
 }
 
@@ -117,13 +93,6 @@
 
 .media-head-row {
   margin-top: 4rpx;
-}
-
-.media-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-  margin-bottom: 14rpx;
 }
 
 .media-image-grid {
@@ -193,12 +162,8 @@
   filter: drop-shadow(0 0 6rpx rgba(0, 0, 0, 0.35));
 }
 
-.submit-btn {
-  margin-top: 18rpx;
-}
-
 .submit-progress {
-  margin-top: 10rpx;
+  margin-top: 8rpx;
 }
 
 .submit-progress-head {
@@ -232,6 +197,81 @@
 .submit-progress-fill {
   height: 100%;
   background: var(--retro-link-text);
+}
+
+.post-submit-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+}
+
+.post-submit-composer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6rpx;
+  padding: 10rpx 18rpx calc(10rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid var(--retro-composer-border);
+  background: var(--retro-composer-bg);
+  box-shadow: var(--retro-toolbar-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.7));
+}
+
+.post-submit-composer.is-panel-open {
+  gap: 4rpx;
+}
+
+.post-submit-composer.is-keyboard-open {
+  padding-bottom: 10rpx;
+}
+
+.post-submit-main-row {
+  --post-submit-height: var(--retro-chat-composer-input-height);
+  --post-submit-icon-size: 30rpx;
+  display: flex;
+  align-items: center;
+  gap: var(--retro-chat-row-gap);
+}
+
+.post-submit-emoji-trigger {
+  width: var(--post-submit-height);
+  height: var(--post-submit-height);
+  flex-shrink: 0;
+  border: 1rpx solid var(--retro-panel-border);
+  background: var(--retro-theme-item-bg);
+  box-shadow: var(--retro-input-inner-shadow, inset 0 1rpx 0 rgba(255, 255, 255, 0.82));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.post-submit-emoji-icon {
+  width: var(--post-submit-icon-size);
+  height: var(--post-submit-icon-size);
+}
+
+.post-submit-main-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-submit-publish-slot {
+  height: var(--post-submit-height);
+}
+
+.post-submit-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--retro-chat-row-gap);
+}
+
+.post-submit-action-btn {
+  min-width: var(--retro-chat-composer-btn-min-width);
+}
+
+.post-submit-clear-btn {
+  min-width: 160rpx;
 }
 
 .theme-dark .post-create-page .field-label,

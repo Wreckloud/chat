@@ -25,6 +25,8 @@ const REPLY_SORT_OPTIONS = [
   { key: 'hot', text: '按热度' },
   { key: 'author', text: '只看楼主' }
 ]
+const SUB_REPLY_PREVIEW_COUNT = 2
+const SUB_REPLY_EXPAND_STEP = 10
 
 function buildReplyTargetHint(reply) {
   if (!reply) return ''
@@ -77,99 +79,148 @@ function resolveNextReplySort(currentSort) {
   return REPLY_SORT_OPTIONS[(index + 1) % REPLY_SORT_OPTIONS.length]
 }
 
-function buildReplyRows(replies) {
+function normalizePositiveId(value) {
+  const id = Number(value)
+  if (!Number.isFinite(id) || id <= 0) {
+    return 0
+  }
+  return id
+}
+
+function resolveUserDisplayName(user) {
+  if (!user) {
+    return ''
+  }
+  const displayName = user.displayName || user.nickname || user.wolfNo || ''
+  return String(displayName).trim()
+}
+
+function stripLeadingMention(content) {
+  const normalized = String(content || '').trim()
+  if (!normalized) {
+    return ''
+  }
+  return normalized.replace(/^@\S+\s*/, '').trim()
+}
+
+function buildSubReplyContent(reply) {
+  const quoteAuthorName = resolveUserDisplayName(reply.quoteAuthor)
+  const replyToName = quoteAuthorName || '行者'
+  const cleanedContent = stripLeadingMention(reply.content)
+  if (!cleanedContent) {
+    return `回复 @${replyToName}: [图片]`
+  }
+  return `回复 @${replyToName}: ${cleanedContent}`
+}
+
+function resolveRootReplyId(replyId, replyMap, cacheMap) {
+  if (!replyId) {
+    return 0
+  }
+  if (cacheMap.has(replyId)) {
+    return cacheMap.get(replyId)
+  }
+
+  const visited = new Set([replyId])
+  let currentId = replyId
+  let current = replyMap.get(currentId)
+  while (current) {
+    const parentId = normalizePositiveId(current.quoteReplyId)
+    if (!parentId) {
+      cacheMap.set(replyId, currentId)
+      return currentId
+    }
+    if (visited.has(parentId)) {
+      cacheMap.set(replyId, replyId)
+      return replyId
+    }
+    const parent = replyMap.get(parentId)
+    if (!parent) {
+      cacheMap.set(replyId, replyId)
+      return replyId
+    }
+    visited.add(parentId)
+    currentId = parentId
+    current = parent
+  }
+  cacheMap.set(replyId, replyId)
+  return replyId
+}
+
+function toSubReplyView(reply) {
+  return {
+    ...reply,
+    displayContent: buildSubReplyContent(reply),
+    displayTime: reply.relativeTimeText || reply.timeText || ''
+  }
+}
+
+function buildReplySections(replies, sectionVisibleCountMap = {}) {
   if (!Array.isArray(replies) || replies.length === 0) {
     return []
   }
-  const normalizedReplies = replies.map(item => {
-    const replyId = Number(item && item.replyId)
-    const quoteReplyId = Number(item && item.quoteReplyId)
+
+  const normalizedReplies = replies.map((item) => {
+    const replyId = normalizePositiveId(item && item.replyId)
+    const quoteReplyId = normalizePositiveId(item && item.quoteReplyId)
     return {
       ...item,
-      replyId: Number.isFinite(replyId) && replyId > 0 ? replyId : 0,
-      quoteReplyId: Number.isFinite(quoteReplyId) && quoteReplyId > 0 ? quoteReplyId : 0
+      replyId,
+      quoteReplyId
     }
   })
   if (normalizedReplies.some(item => item.replyId <= 0)) {
     throw new Error('回复数据缺少 replyId')
   }
 
-  const nodeMap = new Map()
-  const childIdMap = new Map()
-  const hasParentSet = new Set()
+  const replyMap = new Map()
   normalizedReplies.forEach(item => {
-    nodeMap.set(Number(item.replyId), item)
-    childIdMap.set(Number(item.replyId), [])
+    replyMap.set(item.replyId, item)
   })
-
+  const rootCacheMap = new Map()
+  const sectionOrder = []
+  const sectionMap = new Map()
   normalizedReplies.forEach(item => {
-    const replyId = Number(item.replyId)
-    const quoteReplyId = Number(item.quoteReplyId) || 0
-    if (!quoteReplyId) {
-      return
-    }
-    if (quoteReplyId === replyId) {
-      return
-    }
-
-    if (!nodeMap.has(quoteReplyId)) {
-      return
-    }
-    childIdMap.get(quoteReplyId).push(replyId)
-    hasParentSet.add(replyId)
-  })
-
-  const rootIds = normalizedReplies
-    .map(item => Number(item.replyId))
-    .filter(replyId => !hasParentSet.has(replyId))
-
-  const rows = []
-  const visited = new Set()
-
-  function walk(rootReplyId, depth) {
-    const stack = [{ replyId: rootReplyId, depth }]
-    while (stack.length > 0) {
-      const current = stack.pop()
-      if (!current || visited.has(current.replyId)) {
-        continue
+    const rootId = resolveRootReplyId(item.replyId, replyMap, rootCacheMap)
+    let section = sectionMap.get(rootId)
+    if (!section) {
+      const rootReply = replyMap.get(rootId) || item
+      section = {
+        rootReply,
+        subReplies: []
       }
-      const source = nodeMap.get(current.replyId)
-      if (!source) {
-        continue
-      }
-      visited.add(current.replyId)
-
-      const safeDepth = Number.isFinite(current.depth) ? Math.max(0, current.depth) : 0
-      const clampedDepth = Math.min(safeDepth, 6)
-      rows.push({
-        ...source,
-        depth: safeDepth,
-        indentRpx: clampedDepth * 20
-      })
-
-      const childIds = childIdMap.get(current.replyId) || []
-      for (let i = childIds.length - 1; i >= 0; i -= 1) {
-        const childId = childIds[i]
-        if (childId === current.replyId || visited.has(childId)) {
-          continue
-        }
-        stack.push({
-          replyId: childId,
-          depth: safeDepth + 1
-        })
-      }
+      sectionMap.set(rootId, section)
+      sectionOrder.push(rootId)
     }
-  }
-
-  rootIds.forEach(replyId => walk(replyId, 0))
-  normalizedReplies.forEach(item => {
-    const replyId = Number(item.replyId)
-    if (!visited.has(replyId)) {
-      walk(replyId, 0)
+    if (item.replyId !== section.rootReply.replyId) {
+      section.subReplies.push(toSubReplyView(item))
     }
   })
 
-  return rows
+  return sectionOrder
+    .map(rootId => sectionMap.get(rootId))
+    .filter(section => section && section.rootReply)
+    .map(section => {
+      const rootReplyId = section.rootReply.replyId
+      const subReplies = section.subReplies
+      const extraVisibleCount = Math.max(0, Number(sectionVisibleCountMap[rootReplyId]) || 0)
+      const hasExpanded = extraVisibleCount > 0
+      const visibleCount = hasExpanded
+        ? Math.min(subReplies.length, SUB_REPLY_PREVIEW_COUNT + extraVisibleCount)
+        : Math.min(subReplies.length, SUB_REPLY_PREVIEW_COUNT)
+      const canExpandMore = visibleCount < subReplies.length
+      return {
+        rootReplyId,
+        rootReply: section.rootReply,
+        subReplies,
+        visibleSubReplies: subReplies.slice(0, visibleCount),
+        canExpandMore,
+        hasCollapse: hasExpanded,
+        expandLabel: hasExpanded
+          ? '展开更多回复'
+          : `展开 全部 ${subReplies.length} 条回复`
+      }
+    })
 }
 
 function confirmAction(options) {
@@ -212,7 +263,8 @@ Page({
     thread: null,
     content: '',
     replies: [],
-    replyRows: [],
+    replySections: [],
+    replySectionVisibleCountMap: {},
     replyPage: 1,
     replySize: 20,
     replyHasMore: true,
@@ -236,7 +288,9 @@ Page({
     threadLikeLoading: false,
     replyLikeLoadingMap: {},
     loading: false,
-    themeClass: 'theme-retro-blue'
+    themeClass: 'theme-retro-blue',
+    threadVideoLayout: 'default',
+    threadVideoHeightPx: 0
   },
 
   onLoad(options) {
@@ -300,7 +354,8 @@ Page({
     this.setData({
       thread,
       content: detail.content || '',
-      canManageThread: permission.canManageThread
+      canManageThread: permission.canManageThread,
+      threadVideoHeightPx: 0
     }, () => {
       this.syncReplySubmitState()
     })
@@ -332,13 +387,15 @@ Page({
         })
       ))
       const mergedReplies = forumViewHelper.mergePagedList(this.data.replies, list, reset)
-      const replyRows = buildReplyRows(mergedReplies)
+      const nextReplySectionVisibleCountMap = reset ? {} : this.data.replySectionVisibleCountMap
+      const replySections = buildReplySections(mergedReplies, nextReplySectionVisibleCountMap)
       const total = Number(payload.total) || 0
       const hasMore = forumViewHelper.resolveHasMoreByTotal(mergedReplies.length, total)
       const replyTarget = findReplyById(mergedReplies, this.data.replyTargetId)
       this.setData({
         replies: mergedReplies,
-        replyRows,
+        replySections,
+        replySectionVisibleCountMap: nextReplySectionVisibleCountMap,
         replyHasMore: hasMore,
         replyPage: hasMore ? page + 1 : page,
         replyTargetId: replyTarget ? replyTarget.replyId : null,
@@ -438,6 +495,38 @@ Page({
     this.loadReplies({ reset: true, notifyError: true })
   },
 
+  expandSubReplies(e) {
+    const rootReplyId = Number(e.currentTarget.dataset.rootReplyId)
+    if (!rootReplyId) {
+      return
+    }
+    const visibleCountMap = {
+      ...(this.data.replySectionVisibleCountMap || {}),
+      [rootReplyId]: Math.max(0, Number(this.data.replySectionVisibleCountMap && this.data.replySectionVisibleCountMap[rootReplyId]) || 0) + SUB_REPLY_EXPAND_STEP
+    }
+    const replySections = buildReplySections(this.data.replies, visibleCountMap)
+    this.setData({
+      replySectionVisibleCountMap: visibleCountMap,
+      replySections
+    })
+  },
+
+  collapseSubReplies(e) {
+    const rootReplyId = Number(e.currentTarget.dataset.rootReplyId)
+    if (!rootReplyId) {
+      return
+    }
+    const visibleCountMap = {
+      ...(this.data.replySectionVisibleCountMap || {})
+    }
+    delete visibleCountMap[rootReplyId]
+    const replySections = buildReplySections(this.data.replies, visibleCountMap)
+    this.setData({
+      replySectionVisibleCountMap: visibleCountMap,
+      replySections
+    })
+  },
+
   onTapUserElement(e) {
     const userId = Number(e.currentTarget.dataset.userId)
     if (!userId) {
@@ -460,17 +549,70 @@ Page({
     })
   },
 
-  previewThreadVideo(e) {
-    const url = e.currentTarget.dataset.url
-    if (!url) {
+  onThreadVideoLoadedMetadata(e) {
+    const detail = e && e.detail ? e.detail : {}
+    const width = Number(detail.width) || 0
+    const height = Number(detail.height) || 0
+    let nextLayout = 'default'
+    if (width > 0 && height > 0) {
+      if (width >= height * 1.2) {
+        nextLayout = 'landscape'
+      } else if (height >= width * 1.2) {
+        nextLayout = 'portrait'
+      } else {
+        nextLayout = 'square'
+      }
+    }
+    const nextData = {}
+    if (nextLayout !== this.data.threadVideoLayout) {
+      nextData.threadVideoLayout = nextLayout
+    }
+    if (Object.keys(nextData).length > 0) {
+      this.setData(nextData)
+    }
+    if (width > 0 && height > 0) {
+      this.updateThreadVideoHeightByRatio(width, height)
+    }
+  },
+
+  onThreadVideoError() {
+    const nextData = {}
+    if (this.data.threadVideoLayout !== 'default') {
+      nextData.threadVideoLayout = 'default'
+    }
+    if (this.data.threadVideoHeightPx !== 0) {
+      nextData.threadVideoHeightPx = 0
+    }
+    if (Object.keys(nextData).length > 0) {
+      this.setData(nextData)
+    }
+  },
+
+  updateThreadVideoHeightByRatio(videoWidth, videoHeight) {
+    const width = Number(videoWidth) || 0
+    const height = Number(videoHeight) || 0
+    if (width <= 0 || height <= 0) {
       return
     }
-    wx.previewMedia({
-      current: 0,
-      sources: [{
-        url,
-        type: 'video'
-      }]
+    const ratio = height / width
+    wx.nextTick(() => {
+      const query = wx.createSelectorQuery().in(this)
+      query.select('.thread-video-box').boundingClientRect((rect) => {
+        if (!rect || !rect.width) {
+          return
+        }
+        const rawHeightPx = rect.width * ratio
+        const maxHeightPx = Math.floor((wx.getWindowInfo().windowHeight || 0) * 0.62)
+        const targetHeightPx = Math.max(
+          180,
+          maxHeightPx > 0 ? Math.min(maxHeightPx, Math.round(rawHeightPx)) : Math.round(rawHeightPx)
+        )
+        if (targetHeightPx !== this.data.threadVideoHeightPx) {
+          this.setData({
+            threadVideoHeightPx: targetHeightPx
+          })
+        }
+      }).exec()
     })
   },
 
@@ -712,8 +854,8 @@ Page({
       [`replies[${index}].likeCount`]: nextLikeCount,
       [`replyLikeLoadingMap.${replyId}`]: true
     }, () => {
-      const replyRows = buildReplyRows(this.data.replies)
-      this.setData({ replyRows })
+      const replySections = buildReplySections(this.data.replies, this.data.replySectionVisibleCountMap)
+      this.setData({ replySections })
     })
 
     try {
@@ -723,8 +865,8 @@ Page({
         [`replies[${index}].likedByCurrentUser`]: currentReply.likedByCurrentUser,
         [`replies[${index}].likeCount`]: currentReply.likeCount
       }, () => {
-        const replyRows = buildReplyRows(this.data.replies)
-        this.setData({ replyRows })
+        const replySections = buildReplySections(this.data.replies, this.data.replySectionVisibleCountMap)
+        this.setData({ replySections })
       })
       toastError(error, '更新回复点赞失败')
     } finally {
@@ -766,7 +908,7 @@ Page({
     if (!replyId) return
     const confirmed = await confirmAction({
       title: '删除回复',
-      content: '确认删除该楼层回复吗？',
+      content: '确认删除该楼层回复吗？其楼中楼回复也会一起隐藏。',
       confirmColor: '#b4474f',
       confirmText: '删除'
     })
@@ -804,10 +946,10 @@ Page({
       nextReplies = [...deduped, createdReply]
     }
 
-    const nextReplyRows = buildReplyRows(nextReplies)
+    const nextReplySections = buildReplySections(nextReplies, this.data.replySectionVisibleCountMap)
     this.setData({
       replies: nextReplies,
-      replyRows: nextReplyRows
+      replySections: nextReplySections
     }, () => {
       this.scrollReplyListToBottom()
     })

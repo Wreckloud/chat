@@ -11,6 +11,8 @@ function mapThread(rawThread, normalizeUser, time) {
   const videoPosterUrl = typeof rawThread.videoPosterUrl === 'string' ? rawThread.videoPosterUrl : ''
   const hasVideo = !!videoUrl
   const contentPreview = typeof rawThread.contentPreview === 'string' ? rawThread.contentPreview.trim() : ''
+  const hasSingleImagePreview = !hasVideo && imageUrls.length === 1
+  const singleImagePreviewUrl = hasSingleImagePreview ? imageUrls[0] : ''
   const previewImageUrls = imageUrls.slice(0, hasVideo ? 2 : 3)
   const editTimeText = time.formatPostTime(rawThread.editTime)
   const editTimeRelativeText = time.formatRelativeTime(rawThread.editTime)
@@ -24,6 +26,8 @@ function mapThread(rawThread, normalizeUser, time) {
     replyCount,
     likeCount,
     imageUrls,
+    hasSingleImagePreview,
+    singleImagePreviewUrl,
     previewImageUrls,
     hasMoreImages: imageUrls.length > previewImageUrls.length,
     hasVideo,
@@ -93,6 +97,7 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
     quoteReplyId,
     author,
     timeText: time.formatPostTime(rawReply.createTime),
+    relativeTimeText: time.formatRelativeTime(rawReply.createTime),
     canDelete: currentUserId > 0 && (currentUserId === Number(author.userId) || canManageThread)
   }
 }

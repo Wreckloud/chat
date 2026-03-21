@@ -21,59 +21,24 @@
         <view class="field-label">正文</view>
         <view class="content-hint">最多 5000 字，可仅发媒体</view>
       </view>
-      <view class="content-toolbar">
-        <view class="content-emoji-trigger" bindtap="toggleEmojiPanel">
-          <image class="content-emoji-icon" src="/images/icon-kaomoji.svg" mode="aspectFit" />
-        </view>
-      </view>
       <retro-textarea
         placeholder="写下你的主题内容..."
         value="{{content}}"
         maxlength="5000"
+        focus="{{contentFocused}}"
+        adjust-position="{{false}}"
+        hold-keyboard="{{true}}"
+        confirm-hold="{{true}}"
+        confirm-type="done"
+        bindfocus="onContentFocus"
+        bindblur="onContentBlur"
+        bindkeyboardheightchange="onContentKeyboardHeightChange"
         bind:input="onContentInput"
       />
-      <view wx:if="{{emojiPanelVisible}}" class="content-emoji-panel">
-        <scroll-view class="content-emoji-scroll" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
-          <view class="content-emoji-grid">
-            <view
-              wx:for="{{emojiList}}"
-              wx:key="*this"
-              class="content-emoji-item"
-              data-emoji="{{item}}"
-              bindtap="onSelectEmoji">
-              <text class="content-emoji-item-text">{{item}}</text>
-            </view>
-          </view>
-        </scroll-view>
-      </view>
 
       <view class="field-row column media-head-row">
         <view class="field-label">媒体</view>
         <view class="content-hint">9 图或 1 视频（二选一）</view>
-      </view>
-      <view class="media-toolbar">
-        <retro-button
-          size="small"
-          theme="default"
-          disabled="{{loading || !!mediaVideo || mediaImages.length >= 9}}"
-          bindtap="chooseThreadImages">
-          选图片
-        </retro-button>
-        <retro-button
-          size="small"
-          theme="default"
-          disabled="{{loading || !!mediaVideo || mediaImages.length > 0}}"
-          bindtap="chooseThreadVideo">
-          选视频
-        </retro-button>
-        <retro-button
-          wx:if="{{mediaVideo}}"
-          size="small"
-          theme="default"
-          disabled="{{loading}}"
-          bindtap="clearThreadVideo">
-          清除视频
-        </retro-button>
       </view>
 
       <view wx:if="{{mediaImages.length > 0}}" class="media-image-grid">
@@ -98,17 +63,73 @@
           <view class="media-video-play-icon"></view>
         </view>
       </view>
+    </view>
+  </view>
 
-      <retro-button
-        class="submit-btn"
-        theme="primary"
-        size="large"
-        block
-        disabled="{{!canSubmit}}"
-        loading="{{loading}}"
-        bindtap="handleSubmit">
-        {{submitButtonText}}
-      </retro-button>
+  <view class="post-submit-dock" style="bottom: {{keyboardHeightPx}}px;">
+    <view class="post-submit-composer {{emojiPanelVisible ? 'is-panel-open' : ''}} {{keyboardHeightPx > 0 ? 'is-keyboard-open' : ''}}">
+      <view class="post-submit-main-row">
+        <view class="post-submit-emoji-trigger" bindtap="toggleEmojiPanel">
+          <image class="post-submit-emoji-icon" src="/images/icon-kaomoji.svg" mode="aspectFit" />
+        </view>
+
+        <retro-button
+          class="post-submit-main-btn post-submit-publish-slot"
+          theme="primary"
+          size="medium"
+          block
+          disabled="{{!canSubmit}}"
+          loading="{{loading}}"
+          bindtap="handleSubmit">
+          {{submitButtonText}}
+        </retro-button>
+
+        <view class="post-submit-actions">
+          <block wx:if="{{!(mediaVideo || mediaImages.length > 0)}}">
+            <retro-button
+              class="post-submit-action-btn"
+              size="medium"
+              theme="default"
+              disabled="{{loading || mediaImages.length >= 9}}"
+              bindtap="chooseThreadImages">
+              图片
+            </retro-button>
+            <retro-button
+              class="post-submit-action-btn"
+              size="medium"
+              theme="default"
+              disabled="{{loading || mediaImages.length > 0}}"
+              bindtap="chooseThreadVideo">
+              视频
+            </retro-button>
+          </block>
+          <retro-button
+            wx:else
+            class="post-submit-action-btn post-submit-clear-btn"
+            size="medium"
+            theme="default"
+            disabled="{{loading}}"
+            bindtap="clearSelectedMedia">
+            清除媒体
+          </retro-button>
+        </view>
+      </view>
+
+      <view wx:if="{{emojiPanelVisible}}" class="content-emoji-panel">
+        <scroll-view class="content-emoji-scroll" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="content-emoji-grid">
+            <view
+              wx:for="{{emojiList}}"
+              wx:key="*this"
+              class="content-emoji-item"
+              data-emoji="{{item}}"
+              bindtap="onSelectEmoji">
+              <text class="content-emoji-item-text">{{item}}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
       <view wx:if="{{loading && uploadProgressText}}" class="submit-progress">
         <view class="submit-progress-head">
           <text class="submit-progress-text">{{uploadProgressText}}</text>
