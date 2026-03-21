@@ -69,6 +69,16 @@ public class UserPresenceService {
         return lastSeenAt;
     }
 
+    public LocalDateTime markActive(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        LocalDateTime activeAt = LocalDateTime.now();
+        long now = activeAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        stringRedisTemplate.opsForZSet().add(ACTIVE_ZSET_KEY, String.valueOf(userId), now);
+        return activeAt;
+    }
+
     public void fillConversationPresence(List<ConversationVO> conversationList) {
         if (conversationList == null || conversationList.isEmpty()) {
             return;
@@ -102,7 +112,10 @@ public class UserPresenceService {
             conversation.setIsOnline(online);
             if (!online) {
                 Double activeScore = activeScoreMap.get(member);
-                conversation.setLastSeenAt(parseEpochMillis(activeScore));
+                LocalDateTime activeAt = parseEpochMillis(activeScore);
+                if (activeAt != null) {
+                    conversation.setLastSeenAt(activeAt);
+                }
             }
         }
     }

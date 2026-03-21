@@ -72,7 +72,7 @@ wolfchat:
     api-key: ""
     # 例如: deepseek-chat / gpt-4.1-mini
     model: ""
-    temperature: 0.8
+    temperature: 0.68
     max-output-tokens: 400
     timeout-ms: 20000
 
@@ -95,6 +95,10 @@ wolfchat:
       enabled: true
       # 角色配置缓存秒数（从 wf_ai_role 表加载）
       cache-seconds: 60
+      # 人格短期粘性时长（秒）
+      variant-sticky-seconds: 600
+      # 人格切换概率（0~1），避免每条都切人格
+      variant-switch-probability: 0.18
 
     guard:
       # 全局配额守卫，控制成本
@@ -114,15 +118,20 @@ wolfchat:
       # 连续多少秒无人发言视为冷场
       idle-trigger-seconds: 90
       # 冷场时主动发言概率（0~1）
-      idle-speak-probability: 0.08
+      idle-speak-probability: 0.05
       cooldown-seconds: 45
-      reply-probability: 0.22
+      reply-probability: 0.18
+      # 被@或被回复时的高优先级回复概率（0~1）
+      mention-reply-probability: 0.88
       max-replies-per-hour: 28
       # 单条回复最大字符数
       max-reply-chars: 140
       min-delay-seconds: 6
       max-delay-seconds: 18
-      system-prompt: "你是 WolfChat 的狼系老网友。说话短句、有网感、可轻微调侃，不刷屏，不自称AI。"
+      # 被@时的更快延迟（仍非秒回）
+      mention-min-delay-seconds: 2
+      mention-max-delay-seconds: 8
+      system-prompt: "你是 WolfChat 的狼系老网友，不是助手。说话短句、直接、有网感，能调侃、能带刺，但不做人身仇恨攻击；不刷屏，不自称AI。"
 
     private-chat:
       # 私聊 AI（监听“发给机器人”的消息）
@@ -135,21 +144,39 @@ wolfchat:
       max-reply-chars: 180
       min-delay-seconds: 4
       max-delay-seconds: 12
-      system-prompt: "你在私聊中，像真人一样自然聊天，允许轻微情绪和调侃，别写长文，禁止自称AI。"
+      system-prompt: "你在私聊里是有脾气的狼系用户，不是客服。表达直接、句子短、偶尔挖苦和玩梗，别长篇说教，禁止自称AI。"
 
     forum:
       # 社区 AI（主题/回帖触发）
       enabled: false
       bot-user-id:
       cooldown-seconds: 30
-      reply-probability: 0.32
+      reply-probability: 0.24
+      # 被@时的高优先级回帖概率（0~1）
+      mention-reply-probability: 0.80
       max-replies-per-hour: 36
+      max-replies-per-day: 120
       # 单条回复最大字符数
       max-reply-chars: 220
       min-delay-seconds: 20
       max-delay-seconds: 90
-      reply-to-reply-probability: 0.15
-      system-prompt: "你在论坛讨论区发言，观点明确、内容贴题、不过度攻击，1到3句即可。"
+      # 被@时更快回复，但不秒回
+      mention-min-delay-seconds: 8
+      mention-max-delay-seconds: 28
+      reply-to-reply-probability: 0.10
+      # 论坛冷场时低频主动发帖
+      idle-post-enabled: true
+      # 连续多少秒论坛无新活跃，视为冷场
+      idle-post-trigger-seconds: 1800
+      # 冷场主动发帖概率（0~1）
+      idle-post-probability: 0.04
+      # 每小时/每天最多主动发帖数
+      max-posts-per-hour: 1
+      max-posts-per-day: 6
+      # 主动发帖标题/正文最大字符数
+      max-post-title-chars: 36
+      max-post-content-chars: 240
+      system-prompt: "你在论坛发言时保持狼系风格：观点明确、就事论事、可带锋芒但不过界，不写公文腔，1到3句即可。"
 
     follow:
       # 被关注后自动回关

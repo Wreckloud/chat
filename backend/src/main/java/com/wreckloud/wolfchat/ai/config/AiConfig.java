@@ -44,6 +44,8 @@ public class AiConfig {
     public static class Role {
         private Boolean enabled;
         private Integer cacheSeconds;
+        private Integer variantStickySeconds;
+        private Double variantSwitchProbability;
     }
 
     @Data
@@ -63,10 +65,13 @@ public class AiConfig {
         private Double idleSpeakProbability;
         private Integer cooldownSeconds;
         private Double replyProbability;
+        private Double mentionReplyProbability;
         private Integer maxRepliesPerHour;
         private Integer maxReplyChars;
         private Integer minDelaySeconds;
         private Integer maxDelaySeconds;
+        private Integer mentionMinDelaySeconds;
+        private Integer mentionMaxDelaySeconds;
         private String systemPrompt;
     }
 
@@ -89,11 +94,22 @@ public class AiConfig {
         private Long botUserId;
         private Integer cooldownSeconds;
         private Double replyProbability;
+        private Double mentionReplyProbability;
         private Integer maxRepliesPerHour;
+        private Integer maxRepliesPerDay;
         private Integer maxReplyChars;
         private Integer minDelaySeconds;
         private Integer maxDelaySeconds;
+        private Integer mentionMinDelaySeconds;
+        private Integer mentionMaxDelaySeconds;
         private Double replyToReplyProbability;
+        private Boolean idlePostEnabled;
+        private Integer idlePostTriggerSeconds;
+        private Double idlePostProbability;
+        private Integer maxPostsPerHour;
+        private Integer maxPostsPerDay;
+        private Integer maxPostTitleChars;
+        private Integer maxPostContentChars;
         private String systemPrompt;
     }
 

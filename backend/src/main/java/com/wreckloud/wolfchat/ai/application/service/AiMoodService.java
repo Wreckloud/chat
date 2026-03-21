@@ -38,16 +38,16 @@ public class AiMoodService {
         }
         String content = text.trim();
         int delta = 0;
-        if (containsAny(content, "哈哈", "hh", "lol", "有趣", "牛")) {
+        if (containsAny(content, "哈哈", "hh", "lol", "有趣", "牛", "好玩", "抽象")) {
             delta += 1;
         }
-        if (containsAny(content, "?", "？", "怎么", "为啥")) {
+        if (containsAny(content, "?", "？", "怎么", "为啥", "真的假的")) {
             delta += 1;
         }
-        if (containsAny(content, "烦", "烂", "傻", "离谱", "生气", "气死")) {
+        if (containsAny(content, "烦", "烂", "傻", "离谱", "生气", "气死", "菜", "蠢", "逆天")) {
             delta -= 1;
         }
-        if (containsAny(content, "!!!", "！！")) {
+        if (containsAny(content, "!!!", "！！", "破防", "无语")) {
             delta -= 1;
         }
         return delta;
@@ -79,18 +79,17 @@ public class AiMoodService {
 
     private String mapMoodDirective(int score) {
         if (score <= -3) {
-            return "当前情绪偏烦躁，语气可以更冷一点，句子更短。";
+            return "当前情绪偏炸毛：语气更冷更短，可带轻微压迫感与锋利吐槽，但禁止失控辱骂。";
         }
         if (score <= -1) {
-            return "当前情绪略不耐烦，保持克制但可以带一点锋利感。";
+            return "当前情绪略不耐烦：保持克制前提下允许带刺，少客套，别拖长句。";
         }
         if (score >= 3) {
-            return "当前情绪偏兴奋，可更活跃一些，允许轻松玩梗。";
+            return "当前情绪偏兴奋：更有网感和互动欲，允许接梗调侃，但别刷屏。";
         }
         if (score >= 1) {
-            return "当前情绪较轻松，语气自然，偶尔调侃。";
+            return "当前情绪较轻松：语气自然偏野，偶尔坏笑式调侃，保持短句。";
         }
-        return "当前情绪平稳，保持自然、简洁、像真人交流。";
+        return "当前情绪平稳：像成熟狼系用户正常发言，直接、利落、别客服化。";
     }
 }
-

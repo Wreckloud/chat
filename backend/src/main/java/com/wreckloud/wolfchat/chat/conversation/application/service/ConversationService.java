@@ -266,6 +266,7 @@ public class ConversationService {
             vo.setLastMessage(conversation.getLastMessage());
             vo.setLastMessageTime(conversation.getLastMessageTime());
             vo.setUnreadCount(getUnreadCount(conversation, userId));
+            vo.setLastSeenAt(targetUser.getLastLoginAt() != null ? targetUser.getLastLoginAt() : targetUser.getUpdateTime());
             result.add(vo);
         }
         userPresenceService.fillConversationPresence(result);

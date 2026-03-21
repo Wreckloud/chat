@@ -41,15 +41,15 @@
   line-height: 1;
   font-size: 23rpx;
   color: var(--retro-muted-text);
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.5);
+  border: 1rpx solid var(--retro-theme-item-border, var(--retro-row-border));
+  background: var(--retro-theme-item-bg);
   box-sizing: border-box;
 }
 
 .notice-filter-item-active {
-  color: var(--retro-accent-text);
-  border-color: var(--retro-accent-text);
-  background: rgba(255, 255, 255, 0.78);
+  color: var(--retro-strong-text);
+  border-color: var(--retro-theme-item-active-border, var(--retro-accent-color));
+  background: var(--retro-theme-item-active-bg);
 }
 
 .notice-title {
@@ -67,8 +67,8 @@
   line-height: 1;
   font-size: 23rpx;
   color: var(--retro-accent-text);
-  border: 1rpx solid var(--retro-row-border);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1rpx solid var(--retro-theme-item-border, var(--retro-row-border));
+  background: var(--retro-theme-item-bg);
 }
 
 .notice-item {

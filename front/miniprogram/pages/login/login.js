@@ -14,6 +14,7 @@ const {
 } = require('../../utils/password')
 
 const NICKNAME_MAX_LEN = 12
+const EMAIL_ALREADY_USED_CODE = 2010
 
 const EMPTY_REGISTER_FORM = {
   nickname: '',
@@ -157,7 +158,7 @@ Page({
   },
 
   async handleRegister() {
-    if (this.data.loading || !this.data.canRegisterSubmit) return
+    if (this.registerSubmitting || this.data.loading || !this.data.canRegisterSubmit) return
 
     const copy = this.data.copy
     const normalizedNickname = normalizeText(this.data.nickname)
@@ -185,6 +186,7 @@ Page({
       return
     }
 
+    this.registerSubmitting = true
     this.setData({ loading: true })
 
     try {
@@ -202,19 +204,31 @@ Page({
         registeredWolfNo: res.data.userInfo.wolfNo || ''
       })
     } catch (error) {
+      // 并发双击时，可能出现“一个请求已注册成功，另一个请求返回邮箱占用”。
+      // 若当前已拿到登录态，则按注册成功处理，避免用户感知到无意义失败提示。
+      if (Number(error && error.code) === EMAIL_ALREADY_USED_CODE && auth.isLoggedIn()) {
+        const userInfo = auth.getUserInfo() || {}
+        this.setData({
+          showResult: true,
+          registeredWolfNo: userInfo.wolfNo || this.data.registeredWolfNo || ''
+        })
+        return
+      }
       toastError(error, copy.toast.registerFail)
     } finally {
+      this.registerSubmitting = false
       this.setData({ loading: false })
     }
   },
 
   async handleLogin() {
-    if (this.data.loading || !this.data.canLoginSubmit) return
+    if (this.loginSubmitting || this.data.loading || !this.data.canLoginSubmit) return
 
     const copy = this.data.copy
     const normalizedAccount = normalizeText(this.data.account)
     const normalizedLoginKey = normalizeText(this.data.loginKey)
 
+    this.loginSubmitting = true
     this.setData({ loading: true })
 
     try {
@@ -231,6 +245,7 @@ Page({
     } catch (error) {
       toastError(error, copy.toast.loginFail, { scene: 'login' })
     } finally {
+      this.loginSubmitting = false
       this.setData({ loading: false })
     }
   },

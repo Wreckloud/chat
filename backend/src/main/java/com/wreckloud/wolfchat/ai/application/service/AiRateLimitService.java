@@ -42,6 +42,16 @@ public class AiRateLimitService {
         return allowCounterLimit(key, safeMax, Duration.ofHours(2));
     }
 
+    public boolean allowByDailyLimit(String scene, Long botUserId, Integer maxRepliesPerDay) {
+        if (!isPositive(botUserId) || !StringUtils.hasText(scene)) {
+            return false;
+        }
+        int safeMax = maxRepliesPerDay == null || maxRepliesPerDay <= 0 ? 150 : maxRepliesPerDay;
+        String dayBucket = LocalDateTime.now().format(DAY_FORMAT);
+        String key = REDIS_PREFIX + "day:" + scene + ":" + botUserId + ":" + dayBucket;
+        return allowCounterLimit(key, safeMax, Duration.ofDays(2));
+    }
+
     public boolean allowByGlobalHourlyLimit(Long botUserId, Integer maxCallsPerHour) {
         if (!isPositive(botUserId)) {
             return false;

@@ -44,6 +44,7 @@ public class WolfNoService {
     private static final int ALLOCATE_MAX_RETRY = 5;
 
     private final WfNoPoolMapper wfNoPoolMapper;
+    private final Object replenishLock = new Object();
 
     /**
      * 分配一个狼藉号
@@ -148,14 +149,23 @@ public class WolfNoService {
      * 当 UNUSED 数量低于阈值时，自动补充新号码
      */
     private void checkAndReplenishPool() {
+        long unusedCount = countUnusedNoPool();
+        if (unusedCount < REPLENISH_THRESHOLD) {
+            synchronized (replenishLock) {
+                long latestUnusedCount = countUnusedNoPool();
+                if (latestUnusedCount >= REPLENISH_THRESHOLD) {
+                    return;
+                }
+                log.info("号码池 UNUSED 数量不足，开始补充: current={}, threshold={}", latestUnusedCount, REPLENISH_THRESHOLD);
+                replenishPool(REPLENISH_COUNT);
+            }
+        }
+    }
+
+    private long countUnusedNoPool() {
         LambdaQueryWrapper<WfNoPool> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(WfNoPool::getStatus, NoPoolStatus.UNUSED);
-        long unusedCount = wfNoPoolMapper.selectCount(queryWrapper);
-
-        if (unusedCount < REPLENISH_THRESHOLD) {
-            log.info("号码池 UNUSED 数量不足，开始补充: current={}, threshold={}", unusedCount, REPLENISH_THRESHOLD);
-            replenishPool(REPLENISH_COUNT);
-        }
+        return wfNoPoolMapper.selectCount(queryWrapper);
     }
 
     /**

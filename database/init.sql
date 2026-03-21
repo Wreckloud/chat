@@ -1,5 +1,6 @@
 -- WolfChat 数据库初始化脚本
--- 仅包含建表语句，不包含测试数据
+-- 包含：建表 + 必要内置账号（管理员/AI）+ 默认论坛版块
+-- 不包含：联调用的大批量测试数据（请执行 test_data.sql）
 -- 号码池会自动补充（当 UNUSED 数量低于 10 个时，系统会自动补充 50 个）
 
 CREATE DATABASE IF NOT EXISTS `wolf_chat`
@@ -392,32 +393,32 @@ CREATE TABLE IF NOT EXISTS `wf_lobby_message` (
     KEY `idx_create_time_id` (`create_time`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='大厅消息表';
 
--- AI 机器人账号初始化（DeepSeek）
--- 固定用户ID用于配置直接引用：900000001
+-- 内置账号初始化
+-- 约定：
+-- 1) 管理员固定 user_id=1（与默认 allowed-user-ids 配置一致）
+-- 2) AI 固定 user_id=2
+-- 3) 普通用户自增 ID 从 1000 开始
 INSERT INTO `wf_user` (
     `id`, `wolf_no`, `status`, `onboarding_status`, `active_day_count`, `disabled_by_ban`,
     `equipped_title_code`, `equipped_title_name`, `equipped_title_color`
-) VALUES (
-    900000001, '1999000000', 'NORMAL', 'COMPLETED', 0, 0, 'WOLF_CUB', '小狼', '#5f7ea2'
-)
+) VALUES
+    (1, '1677820334', 'NORMAL', 'COMPLETED', 1, 0, 'WOLF_CUB', '小狼', '#5f7ea2'),
+    (2, '1597671722', 'NORMAL', 'COMPLETED', 0, 0, 'WOLF_CUB', '小狼', '#5f7ea2')
 ON DUPLICATE KEY UPDATE
-    `status` = 'NORMAL',
-    `onboarding_status` = 'COMPLETED',
-    `disabled_by_ban` = 0,
-    `equipped_title_code` = 'WOLF_CUB',
-    `equipped_title_name` = '小狼',
-    `equipped_title_color` = '#5f7ea2',
+    `status` = VALUES(`status`),
+    `onboarding_status` = VALUES(`onboarding_status`),
+    `active_day_count` = VALUES(`active_day_count`),
+    `disabled_by_ban` = VALUES(`disabled_by_ban`),
+    `equipped_title_code` = VALUES(`equipped_title_code`),
+    `equipped_title_name` = VALUES(`equipped_title_name`),
+    `equipped_title_color` = VALUES(`equipped_title_color`),
     `update_time` = NOW();
 
 INSERT INTO `wf_user_profile` (
     `user_id`, `nickname`, `avatar`, `signature`, `bio`
-) VALUES (
-    900000001,
-    '夜航电台',
-    NULL,
-    '凌晨在线，偶尔话痨',
-    '公共聊天室常驻用户，会聊日常、社区话题和轻松段子。'
-)
+) VALUES
+    (1, '雲之残骸', NULL, '管理端维护中', '系统管理员账号。'),
+    (2, '夜航电台', NULL, '凌晨在线，偶尔话痨', '公共聊天室常驻用户，会聊日常、社区话题和轻松段子。')
 ON DUPLICATE KEY UPDATE
     `nickname` = VALUES(`nickname`),
     `avatar` = VALUES(`avatar`),
@@ -425,23 +426,36 @@ ON DUPLICATE KEY UPDATE
     `bio` = VALUES(`bio`),
     `update_time` = NOW();
 
+INSERT INTO `wf_user_auth` (
+    `user_id`, `auth_type`, `auth_identifier`, `credential_hash`, `verified`, `enabled`, `last_login_at`
+) VALUES
+    (1, 'WOLF_NO_PASSWORD', '1677820334', '$2a$10$aEITtg2UOOJQNrkgZpPUwu.dwCy5TTAGX2b2uGVfCSsOEbwrupc5.', 1, 1, NOW())
+ON DUPLICATE KEY UPDATE
+    `credential_hash` = VALUES(`credential_hash`),
+    `verified` = VALUES(`verified`),
+    `enabled` = VALUES(`enabled`),
+    `last_login_at` = VALUES(`last_login_at`),
+    `update_time` = NOW();
+
 INSERT INTO `wf_no_pool` (
     `wolf_no`, `status`, `user_id`
-) VALUES (
-    '1999000000', 'USED', 900000001
-)
+) VALUES
+    ('1677820334', 'USED', 1),
+    ('1597671722', 'USED', 2)
 ON DUPLICATE KEY UPDATE
-    `status` = 'USED',
-    `user_id` = 900000001,
+    `status` = VALUES(`status`),
+    `user_id` = VALUES(`user_id`),
     `update_time` = NOW();
 
 INSERT INTO `wf_user_achievement` (
     `user_id`, `achievement_code`
-) VALUES (
-    900000001, 'WOLF_CUB'
-)
+) VALUES
+    (1, 'WOLF_CUB'),
+    (2, 'WOLF_CUB')
 ON DUPLICATE KEY UPDATE
     `create_time` = `create_time`;
+
+ALTER TABLE `wf_user` AUTO_INCREMENT = 1000;
 
 -- 默认论坛版块（避免全新库下无法发帖）
 INSERT INTO `wf_forum_board` (

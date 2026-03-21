@@ -1,6 +1,8 @@
 package com.wreckloud.wolfchat.ai.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.wreckloud.wolfchat.account.application.service.UserService;
+import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.ai.application.client.AiTextClient;
 import com.wreckloud.wolfchat.ai.config.AiConfig;
 import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
@@ -9,6 +11,7 @@ import com.wreckloud.wolfchat.chat.lobby.domain.entity.WfLobbyMessage;
 import com.wreckloud.wolfchat.chat.lobby.infra.mapper.WfLobbyMessageMapper;
 import com.wreckloud.wolfchat.chat.message.application.service.ChatMessagePushService;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
+import com.wreckloud.wolfchat.chat.presence.application.service.UserPresenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,6 +21,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 大厅冷场主动发言任务。
@@ -40,11 +44,14 @@ public class AiLobbyIdleTalkTask {
     private final AiRoleService aiRoleService;
     private final AiMoodService aiMoodService;
     private final AiMemoryDigestService aiMemoryDigestService;
+    private final AiInteractionMemoryService aiInteractionMemoryService;
     private final AiPromptBuilderService aiPromptBuilderService;
     private final AiRateLimitService aiRateLimitService;
     private final AiTaskSchedulerService aiTaskSchedulerService;
+    private final UserService userService;
     private final LobbyService lobbyService;
     private final ChatMessagePushService chatMessagePushService;
+    private final UserPresenceService userPresenceService;
     private final WfLobbyMessageMapper wfLobbyMessageMapper;
 
     @Scheduled(fixedDelay = 30000, initialDelay = 20000)
@@ -100,6 +107,7 @@ public class AiLobbyIdleTalkTask {
             String rolePrompt = buildRolePrompt(roleProfile);
             String moodDirective = aiMoodService.buildMoodDirective(LOBBY_SCENE, botUserId, "冷场开话题");
             String memoryDigest = aiMemoryDigestService.buildLobbyDigest(recentMessages);
+            memoryDigest = mergeMemoryDigest(memoryDigest, buildInteractionMemoryDigest(botUserId));
             String prompt = aiPromptBuilderService.buildLobbyPrompt(
                     botUserId, botUserId, recentMessages, rolePrompt, moodDirective, memoryDigest
             );
@@ -117,6 +125,7 @@ public class AiLobbyIdleTalkTask {
             command.setUserId(botUserId);
             command.setMsgType(MessageType.TEXT);
             command.setContent(reply);
+            userPresenceService.markOnline(botUserId);
             chatMessagePushService.pushLobbyMessage(botUserId, lobbyService.sendMessage(command));
             log.info("AI 大厅冷场发言完成: botUserId={}, role={}", botUserId, roleCode(roleProfile));
         } catch (Exception ex) {
@@ -257,5 +266,63 @@ public class AiLobbyIdleTalkTask {
         }
         return roleProfile.getRoleCode();
     }
-}
 
+    private String buildInteractionMemoryDigest(Long botUserId) {
+        List<Long> recentUserIds = aiInteractionMemoryService.listRecentUserIds(LOBBY_SCENE, botUserId, 3);
+        String userDigest = buildRecentUserDigest(recentUserIds);
+        String topicDigest = aiInteractionMemoryService.buildTopicDigest(LOBBY_SCENE, botUserId, 3);
+        if (!StringUtils.hasText(userDigest) && !StringUtils.hasText(topicDigest)) {
+            return null;
+        }
+        if (!StringUtils.hasText(userDigest)) {
+            return topicDigest;
+        }
+        if (!StringUtils.hasText(topicDigest)) {
+            return userDigest;
+        }
+        return userDigest + "\n" + topicDigest;
+    }
+
+    private String buildRecentUserDigest(List<Long> recentUserIds) {
+        if (recentUserIds == null || recentUserIds.isEmpty()) {
+            return null;
+        }
+        Map<Long, WfUser> userMap = userService.getUserMap(recentUserIds);
+        StringBuilder builder = new StringBuilder();
+        int appended = 0;
+        for (Long userId : recentUserIds) {
+            WfUser user = userMap.get(userId);
+            String name = null;
+            if (user != null && StringUtils.hasText(user.getNickname())) {
+                name = user.getNickname().trim();
+            } else if (user != null && StringUtils.hasText(user.getWolfNo())) {
+                name = user.getWolfNo().trim();
+            }
+            if (!StringUtils.hasText(name)) {
+                continue;
+            }
+            if (appended > 0) {
+                builder.append("、");
+            }
+            builder.append(name);
+            appended++;
+            if (appended >= 3) {
+                break;
+            }
+        }
+        if (builder.length() == 0) {
+            return null;
+        }
+        return "最近常互动对象：" + builder + "。";
+    }
+
+    private String mergeMemoryDigest(String first, String second) {
+        if (!StringUtils.hasText(first)) {
+            return second;
+        }
+        if (!StringUtils.hasText(second)) {
+            return first;
+        }
+        return first + "\n" + second;
+    }
+}

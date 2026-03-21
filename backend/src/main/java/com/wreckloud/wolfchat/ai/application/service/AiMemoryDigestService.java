@@ -4,6 +4,7 @@ import com.wreckloud.wolfchat.chat.lobby.domain.entity.WfLobbyMessage;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.domain.entity.WfMessage;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
+import com.wreckloud.wolfchat.community.domain.entity.WfForumThread;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -67,6 +68,24 @@ public class AiMemoryDigestService {
         return joinDigest(focusItems);
     }
 
+    public String buildForumThreadDigest(List<WfForumThread> recentThreads) {
+        List<String> focusItems = new ArrayList<>();
+        if (recentThreads != null) {
+            for (int i = recentThreads.size() - 1; i >= 0 && focusItems.size() < MAX_ITEMS; i--) {
+                WfForumThread item = recentThreads.get(i);
+                if (item == null) {
+                    continue;
+                }
+                String text = item.getTitle();
+                if (StringUtils.hasText(item.getContent())) {
+                    text = (StringUtils.hasText(text) ? text + "：" : "") + item.getContent();
+                }
+                appendFocusItem(focusItems, text);
+            }
+        }
+        return joinDigest(focusItems);
+    }
+
     private void appendFocusItem(List<String> holder, String text) {
         if (!StringUtils.hasText(text)) {
             return;
@@ -93,4 +112,3 @@ public class AiMemoryDigestService {
         return "最近对话焦点：" + String.join(" | ", focusItems);
     }
 }
-
