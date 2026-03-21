@@ -12,6 +12,7 @@ import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyMessageVO;
 import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
 import com.wreckloud.wolfchat.chat.lobby.application.service.LobbyService;
 import com.wreckloud.wolfchat.chat.message.application.command.SendMessageCommand;
+import com.wreckloud.wolfchat.chat.message.application.service.ChatMessagePushService;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageMediaService;
 import com.wreckloud.wolfchat.chat.message.application.service.MessageService;
 import com.wreckloud.wolfchat.chat.message.domain.enums.MessageDeliveryStatus;
@@ -67,6 +68,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ConversationService conversationService;
     private final MessageService messageService;
     private final LobbyService lobbyService;
+    private final ChatMessagePushService chatMessagePushService;
     private final MessageMediaService messageMediaService;
     private final UserService userService;
     private final WsSessionManager sessionManager;
@@ -458,27 +460,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void pushMessageToReceiver(WfMessage message, MessageVO messageVO) {
-        if (!MessageDeliveryStatus.UNDELIVERED.equals(message.getDelivered())) {
-            return;
-        }
-        WsResponse push = buildMessageResponse(messageVO);
-        int successCount = sessionManager.sendToUser(message.getReceiverId(), JSON.toJSONString(push));
-        if (successCount > 0) {
-            messageService.markDelivered(List.of(message.getId()));
-            log.debug("WS 消息送达: messageId={}, receiverId={}", message.getId(), message.getReceiverId());
-        }
+        chatMessagePushService.pushPrivateMessageToReceiver(message);
     }
 
     private void pushLobbyMessage(Long senderUserId, LobbyMessageVO messageVO) {
-        WsResponse push = buildResponse(WsType.LOBBY_MESSAGE, messageVO);
-        sessionManager.sendToAll(JSON.toJSONString(push), senderUserId);
+        chatMessagePushService.pushLobbyMessage(senderUserId, messageVO);
     }
 
     private void pushMessageToConversationPeers(MessageVO messageVO, Long senderUserId, Long receiverUserId) {
-        WsResponse push = buildMessageResponse(messageVO);
-        String payload = JSON.toJSONString(push);
-        sessionManager.sendToUser(senderUserId, payload);
-        sessionManager.sendToUser(receiverUserId, payload);
+        chatMessagePushService.pushPrivateMessageToConversationPeers(messageVO, senderUserId, receiverUserId);
     }
 
     private String buildSendDedupKey(WsType wsType, Long userId, String clientMsgId) {

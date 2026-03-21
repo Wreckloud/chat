@@ -666,7 +666,60 @@ public class ForumQueryService {
         queryWrapper.eq(WfForumReply::getThreadId, threadId)
                 .eq(WfForumReply::getStatus, ForumReplyStatus.NORMAL)
                 .orderByAsc(WfForumReply::getFloorNo);
-        return wfForumReplyMapper.selectList(queryWrapper);
+        List<WfForumReply> visibleReplies = wfForumReplyMapper.selectList(queryWrapper);
+        return filterDetachedReplies(visibleReplies);
+    }
+
+    private List<WfForumReply> filterDetachedReplies(List<WfForumReply> replies) {
+        if (replies == null || replies.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Long, WfForumReply> replyMap = new LinkedHashMap<>();
+        for (WfForumReply reply : replies) {
+            if (reply == null || reply.getId() == null || reply.getId() <= 0L) {
+                continue;
+            }
+            replyMap.put(reply.getId(), reply);
+        }
+        if (replyMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<WfForumReply> filteredReplies = new ArrayList<>(replyMap.size());
+        for (WfForumReply reply : replies) {
+            if (reply == null || reply.getId() == null || reply.getId() <= 0L) {
+                continue;
+            }
+            if (isReachableReplyChain(reply, replyMap)) {
+                filteredReplies.add(reply);
+            }
+        }
+        return filteredReplies;
+    }
+
+    private boolean isReachableReplyChain(WfForumReply reply, Map<Long, WfForumReply> replyMap) {
+        if (reply == null || reply.getId() == null || reply.getId() <= 0L) {
+            return false;
+        }
+        Set<Long> visitedReplyIds = new HashSet<>();
+        Long currentReplyId = reply.getId();
+        while (currentReplyId != null && currentReplyId > 0L) {
+            if (!visitedReplyIds.add(currentReplyId)) {
+                return false;
+            }
+            WfForumReply currentReply = replyMap.get(currentReplyId);
+            if (currentReply == null) {
+                return false;
+            }
+            Long parentReplyId = currentReply.getQuoteReplyId();
+            if (parentReplyId == null || parentReplyId <= 0L) {
+                return true;
+            }
+            if (!replyMap.containsKey(parentReplyId)) {
+                return false;
+            }
+            currentReplyId = parentReplyId;
+        }
+        return true;
     }
 
     private Map<Long, Integer> buildChildReplyCountMap(List<WfForumReply> replies) {

@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.ConstraintViolationException;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @Description 全局异常处理器
@@ -23,6 +26,8 @@ import javax.validation.ConstraintViolationException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final String LOGIN_PATH = "/auth/login";
+    private static final Pattern MAX_UPLOAD_BYTES_PATTERN =
+            Pattern.compile("maximum permitted size of\\s+(\\d+)\\s+bytes", Pattern.CASE_INSENSITIVE);
 
     /**
      * 处理自定义业务异常
@@ -78,8 +83,13 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e, HttpServletRequest request) {
-        log.warn("上传文件超过大小限制: uri={}, message={}", resolveRequestUri(request), e.getMessage());
-        return Result.error(ErrorCode.MEDIA_FILE_INVALID.getCode(), "文件超过上传大小限制");
+        long limitBytes = resolveUploadLimitBytes(e);
+        String message = limitBytes > 0L
+                ? String.format(Locale.ROOT, "文件超过上传大小限制（上限 %s）", formatSize(limitBytes))
+                : "文件超过上传大小限制";
+        log.warn("上传文件超过大小限制: uri={}, limitBytes={}, message={}",
+                resolveRequestUri(request), limitBytes, e.getMessage());
+        return Result.error(ErrorCode.MEDIA_FILE_INVALID.getCode(), message);
     }
 
     /**
@@ -138,5 +148,49 @@ public class GlobalExceptionHandler {
             return "";
         }
         return request.getRequestURI();
+    }
+
+    private long resolveUploadLimitBytes(MaxUploadSizeExceededException e) {
+        if (e == null) {
+            return 0L;
+        }
+        long maxSize = e.getMaxUploadSize();
+        if (maxSize > 0L) {
+            return maxSize;
+        }
+        String message = e.getMessage();
+        if (!StringUtils.hasText(message)) {
+            return 0L;
+        }
+        Matcher matcher = MAX_UPLOAD_BYTES_PATTERN.matcher(message);
+        if (!matcher.find()) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(matcher.group(1));
+        } catch (NumberFormatException ex) {
+            return 0L;
+        }
+    }
+
+    private String formatSize(long bytes) {
+        if (bytes >= 1024L * 1024L * 1024L) {
+            return formatDecimal(bytes / (1024d * 1024d * 1024d), "GB");
+        }
+        if (bytes >= 1024L * 1024L) {
+            return formatDecimal(bytes / (1024d * 1024d), "MB");
+        }
+        if (bytes >= 1024L) {
+            return formatDecimal(bytes / 1024d, "KB");
+        }
+        return bytes + "B";
+    }
+
+    private String formatDecimal(double value, String unit) {
+        double rounded = Math.round(value * 10d) / 10d;
+        if (Math.abs(rounded - Math.rint(rounded)) < 0.0001d) {
+            return String.format(Locale.ROOT, "%.0f%s", rounded, unit);
+        }
+        return String.format(Locale.ROOT, "%.1f%s", rounded, unit);
     }
 }

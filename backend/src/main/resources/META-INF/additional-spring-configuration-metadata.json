@@ -136,6 +136,31 @@
       "description": "记忆检索 TopK。"
     },
     {
+      "name": "wolfchat.ai.role.enabled",
+      "type": "java.lang.Boolean",
+      "description": "多人格路由开关。"
+    },
+    {
+      "name": "wolfchat.ai.role.cache-seconds",
+      "type": "java.lang.Integer",
+      "description": "AI 角色配置缓存秒数。"
+    },
+    {
+      "name": "wolfchat.ai.guard.enabled",
+      "type": "java.lang.Boolean",
+      "description": "AI 全局配额守卫开关。"
+    },
+    {
+      "name": "wolfchat.ai.guard.max-calls-per-hour",
+      "type": "java.lang.Integer",
+      "description": "AI 全局每小时最大调用次数。"
+    },
+    {
+      "name": "wolfchat.ai.guard.max-calls-per-day",
+      "type": "java.lang.Integer",
+      "description": "AI 全局每天最大调用次数。"
+    },
+    {
       "name": "wolfchat.ai.lobby.enabled",
       "type": "java.lang.Boolean",
       "description": "公共聊天室 AI 开关。"
@@ -151,6 +176,21 @@
       "description": "公共聊天室 AI 展示昵称。"
     },
     {
+      "name": "wolfchat.ai.lobby.idle-enabled",
+      "type": "java.lang.Boolean",
+      "description": "公共聊天室冷场主动发言开关。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.idle-trigger-seconds",
+      "type": "java.lang.Integer",
+      "description": "公共聊天室冷场判定秒数。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.idle-speak-probability",
+      "type": "java.lang.Double",
+      "description": "公共聊天室冷场主动发言概率（0~1）。"
+    },
+    {
       "name": "wolfchat.ai.lobby.cooldown-seconds",
       "type": "java.lang.Integer",
       "description": "公共聊天室 AI 发言冷却秒数。"
@@ -164,6 +204,136 @@
       "name": "wolfchat.ai.lobby.max-replies-per-hour",
       "type": "java.lang.Integer",
       "description": "公共聊天室 AI 每小时最大发言数。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.max-reply-chars",
+      "type": "java.lang.Integer",
+      "description": "公共聊天室 AI 单条回复最大字符数。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.min-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "公共聊天室 AI 最小回复延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.max-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "公共聊天室 AI 最大回复延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.lobby.system-prompt",
+      "type": "java.lang.String",
+      "description": "公共聊天室 AI 系统提示词。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.enabled",
+      "type": "java.lang.Boolean",
+      "description": "私聊 AI 开关。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.bot-user-id",
+      "type": "java.lang.Long",
+      "description": "私聊 AI 对应用户 ID。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.cooldown-seconds",
+      "type": "java.lang.Integer",
+      "description": "私聊 AI 回复冷却秒数。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.reply-probability",
+      "type": "java.lang.Double",
+      "description": "私聊 AI 触发概率（0~1）。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.max-replies-per-hour",
+      "type": "java.lang.Integer",
+      "description": "私聊 AI 每小时最大发言数。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.max-reply-chars",
+      "type": "java.lang.Integer",
+      "description": "私聊 AI 单条回复最大字符数。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.min-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "私聊 AI 最小回复延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.max-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "私聊 AI 最大回复延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.private-chat.system-prompt",
+      "type": "java.lang.String",
+      "description": "私聊 AI 系统提示词。"
+    },
+    {
+      "name": "wolfchat.ai.forum.enabled",
+      "type": "java.lang.Boolean",
+      "description": "社区 AI 回帖开关。"
+    },
+    {
+      "name": "wolfchat.ai.forum.bot-user-id",
+      "type": "java.lang.Long",
+      "description": "社区 AI 对应用户 ID。"
+    },
+    {
+      "name": "wolfchat.ai.forum.cooldown-seconds",
+      "type": "java.lang.Integer",
+      "description": "社区 AI 回复冷却秒数。"
+    },
+    {
+      "name": "wolfchat.ai.forum.reply-probability",
+      "type": "java.lang.Double",
+      "description": "社区 AI 对主题回复概率（0~1）。"
+    },
+    {
+      "name": "wolfchat.ai.forum.max-replies-per-hour",
+      "type": "java.lang.Integer",
+      "description": "社区 AI 每小时最大发言数。"
+    },
+    {
+      "name": "wolfchat.ai.forum.max-reply-chars",
+      "type": "java.lang.Integer",
+      "description": "社区 AI 单条回复最大字符数。"
+    },
+    {
+      "name": "wolfchat.ai.forum.min-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "社区 AI 最小回复延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.forum.max-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "社区 AI 最大回复延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.forum.reply-to-reply-probability",
+      "type": "java.lang.Double",
+      "description": "社区 AI 对楼中楼回复触发概率（0~1）。"
+    },
+    {
+      "name": "wolfchat.ai.forum.system-prompt",
+      "type": "java.lang.String",
+      "description": "社区 AI 系统提示词。"
+    },
+    {
+      "name": "wolfchat.ai.follow.auto-follow-back-enabled",
+      "type": "java.lang.Boolean",
+      "description": "AI 被关注后自动回关开关。"
+    },
+    {
+      "name": "wolfchat.ai.follow.min-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "AI 自动回关最小延迟（秒）。"
+    },
+    {
+      "name": "wolfchat.ai.follow.max-delay-seconds",
+      "type": "java.lang.Integer",
+      "description": "AI 自动回关最大延迟（秒）。"
     }
   ]
 }

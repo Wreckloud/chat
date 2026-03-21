@@ -5,9 +5,9 @@ spring:
     import: classpath:application-local.yml
   servlet:
     multipart:
-      # 本地媒体上传（图片/视频/文件）统一入口限制：单文件 50MB，请求总量 60MB
-      max-file-size: 50MB
-      max-request-size: 60MB
+      # 本地媒体上传（图片/视频/文件）统一入口限制：单文件 160MB，请求总量 170MB
+      max-file-size: 160MB
+      max-request-size: 170MB
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -75,8 +75,8 @@ wolfchat:
     download-url-expire-seconds: 86400
     # 聊天/社区图片大小上限（12MB）
     max-image-size-bytes: 12582912
-    # 聊天视频大小上限（30MB）
-    max-video-size-bytes: 31457280
+    # 聊天视频大小上限（150MB）
+    max-video-size-bytes: 157286400
     # 聊天文件大小上限（20MB）
     max-file-size-bytes: 20971520
   email:
@@ -88,9 +88,9 @@ wolfchat:
       # 邮件标题前缀
       subject-prefix: "WolfChat"
   ai:
-    # AI 总开关（当前仅预留配置）
+    # AI 总开关
     enabled: false
-    provider: "openai"
+    provider: "deepseek"
     base-url: ""
     api-key: ""
     model: ""
@@ -99,15 +99,58 @@ wolfchat:
     timeout-ms: 20000
     memory:
       enabled: true
-      recent-window-size: 60
+      # 每次推理携带的上下文窗口。建议 20~40，越大成本越高
+      recent-window-size: 30
       summary-trigger-message-count: 80
       summary-max-tokens: 600
       embedding-model: ""
       top-k: 8
+    role:
+      # 多人格路由开关
+      enabled: true
+      # 角色配置缓存秒数（从 wf_ai_role 拉取）
+      cache-seconds: 60
+    guard:
+      # 全局配额守卫：用于控制模型请求量，避免费用失控
+      enabled: true
+      max-calls-per-hour: 80
+      max-calls-per-day: 600
     lobby:
       enabled: false
       bot-user-id:
       bot-display-name: ""
+      idle-enabled: true
+      idle-trigger-seconds: 90
+      idle-speak-probability: 0.08
       cooldown-seconds: 45
-      reply-probability: 0.25
-      max-replies-per-hour: 40
+      reply-probability: 0.22
+      max-replies-per-hour: 28
+      max-reply-chars: 140
+      min-delay-seconds: 6
+      max-delay-seconds: 18
+      system-prompt: "你是 WolfChat 的狼系老网友。说话短句、有网感、可轻微调侃，不刷屏，不自称AI。"
+    private-chat:
+      enabled: false
+      bot-user-id:
+      cooldown-seconds: 30
+      reply-probability: 0.60
+      max-replies-per-hour: 50
+      max-reply-chars: 180
+      min-delay-seconds: 4
+      max-delay-seconds: 12
+      system-prompt: "你在私聊中，像真人一样自然聊天，允许轻微情绪和调侃，别写长文，禁止自称AI。"
+    forum:
+      enabled: false
+      bot-user-id:
+      cooldown-seconds: 30
+      reply-probability: 0.32
+      max-replies-per-hour: 36
+      max-reply-chars: 220
+      min-delay-seconds: 20
+      max-delay-seconds: 90
+      reply-to-reply-probability: 0.15
+      system-prompt: "你在论坛讨论区发言，观点明确、内容贴题、不过度攻击，1到3句即可。"
+    follow:
+      auto-follow-back-enabled: false
+      min-delay-seconds: 3
+      max-delay-seconds: 15

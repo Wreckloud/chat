@@ -391,3 +391,158 @@ CREATE TABLE IF NOT EXISTS `wf_lobby_message` (
     KEY `idx_create_time` (`create_time`),
     KEY `idx_create_time_id` (`create_time`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='大厅消息表';
+
+-- AI 机器人账号初始化（DeepSeek）
+-- 固定用户ID用于配置直接引用：900000001
+INSERT INTO `wf_user` (
+    `id`, `wolf_no`, `status`, `onboarding_status`, `active_day_count`, `disabled_by_ban`,
+    `equipped_title_code`, `equipped_title_name`, `equipped_title_color`
+) VALUES (
+    900000001, '1999000000', 'NORMAL', 'COMPLETED', 0, 0, 'WOLF_CUB', '小狼', '#5f7ea2'
+)
+ON DUPLICATE KEY UPDATE
+    `status` = 'NORMAL',
+    `onboarding_status` = 'COMPLETED',
+    `disabled_by_ban` = 0,
+    `equipped_title_code` = 'WOLF_CUB',
+    `equipped_title_name` = '小狼',
+    `equipped_title_color` = '#5f7ea2',
+    `update_time` = NOW();
+
+INSERT INTO `wf_user_profile` (
+    `user_id`, `nickname`, `avatar`, `signature`, `bio`
+) VALUES (
+    900000001,
+    '夜航电台',
+    NULL,
+    '凌晨在线，偶尔话痨',
+    '公共聊天室常驻用户，会聊日常、社区话题和轻松段子。'
+)
+ON DUPLICATE KEY UPDATE
+    `nickname` = VALUES(`nickname`),
+    `avatar` = VALUES(`avatar`),
+    `signature` = VALUES(`signature`),
+    `bio` = VALUES(`bio`),
+    `update_time` = NOW();
+
+INSERT INTO `wf_no_pool` (
+    `wolf_no`, `status`, `user_id`
+) VALUES (
+    '1999000000', 'USED', 900000001
+)
+ON DUPLICATE KEY UPDATE
+    `status` = 'USED',
+    `user_id` = 900000001,
+    `update_time` = NOW();
+
+INSERT INTO `wf_user_achievement` (
+    `user_id`, `achievement_code`
+) VALUES (
+    900000001, 'WOLF_CUB'
+)
+ON DUPLICATE KEY UPDATE
+    `create_time` = `create_time`;
+
+-- 默认论坛版块（避免全新库下无法发帖）
+INSERT INTO `wf_forum_board` (
+    `name`, `slug`, `description`, `sort_no`, `status`
+) VALUES (
+    '社区广场', 'plaza', '默认公共讨论区', 10, 'NORMAL'
+)
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`),
+    `description` = VALUES(`description`),
+    `sort_no` = VALUES(`sort_no`),
+    `status` = VALUES(`status`),
+    `update_time` = NOW();
+
+-- AI 人格角色配置表
+CREATE TABLE IF NOT EXISTS `wf_ai_role` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `role_code` VARCHAR(64) NOT NULL COMMENT '角色编码',
+    `role_name` VARCHAR(64) NOT NULL COMMENT '角色名称',
+    `persona_prompt` VARCHAR(500) DEFAULT NULL COMMENT '角色人设提示词',
+    `style_prompt` VARCHAR(500) DEFAULT NULL COMMENT '表达风格提示词',
+    `scene_lobby_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用大厅场景',
+    `scene_private_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用私聊场景',
+    `scene_forum_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用论坛场景',
+    `role_weight` INT NOT NULL DEFAULT 100 COMMENT '角色权重',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL/DISABLED',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_role_code` (`role_code`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 人格角色配置表';
+
+-- 默认 AI 角色：灰脊（偏锋利）
+INSERT INTO `wf_ai_role` (
+    `role_code`, `role_name`, `persona_prompt`, `style_prompt`,
+    `scene_lobby_enabled`, `scene_private_enabled`, `scene_forum_enabled`,
+    `role_weight`, `status`
+) VALUES (
+    'GRAY_SPIKE',
+    '灰脊',
+    '你是警觉、锋利的狼系用户，表达直接，不绕弯。',
+    '短句优先，偶尔轻微吐槽，允许带刺但不失控，不要长篇说教。',
+    1, 1, 1,
+    100, 'NORMAL'
+)
+ON DUPLICATE KEY UPDATE
+    `role_name` = VALUES(`role_name`),
+    `persona_prompt` = VALUES(`persona_prompt`),
+    `style_prompt` = VALUES(`style_prompt`),
+    `scene_lobby_enabled` = VALUES(`scene_lobby_enabled`),
+    `scene_private_enabled` = VALUES(`scene_private_enabled`),
+    `scene_forum_enabled` = VALUES(`scene_forum_enabled`),
+    `role_weight` = VALUES(`role_weight`),
+    `status` = VALUES(`status`),
+    `update_time` = NOW();
+
+-- 默认 AI 角色：夜爪（偏玩梗）
+INSERT INTO `wf_ai_role` (
+    `role_code`, `role_name`, `persona_prompt`, `style_prompt`,
+    `scene_lobby_enabled`, `scene_private_enabled`, `scene_forum_enabled`,
+    `role_weight`, `status`
+) VALUES (
+    'NIGHT_CLAW',
+    '夜爪',
+    '你是夜猫子气质的狼系用户，上网感强，爱接梗。',
+    '语气轻松，偶尔阴阳怪气，允许简短表情和网络语，但别刷屏。',
+    1, 1, 0,
+    120, 'NORMAL'
+)
+ON DUPLICATE KEY UPDATE
+    `role_name` = VALUES(`role_name`),
+    `persona_prompt` = VALUES(`persona_prompt`),
+    `style_prompt` = VALUES(`style_prompt`),
+    `scene_lobby_enabled` = VALUES(`scene_lobby_enabled`),
+    `scene_private_enabled` = VALUES(`scene_private_enabled`),
+    `scene_forum_enabled` = VALUES(`scene_forum_enabled`),
+    `role_weight` = VALUES(`role_weight`),
+    `status` = VALUES(`status`),
+    `update_time` = NOW();
+
+-- 默认 AI 角色：霜牙（偏理性观点）
+INSERT INTO `wf_ai_role` (
+    `role_code`, `role_name`, `persona_prompt`, `style_prompt`,
+    `scene_lobby_enabled`, `scene_private_enabled`, `scene_forum_enabled`,
+    `role_weight`, `status`
+) VALUES (
+    'FROST_FANG',
+    '霜牙',
+    '你是冷静、克制的狼系用户，不爱废话，但观点清晰。',
+    '论坛优先给出明确立场和依据，保持简洁，不端着，不卖弄。',
+    0, 1, 1,
+    90, 'NORMAL'
+)
+ON DUPLICATE KEY UPDATE
+    `role_name` = VALUES(`role_name`),
+    `persona_prompt` = VALUES(`persona_prompt`),
+    `style_prompt` = VALUES(`style_prompt`),
+    `scene_lobby_enabled` = VALUES(`scene_lobby_enabled`),
+    `scene_private_enabled` = VALUES(`scene_private_enabled`),
+    `scene_forum_enabled` = VALUES(`scene_forum_enabled`),
+    `role_weight` = VALUES(`role_weight`),
+    `status` = VALUES(`status`),
+    `update_time` = NOW();
