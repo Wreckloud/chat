@@ -12,6 +12,7 @@ import com.wreckloud.wolfchat.ai.application.service.AiPromptBuilderService;
 import com.wreckloud.wolfchat.ai.application.service.AiRateLimitService;
 import com.wreckloud.wolfchat.ai.application.service.AiRoleService;
 import com.wreckloud.wolfchat.ai.application.service.AiTaskSchedulerService;
+import com.wreckloud.wolfchat.ai.application.support.AiReplyComposeSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerDecisionSupport;
 import com.wreckloud.wolfchat.ai.config.AiConfig;
 import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
@@ -85,6 +86,7 @@ public class AiEventListener {
     private final AiInteractionMemoryService aiInteractionMemoryService;
     private final AiTaskSchedulerService aiTaskSchedulerService;
     private final AiPromptBuilderService aiPromptBuilderService;
+    private final AiReplyComposeSupport aiReplyComposeSupport;
     private final AiTriggerDecisionSupport aiTriggerDecisionSupport;
     private final UserService userService;
     private final MessageService messageService;
@@ -415,13 +417,12 @@ public class AiEventListener {
             String prompt = aiPromptBuilderService.buildLobbyPrompt(
                     botUserId, event.getSenderId(), recentMessages, rolePrompt, moodDirective, memoryDigest
             );
-            if (directedToBot) {
-                String targetName = resolveUserDisplayName(event.getSenderId());
-                prompt = prompt + "\n触发说明：对方在点名你或回复你，请优先正面回应对方。";
-                if (StringUtils.hasText(targetName)) {
-                    prompt = prompt + "\n可直接称呼对方：@" + targetName;
-                }
-            }
+            prompt = aiReplyComposeSupport.appendLobbyDirectedPrompt(
+                    prompt,
+                    directedToBot,
+                    event.getSenderId(),
+                    this::resolveUserDisplayName
+            );
             String systemPrompt = normalizeSystemPrompt(lobbyConfig.getSystemPrompt(), DEFAULT_LOBBY_SYSTEM_PROMPT);
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
             log.debug("AI 大厅推理: triggerMessageId={}, contextSize={}, promptChars={}",
@@ -434,9 +435,12 @@ public class AiEventListener {
             if (!StringUtils.hasText(reply)) {
                 return;
             }
-            if (directedToBot) {
-                reply = ensureReplyMention(reply, resolveUserDisplayName(event.getSenderId()));
-            }
+            reply = aiReplyComposeSupport.normalizeLobbyDirectedReply(
+                    reply,
+                    directedToBot,
+                    event.getSenderId(),
+                    this::resolveUserDisplayName
+            );
             SendLobbyMessageCommand command = new SendLobbyMessageCommand();
             command.setUserId(botUserId);
             command.setMsgType(MessageType.TEXT);
@@ -474,14 +478,13 @@ public class AiEventListener {
             String prompt = aiPromptBuilderService.buildForumReplyPrompt(
                     botUserId, thread, triggerReply, recentReplies, rolePrompt, moodDirective, memoryDigest
             );
-            if (directedToBot) {
-                Long directedUserId = triggerReply == null ? thread.getAuthorId() : triggerReply.getAuthorId();
-                String targetName = resolveUserDisplayName(directedUserId);
-                prompt = prompt + "\n触发说明：有人在点名你或直接回复你，请优先回应对方。";
-                if (StringUtils.hasText(targetName)) {
-                    prompt = prompt + "\n建议称呼：@" + targetName;
-                }
-            }
+            Long directedUserId = resolveForumDirectedUserId(thread, triggerReply);
+            prompt = aiReplyComposeSupport.appendForumDirectedPrompt(
+                    prompt,
+                    directedToBot,
+                    directedUserId,
+                    this::resolveUserDisplayName
+            );
             String systemPrompt = normalizeSystemPrompt(forumConfig.getSystemPrompt(), DEFAULT_FORUM_SYSTEM_PROMPT);
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
             log.debug("AI 论坛推理: threadId={}, quoteReplyId={}, contextSize={}, promptChars={}",
@@ -494,10 +497,12 @@ public class AiEventListener {
             if (!StringUtils.hasText(reply)) {
                 return;
             }
-            if (directedToBot) {
-                Long directedUserId = triggerReply == null ? thread.getAuthorId() : triggerReply.getAuthorId();
-                reply = ensureForumDirectedPrefix(reply, resolveUserDisplayName(directedUserId));
-            }
+            reply = aiReplyComposeSupport.normalizeForumDirectedReply(
+                    reply,
+                    directedToBot,
+                    directedUserId,
+                    this::resolveUserDisplayName
+            );
 
             CreateReplyDTO dto = new CreateReplyDTO();
             dto.setContent(reply);
@@ -779,28 +784,11 @@ public class AiEventListener {
         return first + "\n" + second;
     }
 
-    private String ensureReplyMention(String reply, String targetName) {
-        if (!StringUtils.hasText(reply) || !StringUtils.hasText(targetName)) {
-            return reply;
+    private Long resolveForumDirectedUserId(WfForumThread thread, WfForumReply triggerReply) {
+        if (triggerReply != null) {
+            return triggerReply.getAuthorId();
         }
-        String normalizedReply = reply.trim();
-        String mention = "@" + targetName.trim();
-        if (normalizedReply.startsWith(mention)) {
-            return normalizedReply;
-        }
-        return mention + " " + normalizedReply;
-    }
-
-    private String ensureForumDirectedPrefix(String reply, String targetName) {
-        if (!StringUtils.hasText(reply) || !StringUtils.hasText(targetName)) {
-            return reply;
-        }
-        String normalizedReply = reply.trim();
-        String prefix = "回复 @" + targetName.trim();
-        if (normalizedReply.startsWith(prefix)) {
-            return normalizedReply;
-        }
-        return prefix + "：" + normalizedReply;
+        return thread == null ? null : thread.getAuthorId();
     }
 
     private String resolveUserDisplayName(Long userId) {
