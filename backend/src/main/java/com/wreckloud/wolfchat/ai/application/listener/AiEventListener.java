@@ -12,7 +12,7 @@ import com.wreckloud.wolfchat.ai.application.service.AiPromptBuilderService;
 import com.wreckloud.wolfchat.ai.application.service.AiRateLimitService;
 import com.wreckloud.wolfchat.ai.application.service.AiRoleService;
 import com.wreckloud.wolfchat.ai.application.service.AiTaskSchedulerService;
-import com.wreckloud.wolfchat.ai.application.support.AiLobbyDialogueIntentSupport;
+import com.wreckloud.wolfchat.ai.application.support.AiTriggerDecisionSupport;
 import com.wreckloud.wolfchat.ai.config.AiConfig;
 import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
 import com.wreckloud.wolfchat.chat.lobby.application.event.LobbyMessageSentEvent;
@@ -85,7 +85,7 @@ public class AiEventListener {
     private final AiInteractionMemoryService aiInteractionMemoryService;
     private final AiTaskSchedulerService aiTaskSchedulerService;
     private final AiPromptBuilderService aiPromptBuilderService;
-    private final AiLobbyDialogueIntentSupport aiLobbyDialogueIntentSupport;
+    private final AiTriggerDecisionSupport aiTriggerDecisionSupport;
     private final UserService userService;
     private final MessageService messageService;
     private final LobbyService lobbyService;
@@ -161,7 +161,12 @@ public class AiEventListener {
             return;
         }
         WfLobbyMessage triggerMessage = wfLobbyMessageMapper.selectById(event.getMessageId());
-        boolean directedToBot = isDirectedLobbyMessage(event, triggerMessage, botUserId);
+        boolean directedToBot = aiTriggerDecisionSupport.isDirectedLobbyMessage(
+                event,
+                triggerMessage,
+                botUserId,
+                this::resolveUserDisplayName
+        );
         aiInteractionMemoryService.recordInteraction(LOBBY_SCENE, botUserId, event.getSenderId(), event.getContent());
         String dedupKey = directedToBot
                 ? LOBBY_MENTION_SCENE + ":" + botUserId + ":" + event.getSenderId()
@@ -221,7 +226,7 @@ public class AiEventListener {
         if (aiIdentityService.isAiUser(event.getAuthorId())) {
             return;
         }
-        boolean directedToBot = containsAiMention(botUserId, event.getTitle(), event.getContent());
+        boolean directedToBot = aiTriggerDecisionSupport.containsAiMention(botUserId, event.getTitle(), event.getContent());
         aiInteractionMemoryService.recordInteraction(
                 FORUM_SCENE,
                 botUserId,
@@ -289,7 +294,7 @@ public class AiEventListener {
             return;
         }
         WfForumReply quoteReply = event.getQuoteReplyId() == null ? null : wfForumReplyMapper.selectById(event.getQuoteReplyId());
-        boolean directedToBot = isDirectedForumReply(event, quoteReply, botUserId);
+        boolean directedToBot = aiTriggerDecisionSupport.isDirectedForumReply(event, quoteReply, botUserId);
         aiInteractionMemoryService.recordInteraction(FORUM_SCENE, botUserId, event.getAuthorId(), event.getContent());
         String dedupKey = directedToBot
                 ? FORUM_MENTION_SCENE + ":reply:" + event.getThreadId() + ":" + event.getAuthorId()
@@ -688,49 +693,6 @@ public class AiEventListener {
             return DEFAULT_CONTEXT_LIMIT;
         }
         return Math.min(configured, MAX_CONTEXT_LIMIT);
-    }
-
-    private boolean isDirectedLobbyMessage(LobbyMessageSentEvent event, WfLobbyMessage triggerMessage, Long botUserId) {
-        if (event == null || !isValidUserId(botUserId)) {
-            return false;
-        }
-        if (triggerMessage != null && botUserId.equals(triggerMessage.getReplyToSenderId())) {
-            return true;
-        }
-        if (containsAiMention(botUserId, event.getContent())) {
-            return true;
-        }
-        if (!aiLobbyDialogueIntentSupport.looksLikeLobbyFollowUpIntent(event.getContent())) {
-            return false;
-        }
-        return aiLobbyDialogueIntentSupport.hasImplicitLobbyContext(
-                event.getSenderId(),
-                botUserId,
-                triggerMessage == null ? null : triggerMessage.getId(),
-                this::resolveUserDisplayName
-        );
-    }
-
-    private boolean isDirectedForumReply(ForumReplyCreatedEvent event, WfForumReply quoteReply, Long botUserId) {
-        if (event == null || !isValidUserId(botUserId)) {
-            return false;
-        }
-        if (quoteReply != null && botUserId.equals(quoteReply.getAuthorId())) {
-            return true;
-        }
-        return containsAiMention(botUserId, event.getContent());
-    }
-
-    private boolean containsAiMention(Long aiUserId, String... texts) {
-        if (!isValidUserId(aiUserId) || texts == null || texts.length == 0) {
-            return false;
-        }
-        for (String text : texts) {
-            if (aiIdentityService.isMentionToAi(aiUserId, text)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private int resolveMentionMinDelaySeconds(Integer mentionMinDelaySeconds, Integer defaultDelaySeconds) {
