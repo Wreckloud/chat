@@ -21,6 +21,7 @@ import com.wreckloud.wolfchat.community.application.event.ForumReplyCreatedEvent
 import com.wreckloud.wolfchat.community.application.event.ForumThreadCreatedEvent;
 import com.wreckloud.wolfchat.community.application.support.ForumLikeCommandSupport;
 import com.wreckloud.wolfchat.community.application.support.ForumPayloadSupport;
+import com.wreckloud.wolfchat.community.application.support.ForumThreadWriteSupport;
 import com.wreckloud.wolfchat.community.domain.constant.ForumModerationLogConstants;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumReply;
@@ -55,8 +56,6 @@ import java.util.Set;
 public class ForumService {
     private static final int THREAD_IMAGE_MAX_COUNT = 9;
     private static final int THREAD_TITLE_MAX_LENGTH = 120;
-    private static final int DRAFT_TITLE_CONTENT_PREVIEW_LENGTH = 20;
-    private static final String DEFAULT_DRAFT_TITLE = "未命名草稿";
 
     private final ForumQueryService forumQueryService;
     private final ForumContentMaintenanceService forumContentMaintenanceService;
@@ -65,6 +64,7 @@ public class ForumService {
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
     private final ForumLikeCommandSupport forumLikeCommandSupport;
+    private final ForumThreadWriteSupport forumThreadWriteSupport;
     private final ForumPayloadSupport forumPayloadSupport;
     private final UserAchievementService userAchievementService;
     private final UserService userService;
@@ -103,32 +103,25 @@ public class ForumService {
         );
 
         LocalDateTime now = LocalDateTime.now();
-        WfForumThread thread = new WfForumThread();
-        thread.setBoardId(board.getId());
-        thread.setAuthorId(userId);
-        thread.setTitle(payload.title);
-        thread.setContent(payload.content);
-        thread.setImageKeys(forumPayloadSupport.joinImageKeys(payload.imageKeys));
-        thread.setVideoKey(payload.videoKey);
-        thread.setVideoPosterKey(payload.videoPosterKey);
-        thread.setThreadType(ForumThreadType.NORMAL);
-        thread.setStatus(ForumThreadStatus.NORMAL);
-        thread.setIsEssence(false);
-        thread.setViewCount(0);
-        thread.setReplyCount(0);
-        thread.setLastReplyTime(now);
-        thread.setEditTime(null);
-
-        assertSingleRow(wfForumThreadMapper.insert(thread));
-        updateBoardOnThreadCreate(board.getId(), thread.getId(), now);
+        Long threadId = forumThreadWriteSupport.createPublishedThread(
+                board.getId(),
+                userId,
+                payload.title,
+                payload.content,
+                payload.joinedImageKeys,
+                payload.videoKey,
+                payload.videoPosterKey,
+                now
+        );
+        updateBoardOnThreadCreate(board.getId(), threadId, now);
         userAchievementService.grantFirstPostAchievement(userId);
         applicationEventPublisher.publishEvent(new ForumThreadCreatedEvent(
-                thread.getId(),
+                threadId,
                 userId,
                 payload.title,
                 payload.content
         ));
-        return forumQueryService.buildThreadVO(userId, thread.getId());
+        return forumQueryService.buildThreadVO(userId, threadId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -147,43 +140,33 @@ public class ForumService {
         Long threadId = dto.getThreadId();
         LocalDateTime now = LocalDateTime.now();
         if (threadId == null || threadId <= 0L) {
-            WfForumThread draft = new WfForumThread();
-            draft.setBoardId(board.getId());
-            draft.setAuthorId(userId);
-            draft.setTitle(normalizeDraftTitle(payload.title, payload.content));
-            draft.setContent(payload.content);
-            draft.setImageKeys(forumPayloadSupport.joinImageKeys(payload.imageKeys));
-            draft.setVideoKey(payload.videoKey);
-            draft.setVideoPosterKey(payload.videoPosterKey);
-            draft.setThreadType(ForumThreadType.NORMAL);
-            draft.setStatus(ForumThreadStatus.DRAFT);
-            draft.setIsEssence(false);
-            draft.setViewCount(0);
-            draft.setReplyCount(0);
-            draft.setLikeCount(0);
-            draft.setLastReplyId(null);
-            draft.setLastReplyUserId(null);
-            draft.setLastReplyTime(null);
-            draft.setEditTime(now);
-            assertSingleRow(wfForumThreadMapper.insert(draft));
-            return forumQueryService.getThreadEditorVO(userId, draft.getId());
+            Long draftId = forumThreadWriteSupport.createDraftThread(
+                    board.getId(),
+                    userId,
+                    payload.title,
+                    payload.content,
+                    payload.joinedImageKeys,
+                    payload.videoKey,
+                    payload.videoPosterKey,
+                    now
+            );
+            return forumQueryService.getThreadEditorVO(userId, draftId);
         }
 
         WfForumThread thread = forumQueryService.getAuthorThreadOrThrow(userId, threadId);
         if (!ForumThreadStatus.DRAFT.equals(thread.getStatus())) {
             throw new BaseException(ErrorCode.PARAM_ERROR, "仅支持保存草稿主题");
         }
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, threadId)
-                .eq(WfForumThread::getAuthorId, userId)
-                .eq(WfForumThread::getStatus, ForumThreadStatus.DRAFT)
-                .set(WfForumThread::getTitle, normalizeDraftTitle(payload.title, payload.content))
-                .set(WfForumThread::getContent, payload.content)
-                .set(WfForumThread::getImageKeys, forumPayloadSupport.joinImageKeys(payload.imageKeys))
-                .set(WfForumThread::getVideoKey, payload.videoKey)
-                .set(WfForumThread::getVideoPosterKey, payload.videoPosterKey)
-                .set(WfForumThread::getEditTime, now);
-        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
+        forumThreadWriteSupport.saveDraftThread(
+                threadId,
+                userId,
+                payload.title,
+                payload.content,
+                payload.joinedImageKeys,
+                payload.videoKey,
+                payload.videoPosterKey,
+                now
+        );
         return forumQueryService.getThreadEditorVO(userId, threadId);
     }
 
@@ -203,7 +186,16 @@ public class ForumService {
                 dto.getVideoPosterKey(),
                 false
         );
-        updatePublishedThreadContent(userId, thread, payload, false);
+        forumThreadWriteSupport.updatePublishedThreadContent(
+                userId,
+                thread,
+                payload.title,
+                payload.content,
+                payload.joinedImageKeys,
+                payload.videoKey,
+                payload.videoPosterKey,
+                false
+        );
         return forumQueryService.buildThreadVO(userId, threadId);
     }
 
@@ -223,7 +215,16 @@ public class ForumService {
                 dto.getVideoPosterKey(),
                 false
         );
-        updatePublishedThreadContent(userId, thread, payload, true);
+        forumThreadWriteSupport.updatePublishedThreadContent(
+                userId,
+                thread,
+                payload.title,
+                payload.content,
+                payload.joinedImageKeys,
+                payload.videoKey,
+                payload.videoPosterKey,
+                true
+        );
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
         userAchievementService.grantFirstPostAchievement(userId);
         applicationEventPublisher.publishEvent(new ForumThreadCreatedEvent(
@@ -252,7 +253,15 @@ public class ForumService {
                 false
         );
 
-        restoreDeletedThreadContent(userId, thread, payload);
+        forumThreadWriteSupport.restoreDeletedThreadContent(
+                userId,
+                thread,
+                payload.title,
+                payload.content,
+                payload.joinedImageKeys,
+                payload.videoKey,
+                payload.videoPosterKey
+        );
         forumContentMaintenanceService.refreshBoardStatsOrThrow(thread.getBoardId());
         applicationEventPublisher.publishEvent(new ForumThreadCreatedEvent(
                 threadId,
@@ -695,73 +704,10 @@ public class ForumService {
                 normalizedTitle,
                 normalizedContent,
                 normalizedImageKeys,
+                forumPayloadSupport.joinImageKeys(normalizedImageKeys),
                 normalizedVideoKey,
                 normalizedVideoPosterKey
         );
-    }
-
-    private void updatePublishedThreadContent(Long userId,
-                                              WfForumThread thread,
-                                              ThreadPayload payload,
-                                              boolean publishFromDraft) {
-        boolean changed = publishFromDraft
-                || !payload.title.equals(thread.getTitle())
-                || !payload.content.equals(thread.getContent())
-                || !safeEquals(forumPayloadSupport.joinImageKeys(payload.imageKeys), thread.getImageKeys())
-                || !safeEquals(payload.videoKey, thread.getVideoKey())
-                || !safeEquals(payload.videoPosterKey, thread.getVideoPosterKey());
-
-        if (!changed) {
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, thread.getId())
-                .eq(WfForumThread::getAuthorId, userId)
-                .eq(WfForumThread::getStatus, thread.getStatus())
-                .set(WfForumThread::getTitle, payload.title)
-                .set(WfForumThread::getContent, payload.content)
-                .set(WfForumThread::getImageKeys, forumPayloadSupport.joinImageKeys(payload.imageKeys))
-                .set(WfForumThread::getVideoKey, payload.videoKey)
-                .set(WfForumThread::getVideoPosterKey, payload.videoPosterKey)
-                .set(WfForumThread::getEditTime, now);
-
-        if (publishFromDraft) {
-            updateWrapper
-                    .set(WfForumThread::getStatus, ForumThreadStatus.NORMAL)
-                    .set(WfForumThread::getCreateTime, now)
-                    .set(WfForumThread::getLastReplyId, null)
-                    .set(WfForumThread::getLastReplyUserId, null)
-                    .set(WfForumThread::getLastReplyTime, now)
-                    .set(WfForumThread::getThreadType, ForumThreadType.NORMAL)
-                    .set(WfForumThread::getIsEssence, false)
-                    .set(WfForumThread::getViewCount, 0)
-                    .set(WfForumThread::getReplyCount, 0)
-                    .set(WfForumThread::getLikeCount, 0);
-        }
-        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
-    }
-
-    private String normalizeDraftTitle(String title, String content) {
-        if (StringUtils.hasText(title)) {
-            String normalized = title.trim();
-            if (normalized.length() <= THREAD_TITLE_MAX_LENGTH) {
-                return normalized;
-            }
-            return normalized.substring(0, THREAD_TITLE_MAX_LENGTH);
-        }
-        if (StringUtils.hasText(content)) {
-            String normalizedContent = content.replaceAll("\\s+", " ").trim();
-            if (!normalizedContent.isEmpty()) {
-                int maxLength = Math.min(THREAD_TITLE_MAX_LENGTH, DRAFT_TITLE_CONTENT_PREVIEW_LENGTH);
-                if (normalizedContent.length() <= maxLength) {
-                    return normalizedContent;
-                }
-                return normalizedContent.substring(0, maxLength) + "...";
-            }
-        }
-        return DEFAULT_DRAFT_TITLE;
     }
 
     private void validateEditableThreadStatus(ForumThreadStatus status) {
@@ -780,56 +726,24 @@ public class ForumService {
         return ForumThreadStatus.NORMAL.equals(status) || ForumThreadStatus.LOCKED.equals(status);
     }
 
-    private boolean safeEquals(String left, String right) {
-        if (left == null && right == null) {
-            return true;
-        }
-        if (left == null || right == null) {
-            return false;
-        }
-        return left.equals(right);
-    }
-
-    private void restoreDeletedThreadContent(Long userId, WfForumThread thread, ThreadPayload payload) {
-        LocalDateTime now = LocalDateTime.now();
-        LambdaUpdateWrapper<WfForumThread> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(WfForumThread::getId, thread.getId())
-                .eq(WfForumThread::getAuthorId, userId)
-                .eq(WfForumThread::getStatus, ForumThreadStatus.DELETED)
-                .set(WfForumThread::getTitle, payload.title)
-                .set(WfForumThread::getContent, payload.content)
-                .set(WfForumThread::getImageKeys, forumPayloadSupport.joinImageKeys(payload.imageKeys))
-                .set(WfForumThread::getVideoKey, payload.videoKey)
-                .set(WfForumThread::getVideoPosterKey, payload.videoPosterKey)
-                .set(WfForumThread::getStatus, ForumThreadStatus.NORMAL)
-                .set(WfForumThread::getThreadType, ForumThreadType.NORMAL)
-                .set(WfForumThread::getIsEssence, false)
-                .set(WfForumThread::getCreateTime, now)
-                .set(WfForumThread::getEditTime, null)
-                .set(WfForumThread::getViewCount, 0)
-                .set(WfForumThread::getReplyCount, 0)
-                .set(WfForumThread::getLikeCount, 0)
-                .set(WfForumThread::getLastReplyId, null)
-                .set(WfForumThread::getLastReplyUserId, null)
-                .set(WfForumThread::getLastReplyTime, now);
-        assertSingleRow(wfForumThreadMapper.update(null, updateWrapper), ErrorCode.FORUM_THREAD_NOT_FOUND);
-    }
-
     private static class ThreadPayload {
         private final String title;
         private final String content;
         private final List<String> imageKeys;
+        private final String joinedImageKeys;
         private final String videoKey;
         private final String videoPosterKey;
 
         private ThreadPayload(String title,
                               String content,
                               List<String> imageKeys,
+                              String joinedImageKeys,
                               String videoKey,
                               String videoPosterKey) {
             this.title = title;
             this.content = content;
             this.imageKeys = imageKeys == null ? List.of() : new ArrayList<>(imageKeys);
+            this.joinedImageKeys = joinedImageKeys;
             this.videoKey = videoKey;
             this.videoPosterKey = videoPosterKey;
         }
