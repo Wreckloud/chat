@@ -3,8 +3,6 @@ package com.wreckloud.wolfchat.community.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
-import com.wreckloud.wolfchat.account.application.service.UserService;
-import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.api.dto.CreateReplyDTO;
@@ -21,6 +19,7 @@ import com.wreckloud.wolfchat.community.application.event.ForumReplyCreatedEvent
 import com.wreckloud.wolfchat.community.application.event.ForumThreadCreatedEvent;
 import com.wreckloud.wolfchat.community.application.support.ForumLikeCommandSupport;
 import com.wreckloud.wolfchat.community.application.support.ForumPayloadSupport;
+import com.wreckloud.wolfchat.community.application.support.ForumReplyComposeSupport;
 import com.wreckloud.wolfchat.community.application.support.ForumThreadWriteSupport;
 import com.wreckloud.wolfchat.community.domain.constant.ForumModerationLogConstants;
 import com.wreckloud.wolfchat.community.domain.entity.WfForumBoard;
@@ -44,7 +43,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -64,10 +62,10 @@ public class ForumService {
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
     private final ForumLikeCommandSupport forumLikeCommandSupport;
+    private final ForumReplyComposeSupport forumReplyComposeSupport;
     private final ForumThreadWriteSupport forumThreadWriteSupport;
     private final ForumPayloadSupport forumPayloadSupport;
     private final UserAchievementService userAchievementService;
-    private final UserService userService;
     private final UserNoticeService userNoticeService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -318,10 +316,7 @@ public class ForumService {
             targetReply = forumQueryService.getQuoteReplyOrThrow(threadId, requestQuoteReplyId);
         }
 
-        String content = forumPayloadSupport.normalizeOptionalContent(dto.getContent());
-        content = prependReplyMentionIfNeeded(userId, content, targetReply);
-        String imageKey = forumPayloadSupport.normalizeOptionalKey(dto.getImageKey());
-        forumPayloadSupport.validateReplyPayload(userId, content, imageKey);
+        ForumReplyComposeSupport.ReplyPayload replyPayload = forumReplyComposeSupport.prepareReplyPayload(userId, dto, targetReply);
 
         int floorNo = getNextFloorNo(threadId);
         LocalDateTime now = LocalDateTime.now();
@@ -330,9 +325,9 @@ public class ForumService {
         reply.setThreadId(threadId);
         reply.setFloorNo(floorNo);
         reply.setAuthorId(userId);
-        reply.setContent(content);
-        reply.setImageKey(imageKey);
-        reply.setQuoteReplyId(resolveReplyParentId(targetReply));
+        reply.setContent(replyPayload.getContent());
+        reply.setImageKey(replyPayload.getImageKey());
+        reply.setQuoteReplyId(forumReplyComposeSupport.resolveReplyParentId(targetReply));
         reply.setStatus(ForumReplyStatus.NORMAL);
 
         assertSingleRow(wfForumReplyMapper.insert(reply));
@@ -340,7 +335,7 @@ public class ForumService {
         updateBoardOnReply(thread.getBoardId(), threadId, now);
         userAchievementService.grantFirstReplyAchievement(userId);
         userNoticeService.notifyThreadReplied(thread.getAuthorId(), thread.getId(), userId);
-        notifyReplyTargetIfNeeded(thread, targetReply, userId);
+        forumReplyComposeSupport.notifyReplyTargetIfNeeded(thread, targetReply, userId);
         log.info("回帖发布成功: userId={}, threadId={}, replyId={}", userId, threadId, reply.getId());
         applicationEventPublisher.publishEvent(new ForumReplyCreatedEvent(
                 reply.getId(),
@@ -600,68 +595,6 @@ public class ForumService {
                 .set(WfForumBoard::getLastThreadId, threadId)
                 .set(WfForumBoard::getLastReplyTime, now);
         assertSingleRow(wfForumBoardMapper.update(null, updateWrapper));
-    }
-
-    private Long resolveReplyParentId(WfForumReply targetReply) {
-        if (targetReply == null) {
-            return null;
-        }
-        return targetReply.getId();
-    }
-
-    private String prependReplyMentionIfNeeded(Long userId, String content, WfForumReply targetReply) {
-        if (targetReply == null || targetReply.getAuthorId() == null || targetReply.getAuthorId().equals(userId)) {
-            return content;
-        }
-        String displayName = resolveMentionDisplayName(targetReply.getAuthorId());
-        if (!StringUtils.hasText(displayName)) {
-            return content;
-        }
-
-        String normalizedContent = content == null ? "" : content.trim();
-        String mentionPrefix = "@" + displayName + " ";
-        if (normalizedContent.startsWith(mentionPrefix)) {
-            return normalizedContent;
-        }
-        if (!normalizedContent.isEmpty() && normalizedContent.startsWith("@")) {
-            normalizedContent = normalizedContent.replaceFirst("^@\\S+\\s*", "");
-        }
-        if (normalizedContent.isEmpty()) {
-            return mentionPrefix.trim();
-        }
-        return mentionPrefix + normalizedContent;
-    }
-
-    private String resolveMentionDisplayName(Long targetUserId) {
-        if (targetUserId == null || targetUserId <= 0L) {
-            return "";
-        }
-        Map<Long, WfUser> userMap = userService.getUserMap(List.of(targetUserId));
-        WfUser user = userMap.get(targetUserId);
-        if (user == null) {
-            return "";
-        }
-        if (StringUtils.hasText(user.getNickname())) {
-            return user.getNickname().trim();
-        }
-        if (StringUtils.hasText(user.getWolfNo())) {
-            return user.getWolfNo().trim();
-        }
-        return "";
-    }
-
-    private void notifyReplyTargetIfNeeded(WfForumThread thread, WfForumReply targetReply, Long operatorUserId) {
-        if (thread == null || targetReply == null || targetReply.getAuthorId() == null) {
-            return;
-        }
-        Long replyTargetUserId = targetReply.getAuthorId();
-        if (replyTargetUserId.equals(operatorUserId)) {
-            return;
-        }
-        if (replyTargetUserId.equals(thread.getAuthorId())) {
-            return;
-        }
-        userNoticeService.notifyReplyReplied(replyTargetUserId, thread.getId(), operatorUserId);
     }
 
     private ThreadPayload normalizeThreadPayload(Long userId,
