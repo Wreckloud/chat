@@ -7,11 +7,11 @@ import com.wreckloud.wolfchat.ai.application.service.AiInteractionMemoryService;
 import com.wreckloud.wolfchat.ai.application.service.AiMemoryDigestService;
 import com.wreckloud.wolfchat.ai.application.service.AiMoodService;
 import com.wreckloud.wolfchat.ai.application.service.AiPromptBuilderService;
-import com.wreckloud.wolfchat.ai.application.service.AiRateLimitService;
 import com.wreckloud.wolfchat.ai.application.service.AiRoleService;
 import com.wreckloud.wolfchat.ai.application.service.AiTaskSchedulerService;
 import com.wreckloud.wolfchat.ai.application.support.AiInteractionContextSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiReplyComposeSupport;
+import com.wreckloud.wolfchat.ai.application.support.AiTriggerGuardSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerDecisionSupport;
 import com.wreckloud.wolfchat.ai.config.AiConfig;
 import com.wreckloud.wolfchat.chat.lobby.application.command.SendLobbyMessageCommand;
@@ -76,7 +76,6 @@ public class AiEventListener {
     private final AiConfig aiConfig;
     private final AiTextClient aiTextClient;
     private final AiIdentityService aiIdentityService;
-    private final AiRateLimitService aiRateLimitService;
     private final AiRoleService aiRoleService;
     private final AiMoodService aiMoodService;
     private final AiMemoryDigestService aiMemoryDigestService;
@@ -85,6 +84,7 @@ public class AiEventListener {
     private final AiPromptBuilderService aiPromptBuilderService;
     private final AiInteractionContextSupport aiInteractionContextSupport;
     private final AiReplyComposeSupport aiReplyComposeSupport;
+    private final AiTriggerGuardSupport aiTriggerGuardSupport;
     private final AiTriggerDecisionSupport aiTriggerDecisionSupport;
     private final MessageService messageService;
     private final LobbyService lobbyService;
@@ -118,17 +118,21 @@ public class AiEventListener {
         if (aiTaskSchedulerService.isPending(dedupKey)) {
             return;
         }
-        if (!hitProbability(privateChatConfig.getReplyProbability(), 0.85D)) {
+        if (!aiTriggerGuardSupport.hitProbability(privateChatConfig.getReplyProbability(), 0.85D)) {
             return;
         }
-        if (!aiRateLimitService.allowByCooldown(PRIVATE_SCENE, botUserId, String.valueOf(event.getConversationId()),
-                privateChatConfig.getCooldownSeconds())) {
+        if (!aiTriggerGuardSupport.allowByCooldown(
+                PRIVATE_SCENE,
+                botUserId,
+                String.valueOf(event.getConversationId()),
+                privateChatConfig.getCooldownSeconds()
+        )) {
             return;
         }
-        if (!aiRateLimitService.allowByHourlyLimit(PRIVATE_SCENE, botUserId, privateChatConfig.getMaxRepliesPerHour())) {
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(PRIVATE_SCENE, botUserId, privateChatConfig.getMaxRepliesPerHour())) {
             return;
         }
-        if (!allowGlobalQuota(PRIVATE_SCENE, botUserId)) {
+        if (!aiTriggerGuardSupport.allowGlobalQuota(PRIVATE_SCENE, botUserId)) {
             return;
         }
 
@@ -177,26 +181,30 @@ public class AiEventListener {
         Double configuredProbability = directedToBot
                 ? lobbyConfig.getMentionReplyProbability()
                 : lobbyConfig.getReplyProbability();
-        if (!hitProbability(configuredProbability, defaultProbability)) {
+        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
             return;
         }
         String cooldownScene = directedToBot ? LOBBY_MENTION_SCENE : LOBBY_SCENE;
         String cooldownTarget = directedToBot ? String.valueOf(event.getSenderId()) : "global";
-        if (!aiRateLimitService.allowByCooldown(cooldownScene, botUserId, cooldownTarget, lobbyConfig.getCooldownSeconds())) {
+        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, cooldownTarget, lobbyConfig.getCooldownSeconds())) {
             return;
         }
-        if (!aiRateLimitService.allowByHourlyLimit(LOBBY_SCENE, botUserId, lobbyConfig.getMaxRepliesPerHour())) {
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(LOBBY_SCENE, botUserId, lobbyConfig.getMaxRepliesPerHour())) {
             return;
         }
-        if (!allowGlobalQuota(LOBBY_SCENE, botUserId)) {
+        if (!aiTriggerGuardSupport.allowGlobalQuota(LOBBY_SCENE, botUserId)) {
             return;
         }
 
         int minDelaySeconds = directedToBot
-                ? resolveMentionMinDelaySeconds(lobbyConfig.getMentionMinDelaySeconds(), lobbyConfig.getMinDelaySeconds())
+                ? aiTriggerGuardSupport.resolveMentionMinDelaySeconds(lobbyConfig.getMentionMinDelaySeconds(), lobbyConfig.getMinDelaySeconds())
                 : lobbyConfig.getMinDelaySeconds();
         int maxDelaySeconds = directedToBot
-                ? resolveMentionMaxDelaySeconds(lobbyConfig.getMentionMaxDelaySeconds(), lobbyConfig.getMaxDelaySeconds(), minDelaySeconds)
+                ? aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
+                        lobbyConfig.getMentionMaxDelaySeconds(),
+                        lobbyConfig.getMaxDelaySeconds(),
+                        minDelaySeconds
+                )
                 : lobbyConfig.getMaxDelaySeconds();
         boolean scheduled = aiTaskSchedulerService.schedule(
                 dedupKey,
@@ -242,28 +250,32 @@ public class AiEventListener {
         Double configuredProbability = directedToBot
                 ? forumConfig.getMentionReplyProbability()
                 : forumConfig.getReplyProbability();
-        if (!hitProbability(configuredProbability, defaultProbability)) {
+        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
             return;
         }
         String cooldownScene = directedToBot ? FORUM_MENTION_SCENE : FORUM_SCENE;
-        if (!aiRateLimitService.allowByCooldown(cooldownScene, botUserId, String.valueOf(event.getThreadId()), forumConfig.getCooldownSeconds())) {
+        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, String.valueOf(event.getThreadId()), forumConfig.getCooldownSeconds())) {
             return;
         }
-        if (!aiRateLimitService.allowByHourlyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerHour())) {
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerHour())) {
             return;
         }
-        if (!aiRateLimitService.allowByDailyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerDay())) {
+        if (!aiTriggerGuardSupport.allowByDailyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerDay())) {
             return;
         }
-        if (!allowGlobalQuota(FORUM_SCENE, botUserId)) {
+        if (!aiTriggerGuardSupport.allowGlobalQuota(FORUM_SCENE, botUserId)) {
             return;
         }
 
         int minDelaySeconds = directedToBot
-                ? resolveMentionMinDelaySeconds(forumConfig.getMentionMinDelaySeconds(), forumConfig.getMinDelaySeconds())
+                ? aiTriggerGuardSupport.resolveMentionMinDelaySeconds(forumConfig.getMentionMinDelaySeconds(), forumConfig.getMinDelaySeconds())
                 : forumConfig.getMinDelaySeconds();
         int maxDelaySeconds = directedToBot
-                ? resolveMentionMaxDelaySeconds(forumConfig.getMentionMaxDelaySeconds(), forumConfig.getMaxDelaySeconds(), minDelaySeconds)
+                ? aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
+                        forumConfig.getMentionMaxDelaySeconds(),
+                        forumConfig.getMaxDelaySeconds(),
+                        minDelaySeconds
+                )
                 : forumConfig.getMaxDelaySeconds();
         boolean scheduled = aiTaskSchedulerService.schedule(
                 dedupKey,
@@ -305,28 +317,32 @@ public class AiEventListener {
         Double configuredProbability = directedToBot
                 ? forumConfig.getMentionReplyProbability()
                 : forumConfig.getReplyToReplyProbability();
-        if (!hitProbability(configuredProbability, defaultProbability)) {
+        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
             return;
         }
         String cooldownScene = directedToBot ? FORUM_MENTION_SCENE : FORUM_SCENE;
-        if (!aiRateLimitService.allowByCooldown(cooldownScene, botUserId, String.valueOf(event.getThreadId()), forumConfig.getCooldownSeconds())) {
+        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, String.valueOf(event.getThreadId()), forumConfig.getCooldownSeconds())) {
             return;
         }
-        if (!aiRateLimitService.allowByHourlyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerHour())) {
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerHour())) {
             return;
         }
-        if (!aiRateLimitService.allowByDailyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerDay())) {
+        if (!aiTriggerGuardSupport.allowByDailyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerDay())) {
             return;
         }
-        if (!allowGlobalQuota(FORUM_SCENE, botUserId)) {
+        if (!aiTriggerGuardSupport.allowGlobalQuota(FORUM_SCENE, botUserId)) {
             return;
         }
 
         int minDelaySeconds = directedToBot
-                ? resolveMentionMinDelaySeconds(forumConfig.getMentionMinDelaySeconds(), forumConfig.getMinDelaySeconds())
+                ? aiTriggerGuardSupport.resolveMentionMinDelaySeconds(forumConfig.getMentionMinDelaySeconds(), forumConfig.getMinDelaySeconds())
                 : forumConfig.getMinDelaySeconds();
         int maxDelaySeconds = directedToBot
-                ? resolveMentionMaxDelaySeconds(forumConfig.getMentionMaxDelaySeconds(), forumConfig.getMaxDelaySeconds(), minDelaySeconds)
+                ? aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
+                        forumConfig.getMentionMaxDelaySeconds(),
+                        forumConfig.getMaxDelaySeconds(),
+                        minDelaySeconds
+                )
                 : forumConfig.getMaxDelaySeconds();
         boolean scheduled = aiTaskSchedulerService.schedule(
                 dedupKey,
@@ -532,35 +548,8 @@ public class AiEventListener {
         return aiIdentityService.isAiEnabled() && aiTextClient.isAvailable();
     }
 
-    private boolean allowGlobalQuota(String scene, Long botUserId) {
-        AiConfig.Guard guard = aiConfig.getGuard();
-        if (guard == null || !Boolean.TRUE.equals(guard.getEnabled())) {
-            return true;
-        }
-        if (!aiRateLimitService.allowByGlobalHourlyLimit(botUserId, guard.getMaxCallsPerHour())) {
-            log.info("AI 全局小时配额已达上限: scene={}, botUserId={}", scene, botUserId);
-            return false;
-        }
-        if (!aiRateLimitService.allowByGlobalDailyLimit(botUserId, guard.getMaxCallsPerDay())) {
-            log.warn("AI 全局日配额已达上限: scene={}, botUserId={}", scene, botUserId);
-            return false;
-        }
-        return true;
-    }
-
     private boolean isValidUserId(Long userId) {
         return userId != null && userId > 0L;
-    }
-
-    private boolean hitProbability(Double configuredProbability, double defaultProbability) {
-        double probability = configuredProbability == null ? defaultProbability : configuredProbability;
-        if (probability <= 0D) {
-            return false;
-        }
-        if (probability >= 1D) {
-            return true;
-        }
-        return Math.random() < probability;
     }
 
     private boolean isUnsupportedTriggerType(MessageType msgType) {
@@ -695,24 +684,6 @@ public class AiEventListener {
             return DEFAULT_CONTEXT_LIMIT;
         }
         return Math.min(configured, MAX_CONTEXT_LIMIT);
-    }
-
-    private int resolveMentionMinDelaySeconds(Integer mentionMinDelaySeconds, Integer defaultDelaySeconds) {
-        int fallback = defaultDelaySeconds == null || defaultDelaySeconds <= 0 ? 4 : defaultDelaySeconds;
-        if (mentionMinDelaySeconds == null || mentionMinDelaySeconds <= 0) {
-            return Math.max(2, Math.min(fallback, 12));
-        }
-        return Math.max(1, Math.min(mentionMinDelaySeconds, 20));
-    }
-
-    private int resolveMentionMaxDelaySeconds(Integer mentionMaxDelaySeconds, Integer defaultDelaySeconds, int minDelaySeconds) {
-        int fallback = defaultDelaySeconds == null || defaultDelaySeconds <= 0
-                ? Math.max(minDelaySeconds + 2, 8)
-                : defaultDelaySeconds;
-        int resolved = mentionMaxDelaySeconds == null || mentionMaxDelaySeconds <= 0
-                ? Math.max(minDelaySeconds + 2, Math.min(fallback, 30))
-                : Math.max(mentionMaxDelaySeconds, minDelaySeconds);
-        return Math.max(minDelaySeconds, Math.min(resolved, 40));
     }
 
     private String buildForumInteractionText(String title, String content) {
