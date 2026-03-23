@@ -110,7 +110,7 @@ public class AiEventListener {
         if (!isValidUserId(botUserId) || !botUserId.equals(event.getReceiverId())) {
             return;
         }
-        if (aiIdentityService.isAiUser(event.getSenderId()) || isUnsupportedTriggerType(event.getMsgType())) {
+        if (isBlockedMessageTrigger(event.getSenderId(), event.getMsgType())) {
             return;
         }
         aiInteractionMemoryService.recordInteraction(PRIVATE_SCENE, botUserId, event.getSenderId(), event.getContent());
@@ -136,15 +136,13 @@ public class AiEventListener {
             return;
         }
 
-        boolean scheduled = aiTaskSchedulerService.schedule(
+        scheduleTriggeredTask(
                 dedupKey,
                 privateChatConfig.getMinDelaySeconds(),
                 privateChatConfig.getMaxDelaySeconds(),
-                () -> processPrivateReply(event, botUserId, privateChatConfig)
+                () -> processPrivateReply(event, botUserId, privateChatConfig),
+                "AI 私聊"
         );
-        if (!scheduled) {
-            log.debug("AI 私聊触发跳过: dedupKey={}", dedupKey);
-        }
     }
 
     @EventListener
@@ -160,7 +158,7 @@ public class AiEventListener {
         if (!isValidUserId(botUserId) || botUserId.equals(event.getSenderId())) {
             return;
         }
-        if (aiIdentityService.isAiUser(event.getSenderId()) || isUnsupportedTriggerType(event.getMsgType())) {
+        if (isBlockedMessageTrigger(event.getSenderId(), event.getMsgType())) {
             return;
         }
         WfLobbyMessage triggerMessage = wfLobbyMessageMapper.selectById(event.getMessageId());
@@ -206,15 +204,13 @@ public class AiEventListener {
                         minDelaySeconds
                 )
                 : lobbyConfig.getMaxDelaySeconds();
-        boolean scheduled = aiTaskSchedulerService.schedule(
+        scheduleTriggeredTask(
                 dedupKey,
                 minDelaySeconds,
                 maxDelaySeconds,
-                () -> processLobbyReply(event, triggerMessage, botUserId, lobbyConfig, directedToBot)
+                () -> processLobbyReply(event, triggerMessage, botUserId, lobbyConfig, directedToBot),
+                "AI 大厅"
         );
-        if (!scheduled) {
-            log.debug("AI 大厅触发跳过: dedupKey={}", dedupKey);
-        }
     }
 
     @EventListener
@@ -277,15 +273,13 @@ public class AiEventListener {
                         minDelaySeconds
                 )
                 : forumConfig.getMaxDelaySeconds();
-        boolean scheduled = aiTaskSchedulerService.schedule(
+        scheduleTriggeredTask(
                 dedupKey,
                 minDelaySeconds,
                 maxDelaySeconds,
-                () -> processForumReply(event.getThreadId(), null, botUserId, forumConfig, directedToBot)
+                () -> processForumReply(event.getThreadId(), null, botUserId, forumConfig, directedToBot),
+                "AI 论坛主题"
         );
-        if (!scheduled) {
-            log.debug("AI 论坛主题触发跳过: dedupKey={}", dedupKey);
-        }
     }
 
     @EventListener
@@ -344,15 +338,13 @@ public class AiEventListener {
                         minDelaySeconds
                 )
                 : forumConfig.getMaxDelaySeconds();
-        boolean scheduled = aiTaskSchedulerService.schedule(
+        scheduleTriggeredTask(
                 dedupKey,
                 minDelaySeconds,
                 maxDelaySeconds,
-                () -> processForumReply(event.getThreadId(), event.getReplyId(), botUserId, forumConfig, directedToBot)
+                () -> processForumReply(event.getThreadId(), event.getReplyId(), botUserId, forumConfig, directedToBot),
+                "AI 论坛回帖"
         );
-        if (!scheduled) {
-            log.debug("AI 论坛回帖触发跳过: dedupKey={}", dedupKey);
-        }
     }
 
     @EventListener
@@ -550,6 +542,21 @@ public class AiEventListener {
 
     private boolean isValidUserId(Long userId) {
         return userId != null && userId > 0L;
+    }
+
+    private boolean isBlockedMessageTrigger(Long senderId, MessageType msgType) {
+        return aiIdentityService.isAiUser(senderId) || isUnsupportedTriggerType(msgType);
+    }
+
+    private void scheduleTriggeredTask(String dedupKey,
+                                       Integer minDelaySeconds,
+                                       Integer maxDelaySeconds,
+                                       Runnable task,
+                                       String sceneLabel) {
+        boolean scheduled = aiTaskSchedulerService.schedule(dedupKey, minDelaySeconds, maxDelaySeconds, task);
+        if (!scheduled) {
+            log.debug("{}触发跳过: dedupKey={}", sceneLabel, dedupKey);
+        }
     }
 
     private boolean isUnsupportedTriggerType(MessageType msgType) {
