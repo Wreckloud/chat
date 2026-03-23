@@ -115,24 +115,7 @@ public class AiEventListener {
         }
         aiInteractionMemoryService.recordInteraction(PRIVATE_SCENE, botUserId, event.getSenderId(), event.getContent());
         String dedupKey = PRIVATE_SCENE + ":" + event.getConversationId();
-        if (aiTaskSchedulerService.isPending(dedupKey)) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.hitProbability(privateChatConfig.getReplyProbability(), 0.85D)) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByCooldown(
-                PRIVATE_SCENE,
-                botUserId,
-                String.valueOf(event.getConversationId()),
-                privateChatConfig.getCooldownSeconds()
-        )) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByHourlyLimit(PRIVATE_SCENE, botUserId, privateChatConfig.getMaxRepliesPerHour())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowGlobalQuota(PRIVATE_SCENE, botUserId)) {
+        if (!passPrivateTriggerGuard(event, botUserId, privateChatConfig, dedupKey)) {
             return;
         }
 
@@ -172,42 +155,21 @@ public class AiEventListener {
         String dedupKey = directedToBot
                 ? LOBBY_MENTION_SCENE + ":" + botUserId + ":" + event.getSenderId()
                 : LOBBY_SCENE + ":" + botUserId;
-        if (aiTaskSchedulerService.isPending(dedupKey)) {
-            return;
-        }
-        double defaultProbability = directedToBot ? DEFAULT_MENTION_REPLY_PROBABILITY : 0.25D;
-        Double configuredProbability = directedToBot
-                ? lobbyConfig.getMentionReplyProbability()
-                : lobbyConfig.getReplyProbability();
-        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
-            return;
-        }
-        String cooldownScene = directedToBot ? LOBBY_MENTION_SCENE : LOBBY_SCENE;
-        String cooldownTarget = directedToBot ? String.valueOf(event.getSenderId()) : "global";
-        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, cooldownTarget, lobbyConfig.getCooldownSeconds())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByHourlyLimit(LOBBY_SCENE, botUserId, lobbyConfig.getMaxRepliesPerHour())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowGlobalQuota(LOBBY_SCENE, botUserId)) {
+        if (!passLobbyTriggerGuard(event, botUserId, lobbyConfig, directedToBot, dedupKey)) {
             return;
         }
 
-        int minDelaySeconds = directedToBot
-                ? aiTriggerGuardSupport.resolveMentionMinDelaySeconds(lobbyConfig.getMentionMinDelaySeconds(), lobbyConfig.getMinDelaySeconds())
-                : lobbyConfig.getMinDelaySeconds();
-        int maxDelaySeconds = directedToBot
-                ? aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
-                        lobbyConfig.getMentionMaxDelaySeconds(),
-                        lobbyConfig.getMaxDelaySeconds(),
-                        minDelaySeconds
-                )
-                : lobbyConfig.getMaxDelaySeconds();
+        DelayWindow delayWindow = resolveDelayWindow(
+                directedToBot,
+                lobbyConfig.getMentionMinDelaySeconds(),
+                lobbyConfig.getMentionMaxDelaySeconds(),
+                lobbyConfig.getMinDelaySeconds(),
+                lobbyConfig.getMaxDelaySeconds()
+        );
         scheduleTriggeredTask(
                 dedupKey,
-                minDelaySeconds,
-                maxDelaySeconds,
+                delayWindow.minDelaySeconds,
+                delayWindow.maxDelaySeconds,
                 () -> processLobbyReply(event, triggerMessage, botUserId, lobbyConfig, directedToBot),
                 "AI 大厅"
         );
@@ -239,44 +201,32 @@ public class AiEventListener {
         String dedupKey = directedToBot
                 ? FORUM_MENTION_SCENE + ":thread:" + event.getThreadId()
                 : FORUM_SCENE + ":thread:" + event.getThreadId();
-        if (aiTaskSchedulerService.isPending(dedupKey)) {
-            return;
-        }
-        double defaultProbability = directedToBot ? DEFAULT_MENTION_REPLY_PROBABILITY : 0.28D;
-        Double configuredProbability = directedToBot
-                ? forumConfig.getMentionReplyProbability()
-                : forumConfig.getReplyProbability();
-        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
-            return;
-        }
-        String cooldownScene = directedToBot ? FORUM_MENTION_SCENE : FORUM_SCENE;
-        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, String.valueOf(event.getThreadId()), forumConfig.getCooldownSeconds())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByHourlyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerHour())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByDailyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerDay())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowGlobalQuota(FORUM_SCENE, botUserId)) {
+        if (!passForumTriggerGuard(
+                botUserId,
+                directedToBot,
+                dedupKey,
+                forumConfig.getMentionReplyProbability(),
+                forumConfig.getReplyProbability(),
+                0.28D,
+                forumConfig.getCooldownSeconds(),
+                String.valueOf(event.getThreadId()),
+                forumConfig.getMaxRepliesPerHour(),
+                forumConfig.getMaxRepliesPerDay()
+        )) {
             return;
         }
 
-        int minDelaySeconds = directedToBot
-                ? aiTriggerGuardSupport.resolveMentionMinDelaySeconds(forumConfig.getMentionMinDelaySeconds(), forumConfig.getMinDelaySeconds())
-                : forumConfig.getMinDelaySeconds();
-        int maxDelaySeconds = directedToBot
-                ? aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
-                        forumConfig.getMentionMaxDelaySeconds(),
-                        forumConfig.getMaxDelaySeconds(),
-                        minDelaySeconds
-                )
-                : forumConfig.getMaxDelaySeconds();
+        DelayWindow delayWindow = resolveDelayWindow(
+                directedToBot,
+                forumConfig.getMentionMinDelaySeconds(),
+                forumConfig.getMentionMaxDelaySeconds(),
+                forumConfig.getMinDelaySeconds(),
+                forumConfig.getMaxDelaySeconds()
+        );
         scheduleTriggeredTask(
                 dedupKey,
-                minDelaySeconds,
-                maxDelaySeconds,
+                delayWindow.minDelaySeconds,
+                delayWindow.maxDelaySeconds,
                 () -> processForumReply(event.getThreadId(), null, botUserId, forumConfig, directedToBot),
                 "AI 论坛主题"
         );
@@ -304,44 +254,32 @@ public class AiEventListener {
         String dedupKey = directedToBot
                 ? FORUM_MENTION_SCENE + ":reply:" + event.getThreadId() + ":" + event.getAuthorId()
                 : FORUM_SCENE + ":reply:" + event.getThreadId();
-        if (aiTaskSchedulerService.isPending(dedupKey)) {
-            return;
-        }
-        double defaultProbability = directedToBot ? DEFAULT_MENTION_REPLY_PROBABILITY : 0.20D;
-        Double configuredProbability = directedToBot
-                ? forumConfig.getMentionReplyProbability()
-                : forumConfig.getReplyToReplyProbability();
-        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
-            return;
-        }
-        String cooldownScene = directedToBot ? FORUM_MENTION_SCENE : FORUM_SCENE;
-        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, String.valueOf(event.getThreadId()), forumConfig.getCooldownSeconds())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByHourlyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerHour())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowByDailyLimit(FORUM_SCENE, botUserId, forumConfig.getMaxRepliesPerDay())) {
-            return;
-        }
-        if (!aiTriggerGuardSupport.allowGlobalQuota(FORUM_SCENE, botUserId)) {
+        if (!passForumTriggerGuard(
+                botUserId,
+                directedToBot,
+                dedupKey,
+                forumConfig.getMentionReplyProbability(),
+                forumConfig.getReplyToReplyProbability(),
+                0.20D,
+                forumConfig.getCooldownSeconds(),
+                String.valueOf(event.getThreadId()),
+                forumConfig.getMaxRepliesPerHour(),
+                forumConfig.getMaxRepliesPerDay()
+        )) {
             return;
         }
 
-        int minDelaySeconds = directedToBot
-                ? aiTriggerGuardSupport.resolveMentionMinDelaySeconds(forumConfig.getMentionMinDelaySeconds(), forumConfig.getMinDelaySeconds())
-                : forumConfig.getMinDelaySeconds();
-        int maxDelaySeconds = directedToBot
-                ? aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
-                        forumConfig.getMentionMaxDelaySeconds(),
-                        forumConfig.getMaxDelaySeconds(),
-                        minDelaySeconds
-                )
-                : forumConfig.getMaxDelaySeconds();
+        DelayWindow delayWindow = resolveDelayWindow(
+                directedToBot,
+                forumConfig.getMentionMinDelaySeconds(),
+                forumConfig.getMentionMaxDelaySeconds(),
+                forumConfig.getMinDelaySeconds(),
+                forumConfig.getMaxDelaySeconds()
+        );
         scheduleTriggeredTask(
                 dedupKey,
-                minDelaySeconds,
-                maxDelaySeconds,
+                delayWindow.minDelaySeconds,
+                delayWindow.maxDelaySeconds,
                 () -> processForumReply(event.getThreadId(), event.getReplyId(), botUserId, forumConfig, directedToBot),
                 "AI 论坛回帖"
         );
@@ -548,6 +486,104 @@ public class AiEventListener {
         return aiIdentityService.isAiUser(senderId) || isUnsupportedTriggerType(msgType);
     }
 
+    private boolean passPrivateTriggerGuard(PrivateMessageSentEvent event,
+                                            Long botUserId,
+                                            AiConfig.PrivateChat privateChatConfig,
+                                            String dedupKey) {
+        if (aiTaskSchedulerService.isPending(dedupKey)) {
+            return false;
+        }
+        if (!aiTriggerGuardSupport.hitProbability(privateChatConfig.getReplyProbability(), 0.85D)) {
+            return false;
+        }
+        if (!aiTriggerGuardSupport.allowByCooldown(
+                PRIVATE_SCENE,
+                botUserId,
+                String.valueOf(event.getConversationId()),
+                privateChatConfig.getCooldownSeconds()
+        )) {
+            return false;
+        }
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(PRIVATE_SCENE, botUserId, privateChatConfig.getMaxRepliesPerHour())) {
+            return false;
+        }
+        return aiTriggerGuardSupport.allowGlobalQuota(PRIVATE_SCENE, botUserId);
+    }
+
+    private boolean passLobbyTriggerGuard(LobbyMessageSentEvent event,
+                                          Long botUserId,
+                                          AiConfig.Lobby lobbyConfig,
+                                          boolean directedToBot,
+                                          String dedupKey) {
+        if (aiTaskSchedulerService.isPending(dedupKey)) {
+            return false;
+        }
+        double defaultProbability = directedToBot ? DEFAULT_MENTION_REPLY_PROBABILITY : 0.25D;
+        Double configuredProbability = directedToBot
+                ? lobbyConfig.getMentionReplyProbability()
+                : lobbyConfig.getReplyProbability();
+        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
+            return false;
+        }
+        String cooldownScene = directedToBot ? LOBBY_MENTION_SCENE : LOBBY_SCENE;
+        String cooldownTarget = directedToBot ? String.valueOf(event.getSenderId()) : "global";
+        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, cooldownTarget, lobbyConfig.getCooldownSeconds())) {
+            return false;
+        }
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(LOBBY_SCENE, botUserId, lobbyConfig.getMaxRepliesPerHour())) {
+            return false;
+        }
+        return aiTriggerGuardSupport.allowGlobalQuota(LOBBY_SCENE, botUserId);
+    }
+
+    private boolean passForumTriggerGuard(Long botUserId,
+                                          boolean directedToBot,
+                                          String dedupKey,
+                                          Double mentionProbability,
+                                          Double normalConfiguredProbability,
+                                          double normalDefaultProbability,
+                                          Integer cooldownSeconds,
+                                          String cooldownTarget,
+                                          Integer maxRepliesPerHour,
+                                          Integer maxRepliesPerDay) {
+        if (aiTaskSchedulerService.isPending(dedupKey)) {
+            return false;
+        }
+        double defaultProbability = directedToBot ? DEFAULT_MENTION_REPLY_PROBABILITY : normalDefaultProbability;
+        Double configuredProbability = directedToBot ? mentionProbability : normalConfiguredProbability;
+        if (!aiTriggerGuardSupport.hitProbability(configuredProbability, defaultProbability)) {
+            return false;
+        }
+        String cooldownScene = directedToBot ? FORUM_MENTION_SCENE : FORUM_SCENE;
+        if (!aiTriggerGuardSupport.allowByCooldown(cooldownScene, botUserId, cooldownTarget, cooldownSeconds)) {
+            return false;
+        }
+        if (!aiTriggerGuardSupport.allowByHourlyLimit(FORUM_SCENE, botUserId, maxRepliesPerHour)) {
+            return false;
+        }
+        if (!aiTriggerGuardSupport.allowByDailyLimit(FORUM_SCENE, botUserId, maxRepliesPerDay)) {
+            return false;
+        }
+        return aiTriggerGuardSupport.allowGlobalQuota(FORUM_SCENE, botUserId);
+    }
+
+    private DelayWindow resolveDelayWindow(boolean directedToBot,
+                                           Integer mentionMinDelaySeconds,
+                                           Integer mentionMaxDelaySeconds,
+                                           Integer defaultMinDelaySeconds,
+                                           Integer defaultMaxDelaySeconds) {
+        if (!directedToBot) {
+            return new DelayWindow(defaultMinDelaySeconds, defaultMaxDelaySeconds);
+        }
+        int minDelaySeconds = aiTriggerGuardSupport.resolveMentionMinDelaySeconds(mentionMinDelaySeconds, defaultMinDelaySeconds);
+        int maxDelaySeconds = aiTriggerGuardSupport.resolveMentionMaxDelaySeconds(
+                mentionMaxDelaySeconds,
+                defaultMaxDelaySeconds,
+                minDelaySeconds
+        );
+        return new DelayWindow(minDelaySeconds, maxDelaySeconds);
+    }
+
     private void scheduleTriggeredTask(String dedupKey,
                                        Integer minDelaySeconds,
                                        Integer maxDelaySeconds,
@@ -715,5 +751,15 @@ public class AiEventListener {
 
     private boolean isVisibleThreadStatus(ForumThreadStatus status) {
         return ForumThreadStatus.NORMAL.equals(status) || ForumThreadStatus.LOCKED.equals(status);
+    }
+
+    private static final class DelayWindow {
+        private final Integer minDelaySeconds;
+        private final Integer maxDelaySeconds;
+
+        private DelayWindow(Integer minDelaySeconds, Integer maxDelaySeconds) {
+            this.minDelaySeconds = minDelaySeconds;
+            this.maxDelaySeconds = maxDelaySeconds;
+        }
     }
 }
