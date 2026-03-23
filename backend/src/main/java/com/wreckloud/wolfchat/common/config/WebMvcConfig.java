@@ -24,8 +24,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         // 认证接口放行
                         "/auth/**",
                         "/api/auth/**",
-                        "/admin/auth/**",
-                        "/api/admin/auth/**",
+                        "/admin/auth/login",
+                        "/api/admin/auth/login",
                         // 管理端静态页面放行
                         "/admin-console/**",
                         "/api/admin-console/**",

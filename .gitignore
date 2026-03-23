@@ -39,6 +39,12 @@ storage/
 # Database
 *.db
 *.sqlite
+database/*.sql
+!database/README.md
+
+# Private docs for thesis/notes (keep local only)
+doc/*.md
+!doc/README.md
 
 # Environment
 .env

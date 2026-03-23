@@ -21,6 +21,8 @@ import com.wreckloud.wolfchat.chat.websocket.dto.WsRequest;
 import com.wreckloud.wolfchat.chat.websocket.dto.WsResponse;
 import com.wreckloud.wolfchat.chat.websocket.dto.UploadProgressPayload;
 import com.wreckloud.wolfchat.chat.websocket.enums.WsType;
+import com.wreckloud.wolfchat.chat.websocket.handler.support.WsResponseSupport;
+import com.wreckloud.wolfchat.chat.websocket.handler.support.WsSendDedupStore;
 import com.wreckloud.wolfchat.chat.websocket.session.WsSessionManager;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
@@ -28,7 +30,6 @@ import com.wreckloud.wolfchat.common.security.service.SessionUserService;
 import com.wreckloud.wolfchat.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -38,7 +39,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -56,9 +56,6 @@ import java.util.function.BiConsumer;
 @Component
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
-    private static final String SEND_DEDUP_KEY_PREFIX = "chat:ws:send:dedup:";
-    private static final Duration SEND_DEDUP_TTL = Duration.ofMinutes(10);
-    private static final String SEND_DEDUP_PENDING = "PENDING";
     private static final String SESSION_PASSWORD_VERSION_KEY = "session_pwd_ver";
     private static final String SEND_TYPE_PRIVATE = "SEND";
     private static final String SEND_TYPE_LOBBY = "LOBBY_SEND";
@@ -73,7 +70,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final UserService userService;
     private final WsSessionManager sessionManager;
     private final SessionUserService sessionUserService;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final WsResponseSupport wsResponseSupport;
+    private final WsSendDedupStore wsSendDedupStore;
     private final Map<WsType, BiConsumer<WebSocketSession, WsRequest>> requestHandlerMap = new EnumMap<>(WsType.class);
 
     @PostConstruct
@@ -106,17 +104,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         BiConsumer<WebSocketSession, WsRequest> requestHandler = requestHandlerMap.get(request.getType());
         if (requestHandler == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "不支持的消息类型");
             return;
         }
         try {
             requestHandler.accept(session, request);
         } catch (BaseException e) {
-            sendError(session, e.getCode(), e.getMessage(), request.getClientMsgId());
+            wsResponseSupport.sendError(session, e.getCode(), e.getMessage(), request.getClientMsgId());
         } catch (Exception e) {
             log.error("WS 请求处理异常: type={}, sessionId={}",
                     request.getType(), session.getId(), e);
-            sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", request.getClientMsgId());
+            wsResponseSupport.sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", request.getClientMsgId());
         }
     }
 
@@ -131,12 +129,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         try {
             request = JSON.parseObject(payload, WsRequest.class);
         } catch (Exception e) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息格式错误");
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "消息格式错误");
             return null;
         }
 
         if (request == null || request.getType() == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息类型不能为空");
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "消息类型不能为空");
             return null;
         }
         return request;
@@ -150,7 +148,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         sessionManager.addSession(userId, session);
         log.debug("WS 认证成功: userId={}, sessionId={}", userId, session.getId());
-        sendAuthOk(session);
+        wsResponseSupport.sendAuthOk(session);
         replayUndeliveredMessages(session, userId);
     }
 
@@ -163,30 +161,30 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private Long authenticateUserId(WebSocketSession session, String rawToken) {
         String token = normalizeToken(rawToken);
         if (!StringUtils.hasText(token)) {
-            sendError(session, ErrorCode.UNAUTHORIZED, "token 不能为空");
+            wsResponseSupport.sendError(session, ErrorCode.UNAUTHORIZED, "token 不能为空");
             return null;
         }
         if (!jwtUtil.validateToken(token)) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
 
         Long userId = jwtUtil.getUserIdFromToken(token);
         if (userId == null) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
         Long tokenPasswordVersion = jwtUtil.getPasswordVersionFromToken(token);
         if (tokenPasswordVersion == null) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
         if (!sessionUserService.isSessionUserExists(userId)) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
         if (!sessionUserService.isPasswordVersionMatched(userId, tokenPasswordVersion)) {
-            sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
+            wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "token 无效");
             return null;
         }
         session.getAttributes().put(SESSION_PASSWORD_VERSION_KEY, tokenPasswordVersion);
@@ -204,10 +202,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return token;
     }
 
-    private void sendAuthOk(WebSocketSession session) {
-        send(session, buildResponse(WsType.AUTH_OK, null));
-    }
-
     private void replayUndeliveredMessages(WebSocketSession session, Long userId) {
         // 离线补发只对当前认证会话执行；仅当推送成功后再标记 delivered。
         List<WfMessage> undelivered = messageService.listUndeliveredMessages(userId);
@@ -218,8 +212,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.info("WS 补发未送达消息: userId={}, count={}", userId, undelivered.size());
         List<Long> deliveredIds = new ArrayList<>();
         for (WfMessage message : undelivered) {
-            WsResponse push = buildMessageResponse(buildMessageVOWithSender(message));
-            if (send(session, push)) {
+            WsResponse push = wsResponseSupport.buildMessageResponse(buildMessageVOWithSender(message));
+            if (wsResponseSupport.send(session, push)) {
                 deliveredIds.add(message.getId());
             }
         }
@@ -233,23 +227,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if (!validateSendRequest(session, currentRequest, clientMsgId)) {
                 return;
             }
-            String dedupKey = buildSendDedupKey(WsType.SEND, userId, clientMsgId);
+            String dedupKey = wsSendDedupStore.buildKey(WsType.SEND, userId, clientMsgId);
             MessageVO duplicateMessage = resolveDuplicatePrivateMessageVO(session, clientMsgId, dedupKey);
             if (duplicateMessage != null) {
                 return;
             }
-            if (!tryMarkSendDedupPending(dedupKey)) {
-                sendError(session, ErrorCode.PARAM_ERROR, "请求处理中，请勿重复发送", clientMsgId);
+            if (!wsSendDedupStore.markPending(dedupKey)) {
+                wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "请求处理中，请勿重复发送", clientMsgId);
                 return;
             }
             try {
                 WfMessage message = messageService.sendMessage(buildSendCommand(userId, currentRequest));
                 MessageVO messageVO = buildMessageVOWithSender(message);
-                sendAck(session, clientMsgId, messageVO);
-                pushMessageToReceiver(message, messageVO);
-                storeSendDedupMessageId(dedupKey, message.getId());
+                wsResponseSupport.sendAck(session, clientMsgId, messageVO);
+                pushMessageToReceiver(message);
+                wsSendDedupStore.storeMessageId(dedupKey, message.getId());
             } catch (Exception e) {
-                clearSendDedupPending(dedupKey);
+                wsSendDedupStore.clearPending(dedupKey);
                 throw e;
             }
         });
@@ -257,22 +251,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void handleLobbySend(WebSocketSession session, WsRequest request) {
         withAuthenticatedUser(session, request, "发送大厅消息", (userId, clientMsgId, currentRequest) -> {
-            String dedupKey = buildSendDedupKey(WsType.LOBBY_SEND, userId, clientMsgId);
+            String dedupKey = wsSendDedupStore.buildKey(WsType.LOBBY_SEND, userId, clientMsgId);
             LobbyMessageVO duplicateMessage = resolveDuplicateLobbyMessageVO(session, clientMsgId, dedupKey);
             if (duplicateMessage != null) {
                 return;
             }
-            if (!tryMarkSendDedupPending(dedupKey)) {
-                sendError(session, ErrorCode.PARAM_ERROR, "请求处理中，请勿重复发送", clientMsgId);
+            if (!wsSendDedupStore.markPending(dedupKey)) {
+                wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "请求处理中，请勿重复发送", clientMsgId);
                 return;
             }
             try {
                 LobbyMessageVO messageVO = lobbyService.sendMessage(buildLobbySendCommand(userId, currentRequest));
-                sendAck(session, clientMsgId, messageVO);
+                wsResponseSupport.sendAck(session, clientMsgId, messageVO);
                 pushLobbyMessage(userId, messageVO);
-                storeSendDedupMessageId(dedupKey, messageVO.getMessageId());
+                wsSendDedupStore.storeMessageId(dedupKey, messageVO.getMessageId());
             } catch (Exception e) {
-                clearSendDedupPending(dedupKey);
+                wsSendDedupStore.clearPending(dedupKey);
                 throw e;
             }
         });
@@ -284,7 +278,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             LobbyMessageVO messageVO = lobbyService.recallMessage(userId, currentRequest.getMessageId());
-            sendAck(session, clientMsgId, messageVO);
+            wsResponseSupport.sendAck(session, clientMsgId, messageVO);
             pushLobbyMessage(userId, messageVO);
         });
     }
@@ -300,7 +294,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     currentRequest.getMessageId()
             );
             MessageVO messageVO = buildMessageVOWithSender(message);
-            sendAck(session, clientMsgId, messageVO);
+            wsResponseSupport.sendAck(session, clientMsgId, messageVO);
             pushMessageToConversationPeers(messageVO, message.getSenderId(), message.getReceiverId());
         });
     }
@@ -312,7 +306,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
             String sendType = currentRequest.getSendType().trim().toUpperCase();
             UploadProgressPayload payload = buildUploadProgressPayload(userId, currentRequest, sendType);
-            WsResponse response = buildResponse(WsType.UPLOAD_PROGRESS, payload);
+            WsResponse response = wsResponseSupport.buildResponse(WsType.UPLOAD_PROGRESS, payload);
             String encodedPayload = JSON.toJSONString(response);
 
             if (SEND_TYPE_LOBBY.equals(sendType)) {
@@ -333,34 +327,34 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String clientMsgId = request.getClientMsgId();
         Long userId = sessionManager.getUserId(session);
         if (userId == null) {
-            sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
             return;
         }
 
         try {
             if (!sessionUserService.isSessionUserExists(userId)) {
-                sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
+                wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
                 sessionManager.removeSession(session);
                 return;
             }
             Long tokenPasswordVersion = (Long) session.getAttributes().get(SESSION_PASSWORD_VERSION_KEY);
             if (!sessionUserService.isPasswordVersionMatched(userId, tokenPasswordVersion)) {
-                sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
+                wsResponseSupport.sendError(session, ErrorCode.TOKEN_INVALID, "登录状态已失效，请重新登录", clientMsgId);
                 sessionManager.removeSession(session);
                 return;
             }
             handler.handle(userId, clientMsgId, request);
         } catch (BaseException e) {
-            sendError(session, e.getCode(), e.getMessage(), clientMsgId);
+            wsResponseSupport.sendError(session, e.getCode(), e.getMessage(), clientMsgId);
         } catch (Exception e) {
             log.error("WS {}失败: userId={}, sessionId={}", scene, userId, session.getId(), e);
-            sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.SYSTEM_ERROR, "系统错误", clientMsgId);
         }
     }
 
     private boolean validateSendRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
         if (request.getConversationId() == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
             return false;
         }
 
@@ -369,11 +363,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private boolean validateRecallRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
         if (request.getConversationId() == null) {
-            sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
             return false;
         }
         if (request.getMessageId() == null || request.getMessageId() <= 0L) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息ID不能为空", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "消息ID不能为空", clientMsgId);
             return false;
         }
         return true;
@@ -381,7 +375,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private boolean validateLobbyRecallRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
         if (request.getMessageId() == null || request.getMessageId() <= 0L) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息ID不能为空", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "消息ID不能为空", clientMsgId);
             return false;
         }
         return true;
@@ -390,39 +384,39 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private boolean validateUploadProgressRequest(WebSocketSession session, WsRequest request, String clientMsgId) {
         String sendType = request.getSendType() == null ? "" : request.getSendType().trim().toUpperCase();
         if (!SEND_TYPE_PRIVATE.equals(sendType) && !SEND_TYPE_LOBBY.equals(sendType)) {
-            sendError(session, ErrorCode.PARAM_ERROR, "发送场景不正确", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "发送场景不正确", clientMsgId);
             return false;
         }
         if (!StringUtils.hasText(request.getClientMsgId())) {
-            sendError(session, ErrorCode.PARAM_ERROR, "客户端消息ID不能为空", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "客户端消息ID不能为空", clientMsgId);
             return false;
         }
         MessageType msgType = request.getMsgType();
         if (!MessageType.IMAGE.equals(msgType)
                 && !MessageType.VIDEO.equals(msgType)
                 && !MessageType.FILE.equals(msgType)) {
-            sendError(session, ErrorCode.PARAM_ERROR, "消息类型不支持进度同步", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "消息类型不支持进度同步", clientMsgId);
             return false;
         }
         int progress = request.getUploadProgress() == null ? -1 : request.getUploadProgress();
         if (progress < 0 || progress > 100) {
-            sendError(session, ErrorCode.PARAM_ERROR, "上传进度不合法", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "上传进度不合法", clientMsgId);
             return false;
         }
         String uploadStatus = request.getUploadStatus() == null ? "" : request.getUploadStatus().trim().toUpperCase();
         if (!ALLOWED_UPLOAD_STATUS.contains(uploadStatus)) {
-            sendError(session, ErrorCode.PARAM_ERROR, "上传状态不合法", clientMsgId);
+            wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "上传状态不合法", clientMsgId);
             return false;
         }
 
         if (SEND_TYPE_PRIVATE.equals(sendType)) {
             if (request.getConversationId() == null || request.getConversationId() <= 0L) {
-                sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
+                wsResponseSupport.sendError(session, ErrorCode.PARAM_ERROR, "会话ID不能为空", clientMsgId);
                 return false;
             }
             Long userId = sessionManager.getUserId(session);
             if (userId == null) {
-                sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
+                wsResponseSupport.sendError(session, ErrorCode.UNAUTHORIZED, "请先认证", clientMsgId);
                 return false;
             }
             conversationService.validateConversationMember(request.getConversationId(), userId);
@@ -449,17 +443,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return payload;
     }
 
-    private void sendAck(WebSocketSession session, String clientMsgId, Object data) {
-        WsResponse ack = buildResponse(WsType.ACK, data);
-        ack.setClientMsgId(clientMsgId);
-        send(session, ack);
-    }
-
-    private WsResponse buildMessageResponse(MessageVO messageVO) {
-        return buildResponse(WsType.MESSAGE, messageVO);
-    }
-
-    private void pushMessageToReceiver(WfMessage message, MessageVO messageVO) {
+    private void pushMessageToReceiver(WfMessage message) {
         chatMessagePushService.pushPrivateMessageToReceiver(message);
     }
 
@@ -471,119 +455,37 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         chatMessagePushService.pushPrivateMessageToConversationPeers(messageVO, senderUserId, receiverUserId);
     }
 
-    private String buildSendDedupKey(WsType wsType, Long userId, String clientMsgId) {
-        if (!StringUtils.hasText(clientMsgId) || userId == null || wsType == null) {
-            return null;
-        }
-        return SEND_DEDUP_KEY_PREFIX + wsType.name() + ":" + userId + ":" + clientMsgId.trim();
-    }
-
-    private Long getSendDedupMessageId(String key) {
-        if (!StringUtils.hasText(key)) {
-            return null;
-        }
-        String raw = stringRedisTemplate.opsForValue().get(key);
-        if (!StringUtils.hasText(raw) || SEND_DEDUP_PENDING.equals(raw)) {
-            return null;
-        }
-        try {
-            long parsed = Long.parseLong(raw);
-            return parsed > 0 ? parsed : null;
-        } catch (NumberFormatException ex) {
-            return null;
-        }
-    }
-
-    private boolean tryMarkSendDedupPending(String key) {
-        if (!StringUtils.hasText(key)) {
-            return true;
-        }
-        Boolean created = stringRedisTemplate.opsForValue()
-                .setIfAbsent(key, SEND_DEDUP_PENDING, SEND_DEDUP_TTL);
-        return Boolean.TRUE.equals(created);
-    }
-
-    private void clearSendDedupPending(String key) {
-        if (!StringUtils.hasText(key)) {
-            return;
-        }
-        String current = stringRedisTemplate.opsForValue().get(key);
-        if (SEND_DEDUP_PENDING.equals(current)) {
-            stringRedisTemplate.delete(key);
-        }
-    }
-
-    private void storeSendDedupMessageId(String key, Long messageId) {
-        if (!StringUtils.hasText(key) || messageId == null || messageId <= 0L) {
-            return;
-        }
-        stringRedisTemplate.opsForValue().set(key, String.valueOf(messageId), SEND_DEDUP_TTL);
-    }
-
     private MessageVO resolveDuplicatePrivateMessageVO(WebSocketSession session, String clientMsgId, String dedupKey) {
-        Long duplicateMessageId = getSendDedupMessageId(dedupKey);
+        Long duplicateMessageId = wsSendDedupStore.getMessageId(dedupKey);
         if (duplicateMessageId == null) {
             return null;
         }
         WfMessage duplicateMessage = messageService.getById(duplicateMessageId);
         if (duplicateMessage == null) {
-            stringRedisTemplate.delete(dedupKey);
+            wsSendDedupStore.delete(dedupKey);
             return null;
         }
 
         MessageVO messageVO = buildMessageVOWithSender(duplicateMessage);
-        sendAck(session, clientMsgId, messageVO);
+        wsResponseSupport.sendAck(session, clientMsgId, messageVO);
         if (MessageDeliveryStatus.UNDELIVERED.equals(duplicateMessage.getDelivered())) {
-            pushMessageToReceiver(duplicateMessage, messageVO);
+            pushMessageToReceiver(duplicateMessage);
         }
         return messageVO;
     }
 
     private LobbyMessageVO resolveDuplicateLobbyMessageVO(WebSocketSession session, String clientMsgId, String dedupKey) {
-        Long duplicateMessageId = getSendDedupMessageId(dedupKey);
+        Long duplicateMessageId = wsSendDedupStore.getMessageId(dedupKey);
         if (duplicateMessageId == null) {
             return null;
         }
         LobbyMessageVO messageVO = lobbyService.getMessageById(duplicateMessageId);
         if (messageVO == null) {
-            stringRedisTemplate.delete(dedupKey);
+            wsSendDedupStore.delete(dedupKey);
             return null;
         }
-        sendAck(session, clientMsgId, messageVO);
+        wsResponseSupport.sendAck(session, clientMsgId, messageVO);
         return messageVO;
-    }
-
-    private boolean send(WebSocketSession session, WsResponse response) {
-        try {
-            session.sendMessage(new TextMessage(JSON.toJSONString(response)));
-            return true;
-        } catch (Exception e) {
-            log.warn("WS 发送失败: sessionId={}", session.getId(), e);
-            return false;
-        }
-    }
-
-    private void sendError(WebSocketSession session, ErrorCode errorCode, String message) {
-        sendError(session, errorCode.getCode(), message, null);
-    }
-
-    private void sendError(WebSocketSession session, ErrorCode errorCode, String message, String clientMsgId) {
-        sendError(session, errorCode.getCode(), message, clientMsgId);
-    }
-
-    private void sendError(WebSocketSession session, Integer code, String message, String clientMsgId) {
-        WsResponse response = buildResponse(WsType.ERROR, null);
-        response.setCode(code);
-        response.setMessage(message);
-        response.setClientMsgId(clientMsgId);
-        send(session, response);
-    }
-
-    private WsResponse buildResponse(WsType type, Object data) {
-        WsResponse response = new WsResponse();
-        response.setType(type);
-        response.setData(data);
-        return response;
     }
 
     private MessageVO buildMessageVOWithSender(WfMessage message) {
