@@ -164,18 +164,6 @@ wolfchat:
       mention-min-delay-seconds: 8
       mention-max-delay-seconds: 28
       reply-to-reply-probability: 0.10
-      # 论坛冷场时低频主动发帖
-      idle-post-enabled: true
-      # 连续多少秒论坛无新活跃，视为冷场
-      idle-post-trigger-seconds: 1800
-      # 冷场主动发帖概率（0~1）
-      idle-post-probability: 0.04
-      # 每小时/每天最多主动发帖数
-      max-posts-per-hour: 1
-      max-posts-per-day: 6
-      # 主动发帖标题/正文最大字符数
-      max-post-title-chars: 36
-      max-post-content-chars: 240
       system-prompt: "你在论坛发言时保持狼系风格：观点明确、就事论事、可带锋芒但不过界，不写公文腔，1到3句即可。"
 
     follow:

@@ -103,13 +103,6 @@ public class AiConfig {
         private Integer mentionMinDelaySeconds;
         private Integer mentionMaxDelaySeconds;
         private Double replyToReplyProbability;
-        private Boolean idlePostEnabled;
-        private Integer idlePostTriggerSeconds;
-        private Double idlePostProbability;
-        private Integer maxPostsPerHour;
-        private Integer maxPostsPerDay;
-        private Integer maxPostTitleChars;
-        private Integer maxPostContentChars;
         private String systemPrompt;
     }
 
