@@ -139,9 +139,9 @@ wolfchat:
     private-chat:
       enabled: false
       bot-user-id:
-      cooldown-seconds: 30
-      reply-probability: 0.60
-      max-replies-per-hour: 50
+      cooldown-seconds: 18
+      reply-probability: 0.78
+      max-replies-per-hour: 72
       max-reply-chars: 180
       min-delay-seconds: 4
       max-delay-seconds: 12
@@ -160,13 +160,6 @@ wolfchat:
       mention-min-delay-seconds: 8
       mention-max-delay-seconds: 28
       reply-to-reply-probability: 0.10
-      idle-post-enabled: false
-      idle-post-trigger-seconds: 1800
-      idle-post-probability: 0.04
-      max-posts-per-hour: 1
-      max-posts-per-day: 6
-      max-post-title-chars: 36
-      max-post-content-chars: 240
       system-prompt: "你在论坛发言时保持狼系风格：观点明确、就事论事、可带锋芒但不过界，不写公文腔，1到3句即可。"
     follow:
       auto-follow-back-enabled: false

@@ -137,9 +137,10 @@ wolfchat:
       # 私聊 AI（监听“发给机器人”的消息）
       enabled: false
       bot-user-id:
-      cooldown-seconds: 30
-      reply-probability: 0.60
-      max-replies-per-hour: 50
+      # 私聊更活跃：提高触发率并缩短冷却
+      cooldown-seconds: 18
+      reply-probability: 0.78
+      max-replies-per-hour: 72
       # 单条回复最大字符数
       max-reply-chars: 180
       min-delay-seconds: 4

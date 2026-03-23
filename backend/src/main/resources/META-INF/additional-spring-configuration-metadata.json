@@ -361,41 +361,6 @@
       "description": "社区 AI 对楼中楼回复触发概率（0~1）。"
     },
     {
-      "name": "wolfchat.ai.forum.idle-post-enabled",
-      "type": "java.lang.Boolean",
-      "description": "社区 AI 冷场主动发帖开关。"
-    },
-    {
-      "name": "wolfchat.ai.forum.idle-post-trigger-seconds",
-      "type": "java.lang.Integer",
-      "description": "社区 AI 冷场主动发帖触发秒数。"
-    },
-    {
-      "name": "wolfchat.ai.forum.idle-post-probability",
-      "type": "java.lang.Double",
-      "description": "社区 AI 冷场主动发帖概率（0~1）。"
-    },
-    {
-      "name": "wolfchat.ai.forum.max-posts-per-hour",
-      "type": "java.lang.Integer",
-      "description": "社区 AI 每小时最多主动发帖数。"
-    },
-    {
-      "name": "wolfchat.ai.forum.max-posts-per-day",
-      "type": "java.lang.Integer",
-      "description": "社区 AI 每天最多主动发帖数。"
-    },
-    {
-      "name": "wolfchat.ai.forum.max-post-title-chars",
-      "type": "java.lang.Integer",
-      "description": "社区 AI 主动发帖标题最大字符数。"
-    },
-    {
-      "name": "wolfchat.ai.forum.max-post-content-chars",
-      "type": "java.lang.Integer",
-      "description": "社区 AI 主动发帖正文最大字符数。"
-    },
-    {
       "name": "wolfchat.ai.forum.system-prompt",
       "type": "java.lang.String",
       "description": "社区 AI 系统提示词。"

@@ -11,6 +11,7 @@ import com.wreckloud.wolfchat.ai.application.service.AiRoleService;
 import com.wreckloud.wolfchat.ai.application.service.AiTaskSchedulerService;
 import com.wreckloud.wolfchat.ai.application.support.AiInteractionContextSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiReplyComposeSupport;
+import com.wreckloud.wolfchat.ai.application.support.AiReplySplitSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerGuardSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerDecisionSupport;
 import com.wreckloud.wolfchat.ai.config.AiConfig;
@@ -84,6 +85,7 @@ public class AiEventListener {
     private final AiPromptBuilderService aiPromptBuilderService;
     private final AiInteractionContextSupport aiInteractionContextSupport;
     private final AiReplyComposeSupport aiReplyComposeSupport;
+    private final AiReplySplitSupport aiReplySplitSupport;
     private final AiTriggerGuardSupport aiTriggerGuardSupport;
     private final AiTriggerDecisionSupport aiTriggerDecisionSupport;
     private final MessageService messageService;
@@ -329,17 +331,24 @@ public class AiEventListener {
             if (!StringUtils.hasText(reply)) {
                 return;
             }
-
-            SendMessageCommand command = new SendMessageCommand();
-            command.setUserId(botUserId);
-            command.setConversationId(event.getConversationId());
-            command.setMsgType(MessageType.TEXT);
-            command.setContent(reply);
             userPresenceService.markOnline(botUserId);
-            WfMessage message = messageService.sendMessage(command);
-            chatMessagePushService.pushPrivateMessageToReceiver(message);
-            log.info("AI 私聊回复完成: conversationId={}, messageId={}, role={}",
-                    event.getConversationId(), message.getId(), roleCode(roleProfile));
+            List<String> segments = aiReplySplitSupport.splitPrivateReply(reply);
+            if (segments.isEmpty()) {
+                segments = List.of(reply);
+            }
+            Long lastMessageId = null;
+            for (String segment : segments) {
+                SendMessageCommand command = new SendMessageCommand();
+                command.setUserId(botUserId);
+                command.setConversationId(event.getConversationId());
+                command.setMsgType(MessageType.TEXT);
+                command.setContent(segment);
+                WfMessage message = messageService.sendMessage(command);
+                chatMessagePushService.pushPrivateMessageToReceiver(message);
+                lastMessageId = message.getId();
+            }
+            log.info("AI 私聊回复完成: conversationId={}, messageId={}, splitCount={}, totalChars={}, role={}",
+                    event.getConversationId(), lastMessageId, segments.size(), reply.length(), roleCode(roleProfile));
         } catch (Exception ex) {
             log.warn("AI 私聊回复失败: conversationId={}, message={}", event.getConversationId(), ex.getMessage());
         }
@@ -384,17 +393,24 @@ public class AiEventListener {
                     event.getSenderId(),
                     aiInteractionContextSupport::resolveUserDisplayName
             );
-            SendLobbyMessageCommand command = new SendLobbyMessageCommand();
-            command.setUserId(botUserId);
-            command.setMsgType(MessageType.TEXT);
-            command.setContent(reply);
-            if (directedToBot && triggerMessage != null && triggerMessage.getId() != null) {
-                command.setReplyToMessageId(triggerMessage.getId());
+            List<String> segments = aiReplySplitSupport.splitLobbyReply(reply);
+            if (segments.isEmpty()) {
+                segments = List.of(reply);
             }
             userPresenceService.markOnline(botUserId);
-            chatMessagePushService.pushLobbyMessage(botUserId, lobbyService.sendMessage(command));
-            log.info("AI 大厅回复完成: triggerMessageId={}, role={}",
-                    event.getMessageId(), roleCode(roleProfile));
+            Long replyToMessageId = directedToBot && triggerMessage != null ? triggerMessage.getId() : null;
+            for (int i = 0; i < segments.size(); i++) {
+                SendLobbyMessageCommand command = new SendLobbyMessageCommand();
+                command.setUserId(botUserId);
+                command.setMsgType(MessageType.TEXT);
+                command.setContent(segments.get(i));
+                if (i == 0 && replyToMessageId != null) {
+                    command.setReplyToMessageId(replyToMessageId);
+                }
+                chatMessagePushService.pushLobbyMessage(botUserId, lobbyService.sendMessage(command));
+            }
+            log.info("AI 大厅回复完成: triggerMessageId={}, splitCount={}, totalChars={}, role={}",
+                    event.getMessageId(), segments.size(), reply.length(), roleCode(roleProfile));
         } catch (Exception ex) {
             log.warn("AI 大厅回复失败: triggerMessageId={}, message={}", event.getMessageId(), ex.getMessage());
         }
