@@ -18,22 +18,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 约定：匹配路径基于应用内路径（不包含 server.servlet.context-path）。
         registry.addInterceptor(jwtInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         // 认证接口放行
                         "/auth/**",
-                        "/api/auth/**",
                         "/admin/auth/login",
-                        "/api/admin/auth/login",
                         // 管理端静态页面放行
                         "/admin-console/**",
-                        "/api/admin-console/**",
                         // 媒体上传/读取放行（通过上传令牌与签名链接控制）
                         "/media/upload",
-                        "/api/media/upload",
                         "/media/object",
-                        "/api/media/object",
                         // OpenAPI 文档放行
                         "/v3/api-docs/**",
                         "/doc.html/**",
