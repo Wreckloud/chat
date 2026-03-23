@@ -11,6 +11,7 @@ import com.wreckloud.wolfchat.ai.application.service.AiRoleService;
 import com.wreckloud.wolfchat.ai.application.service.AiTaskSchedulerService;
 import com.wreckloud.wolfchat.ai.application.support.AiInteractionContextSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiReplyComposeSupport;
+import com.wreckloud.wolfchat.ai.application.support.AiResponseProcessor;
 import com.wreckloud.wolfchat.ai.application.support.AiReplySplitSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerGuardSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerDecisionSupport;
@@ -65,6 +66,7 @@ public class AiEventListener {
     private static final String LOBBY_MENTION_SCENE = "lobby-mention";
     private static final String FORUM_SCENE = "forum";
     private static final String FORUM_MENTION_SCENE = "forum-mention";
+    private static final int FORUM_AUTHOR_BURST_COOLDOWN_SECONDS = 12;
     private static final int DEFAULT_PRIVATE_MAX_REPLY_CHARS = 180;
     private static final int DEFAULT_LOBBY_MAX_REPLY_CHARS = 140;
     private static final int DEFAULT_FORUM_MAX_REPLY_CHARS = 220;
@@ -85,6 +87,7 @@ public class AiEventListener {
     private final AiPromptBuilderService aiPromptBuilderService;
     private final AiInteractionContextSupport aiInteractionContextSupport;
     private final AiReplyComposeSupport aiReplyComposeSupport;
+    private final AiResponseProcessor aiResponseProcessor;
     private final AiReplySplitSupport aiReplySplitSupport;
     private final AiTriggerGuardSupport aiTriggerGuardSupport;
     private final AiTriggerDecisionSupport aiTriggerDecisionSupport;
@@ -209,7 +212,7 @@ public class AiEventListener {
                 dedupKey,
                 forumConfig.getMentionReplyProbability(),
                 forumConfig.getReplyProbability(),
-                0.28D,
+                0.36D,
                 forumConfig.getCooldownSeconds(),
                 String.valueOf(event.getThreadId()),
                 forumConfig.getMaxRepliesPerHour(),
@@ -252,6 +255,9 @@ public class AiEventListener {
         }
         WfForumReply quoteReply = event.getQuoteReplyId() == null ? null : wfForumReplyMapper.selectById(event.getQuoteReplyId());
         boolean directedToBot = aiTriggerDecisionSupport.isDirectedForumReply(event, quoteReply, botUserId);
+        if (!directedToBot && !allowForumAuthorBurst(event, botUserId)) {
+            return;
+        }
         aiInteractionMemoryService.recordInteraction(FORUM_SCENE, botUserId, event.getAuthorId(), event.getContent());
         String dedupKey = directedToBot
                 ? FORUM_MENTION_SCENE + ":reply:" + event.getThreadId() + ":" + event.getAuthorId()
@@ -262,7 +268,7 @@ public class AiEventListener {
                 dedupKey,
                 forumConfig.getMentionReplyProbability(),
                 forumConfig.getReplyToReplyProbability(),
-                0.20D,
+                0.24D,
                 forumConfig.getCooldownSeconds(),
                 String.valueOf(event.getThreadId()),
                 forumConfig.getMaxRepliesPerHour(),
@@ -323,7 +329,7 @@ public class AiEventListener {
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
             log.debug("AI 私聊推理: conversationId={}, contextSize={}, promptChars={}",
                     event.getConversationId(), recentMessages.size(), prompt.length());
-            String reply = normalizeAiReply(
+            String reply = aiResponseProcessor.processPrivateReply(
                     aiTextClient.complete(systemPrompt, prompt),
                     privateChatConfig.getMaxReplyChars(),
                     DEFAULT_PRIVATE_MAX_REPLY_CHARS
@@ -379,7 +385,7 @@ public class AiEventListener {
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
             log.debug("AI 大厅推理: triggerMessageId={}, contextSize={}, promptChars={}",
                     event.getMessageId(), recentMessages.size(), prompt.length());
-            String reply = normalizeAiReply(
+            String reply = aiResponseProcessor.processLobbyReply(
                     aiTextClient.complete(systemPrompt, prompt),
                     lobbyConfig.getMaxReplyChars(),
                     DEFAULT_LOBBY_MAX_REPLY_CHARS
@@ -448,7 +454,7 @@ public class AiEventListener {
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
             log.debug("AI 论坛推理: threadId={}, quoteReplyId={}, contextSize={}, promptChars={}",
                     threadId, quoteReplyId, recentReplies.size(), prompt.length());
-            String reply = normalizeAiReply(
+            String reply = aiResponseProcessor.processForumReply(
                     aiTextClient.complete(systemPrompt, prompt),
                     forumConfig.getMaxReplyChars(),
                     DEFAULT_FORUM_MAX_REPLY_CHARS
@@ -500,6 +506,22 @@ public class AiEventListener {
 
     private boolean isBlockedMessageTrigger(Long senderId, MessageType msgType) {
         return aiIdentityService.isAiUser(senderId) || isUnsupportedTriggerType(msgType);
+    }
+
+    private boolean allowForumAuthorBurst(ForumReplyCreatedEvent event, Long botUserId) {
+        if (event == null || !isValidUserId(botUserId) || !isValidUserId(event.getAuthorId())) {
+            return true;
+        }
+        if (event.getThreadId() == null || event.getThreadId() <= 0L) {
+            return true;
+        }
+        String target = event.getThreadId() + ":" + event.getAuthorId();
+        return aiTriggerGuardSupport.allowByCooldown(
+                FORUM_SCENE + ":author-burst",
+                botUserId,
+                target,
+                FORUM_AUTHOR_BURST_COOLDOWN_SECONDS
+        );
     }
 
     private boolean passPrivateTriggerGuard(PrivateMessageSentEvent event,
@@ -659,29 +681,6 @@ public class AiEventListener {
             return "default";
         }
         return roleProfile.getRoleCode();
-    }
-
-    private String normalizeAiReply(String raw, Integer configuredMaxChars, int defaultMaxChars) {
-        if (!StringUtils.hasText(raw)) {
-            return null;
-        }
-        String normalized = raw.replace("\r", "").trim();
-        if (!StringUtils.hasText(normalized)) {
-            return null;
-        }
-        int maxChars = resolveMaxReplyChars(configuredMaxChars, defaultMaxChars);
-        if (normalized.length() <= maxChars) {
-            return normalized;
-        }
-        return normalized.substring(0, maxChars);
-    }
-
-    private int resolveMaxReplyChars(Integer configuredMaxChars, int defaultMaxChars) {
-        int safeDefault = defaultMaxChars <= 0 ? 180 : defaultMaxChars;
-        if (configuredMaxChars == null || configuredMaxChars <= 0) {
-            return safeDefault;
-        }
-        return Math.max(60, Math.min(configuredMaxChars, 600));
     }
 
     private List<WfMessage> loadRecentPrivateMessages(Long conversationId) {

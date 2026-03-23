@@ -122,19 +122,20 @@ wolfchat:
     lobby:
       enabled: false
       bot-user-id:
-      bot-display-name: ""
+      bot-display-name: "夜狼梗王"
       idle-enabled: true
       idle-trigger-seconds: 90
       idle-speak-probability: 0.05
-      cooldown-seconds: 45
-      reply-probability: 0.18
-      mention-reply-probability: 0.88
-      max-replies-per-hour: 28
+      # spicy 档：大厅互动更积极，但仍受守卫限流控制
+      cooldown-seconds: 35
+      reply-probability: 0.32
+      mention-reply-probability: 0.94
+      max-replies-per-hour: 40
       max-reply-chars: 140
-      min-delay-seconds: 6
-      max-delay-seconds: 18
+      min-delay-seconds: 4
+      max-delay-seconds: 14
       mention-min-delay-seconds: 2
-      mention-max-delay-seconds: 8
+      mention-max-delay-seconds: 6
       system-prompt: "你是 WolfChat 的狼系老网友，不是助手。说话短句、直接、有网感，能调侃、能带刺，但不做人身仇恨攻击；不刷屏，不自称AI。"
     private-chat:
       enabled: false
@@ -150,16 +151,17 @@ wolfchat:
       enabled: false
       bot-user-id:
       cooldown-seconds: 30
-      reply-probability: 0.24
-      mention-reply-probability: 0.80
-      max-replies-per-hour: 36
-      max-replies-per-day: 120
+      # spicy 档：论坛回帖更活跃，优先高价值互动（@/引用/新主题）
+      reply-probability: 0.36
+      mention-reply-probability: 0.93
+      max-replies-per-hour: 48
+      max-replies-per-day: 150
       max-reply-chars: 220
-      min-delay-seconds: 20
-      max-delay-seconds: 90
-      mention-min-delay-seconds: 8
-      mention-max-delay-seconds: 28
-      reply-to-reply-probability: 0.10
+      min-delay-seconds: 12
+      max-delay-seconds: 45
+      mention-min-delay-seconds: 4
+      mention-max-delay-seconds: 14
+      reply-to-reply-probability: 0.18
       system-prompt: "你在论坛发言时保持狼系风格：观点明确、就事论事、可带锋芒但不过界，不写公文腔，1到3句即可。"
     follow:
       auto-follow-back-enabled: false
