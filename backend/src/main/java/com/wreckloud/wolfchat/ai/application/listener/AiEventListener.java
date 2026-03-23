@@ -1,8 +1,6 @@
 package com.wreckloud.wolfchat.ai.application.listener;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.wreckloud.wolfchat.account.application.service.UserService;
-import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.ai.application.client.AiTextClient;
 import com.wreckloud.wolfchat.ai.application.service.AiIdentityService;
 import com.wreckloud.wolfchat.ai.application.service.AiInteractionMemoryService;
@@ -12,6 +10,7 @@ import com.wreckloud.wolfchat.ai.application.service.AiPromptBuilderService;
 import com.wreckloud.wolfchat.ai.application.service.AiRateLimitService;
 import com.wreckloud.wolfchat.ai.application.service.AiRoleService;
 import com.wreckloud.wolfchat.ai.application.service.AiTaskSchedulerService;
+import com.wreckloud.wolfchat.ai.application.support.AiInteractionContextSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiReplyComposeSupport;
 import com.wreckloud.wolfchat.ai.application.support.AiTriggerDecisionSupport;
 import com.wreckloud.wolfchat.ai.config.AiConfig;
@@ -50,8 +49,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * AI 业务事件监听器。
@@ -86,9 +83,9 @@ public class AiEventListener {
     private final AiInteractionMemoryService aiInteractionMemoryService;
     private final AiTaskSchedulerService aiTaskSchedulerService;
     private final AiPromptBuilderService aiPromptBuilderService;
+    private final AiInteractionContextSupport aiInteractionContextSupport;
     private final AiReplyComposeSupport aiReplyComposeSupport;
     private final AiTriggerDecisionSupport aiTriggerDecisionSupport;
-    private final UserService userService;
     private final MessageService messageService;
     private final LobbyService lobbyService;
     private final ForumService forumService;
@@ -167,7 +164,7 @@ public class AiEventListener {
                 event,
                 triggerMessage,
                 botUserId,
-                this::resolveUserDisplayName
+                aiInteractionContextSupport::resolveUserDisplayName
         );
         aiInteractionMemoryService.recordInteraction(LOBBY_SCENE, botUserId, event.getSenderId(), event.getContent());
         String dedupKey = directedToBot
@@ -370,7 +367,7 @@ public class AiEventListener {
             List<WfMessage> recentMessages = loadRecentPrivateMessages(event.getConversationId());
             String moodDirective = aiMoodService.buildMoodDirective(PRIVATE_SCENE, botUserId, event.getContent());
             String memoryDigest = aiMemoryDigestService.buildPrivateDigest(recentMessages);
-            memoryDigest = mergeMemoryDigest(memoryDigest, buildInteractionMemoryDigest(PRIVATE_SCENE, botUserId));
+            memoryDigest = aiInteractionContextSupport.appendInteractionMemoryDigest(memoryDigest, PRIVATE_SCENE, botUserId);
             String prompt = aiPromptBuilderService.buildPrivatePrompt(
                     botUserId, event.getSenderId(), recentMessages, rolePrompt, moodDirective, memoryDigest
             );
@@ -413,7 +410,7 @@ public class AiEventListener {
             List<WfLobbyMessage> recentMessages = loadRecentLobbyMessages();
             String moodDirective = aiMoodService.buildMoodDirective(LOBBY_SCENE, botUserId, event.getContent());
             String memoryDigest = aiMemoryDigestService.buildLobbyDigest(recentMessages);
-            memoryDigest = mergeMemoryDigest(memoryDigest, buildInteractionMemoryDigest(LOBBY_SCENE, botUserId));
+            memoryDigest = aiInteractionContextSupport.appendInteractionMemoryDigest(memoryDigest, LOBBY_SCENE, botUserId);
             String prompt = aiPromptBuilderService.buildLobbyPrompt(
                     botUserId, event.getSenderId(), recentMessages, rolePrompt, moodDirective, memoryDigest
             );
@@ -421,7 +418,7 @@ public class AiEventListener {
                     prompt,
                     directedToBot,
                     event.getSenderId(),
-                    this::resolveUserDisplayName
+                    aiInteractionContextSupport::resolveUserDisplayName
             );
             String systemPrompt = normalizeSystemPrompt(lobbyConfig.getSystemPrompt(), DEFAULT_LOBBY_SYSTEM_PROMPT);
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
@@ -439,7 +436,7 @@ public class AiEventListener {
                     reply,
                     directedToBot,
                     event.getSenderId(),
-                    this::resolveUserDisplayName
+                    aiInteractionContextSupport::resolveUserDisplayName
             );
             SendLobbyMessageCommand command = new SendLobbyMessageCommand();
             command.setUserId(botUserId);
@@ -474,7 +471,7 @@ public class AiEventListener {
             String triggerText = triggerReply == null ? thread.getContent() : triggerReply.getContent();
             String moodDirective = aiMoodService.buildMoodDirective(FORUM_SCENE, botUserId, triggerText);
             String memoryDigest = aiMemoryDigestService.buildForumDigest(recentReplies);
-            memoryDigest = mergeMemoryDigest(memoryDigest, buildInteractionMemoryDigest(FORUM_SCENE, botUserId));
+            memoryDigest = aiInteractionContextSupport.appendInteractionMemoryDigest(memoryDigest, FORUM_SCENE, botUserId);
             String prompt = aiPromptBuilderService.buildForumReplyPrompt(
                     botUserId, thread, triggerReply, recentReplies, rolePrompt, moodDirective, memoryDigest
             );
@@ -483,7 +480,7 @@ public class AiEventListener {
                     prompt,
                     directedToBot,
                     directedUserId,
-                    this::resolveUserDisplayName
+                    aiInteractionContextSupport::resolveUserDisplayName
             );
             String systemPrompt = normalizeSystemPrompt(forumConfig.getSystemPrompt(), DEFAULT_FORUM_SYSTEM_PROMPT);
             systemPrompt = appendRoleSystemPrompt(systemPrompt, roleProfile);
@@ -501,7 +498,7 @@ public class AiEventListener {
                     reply,
                     directedToBot,
                     directedUserId,
-                    this::resolveUserDisplayName
+                    aiInteractionContextSupport::resolveUserDisplayName
             );
 
             CreateReplyDTO dto = new CreateReplyDTO();
@@ -731,85 +728,11 @@ public class AiEventListener {
         return null;
     }
 
-    private String buildInteractionMemoryDigest(String scene, Long botUserId) {
-        List<Long> recentUserIds = aiInteractionMemoryService.listRecentUserIds(scene, botUserId, 3);
-        String userDigest = buildRecentUserDigest(recentUserIds);
-        String topicDigest = aiInteractionMemoryService.buildTopicDigest(scene, botUserId, 3);
-        if (!StringUtils.hasText(userDigest) && !StringUtils.hasText(topicDigest)) {
-            return null;
-        }
-        if (!StringUtils.hasText(userDigest)) {
-            return topicDigest;
-        }
-        if (!StringUtils.hasText(topicDigest)) {
-            return userDigest;
-        }
-        return userDigest + "\n" + topicDigest;
-    }
-
-    private String buildRecentUserDigest(List<Long> recentUserIds) {
-        if (recentUserIds == null || recentUserIds.isEmpty()) {
-            return null;
-        }
-        Map<Long, WfUser> userMap = userService.getUserMap(recentUserIds);
-        StringBuilder builder = new StringBuilder();
-        int appended = 0;
-        for (Long userId : recentUserIds) {
-            String name = resolveUserDisplayName(userMap.get(userId), userId);
-            if (!StringUtils.hasText(name)) {
-                continue;
-            }
-            if (appended > 0) {
-                builder.append("、");
-            }
-            builder.append(name);
-            appended++;
-            if (appended >= 3) {
-                break;
-            }
-        }
-        if (builder.length() == 0) {
-            return null;
-        }
-        return "最近常互动对象：" + builder + "。";
-    }
-
-    private String mergeMemoryDigest(String first, String second) {
-        if (!StringUtils.hasText(first)) {
-            return second;
-        }
-        if (!StringUtils.hasText(second)) {
-            return first;
-        }
-        return first + "\n" + second;
-    }
-
     private Long resolveForumDirectedUserId(WfForumThread thread, WfForumReply triggerReply) {
         if (triggerReply != null) {
             return triggerReply.getAuthorId();
         }
         return thread == null ? null : thread.getAuthorId();
-    }
-
-    private String resolveUserDisplayName(Long userId) {
-        if (!isValidUserId(userId)) {
-            return null;
-        }
-        Map<Long, WfUser> userMap = userService.getUserMap(Set.of(userId));
-        return resolveUserDisplayName(userMap.get(userId), userId);
-    }
-
-    private String resolveUserDisplayName(WfUser user, Long fallbackUserId) {
-        if (user != null && StringUtils.hasText(user.getNickname())) {
-            return user.getNickname().trim();
-        }
-        if (user != null && StringUtils.hasText(user.getWolfNo())) {
-            return user.getWolfNo().trim();
-        }
-        if (isValidUserId(fallbackUserId)) {
-            return "user#" + fallbackUserId;
-        }
-        return null;
     }
 
     private boolean isVisibleThreadStatus(ForumThreadStatus status) {
