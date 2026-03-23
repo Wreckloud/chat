@@ -36,6 +36,26 @@ public class AiPromptBuilderService {
                                      String rolePrompt,
                                      String moodDirective,
                                      String memoryDigest) {
+        return buildPrivatePrompt(
+                botUserId,
+                humanUserId,
+                recentMessages,
+                rolePrompt,
+                moodDirective,
+                memoryDigest,
+                "serious",
+                false
+        );
+    }
+
+    public String buildPrivatePrompt(Long botUserId,
+                                     Long humanUserId,
+                                     List<WfMessage> recentMessages,
+                                     String rolePrompt,
+                                     String moodDirective,
+                                     String memoryDigest,
+                                     String engagementMode,
+                                     boolean conversationStalled) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("场景：你正在进行私聊对话。\n");
         prompt.append("角色：你是社区里的狼系用户，语气直接、短句、有网感，可轻微调侃。\n");
@@ -44,12 +64,35 @@ public class AiPromptBuilderService {
         appendMoodDirective(prompt, moodDirective);
         appendMemoryDigest(prompt, memoryDigest);
         prompt.append("要求：回复控制在1-2句，避免长篇解释，不要像客服，不尬聊。\n");
+        prompt.append("强约束：必须先回应“最后一条对方消息”的核心点，不能换题硬聊。\n");
+        prompt.append("若最后一条是疑问句，先给直接答案，再补一句追问。\n");
+        prompt.append("私聊互动目标：别只接一句就结束。若对方在打招呼/探活，优先用轻松梗+一个追问把话题带起来（例如游戏/日常/吃瓜三选一）。\n");
+        prompt.append("禁止无聊收尾：避免只回“在”“嗯”“好的”，尽量给对方一个可接的话头。\n");
+        appendPrivateEngagementMode(prompt, engagementMode, conversationStalled);
         prompt.append("注意：禁止自称 AI、禁止编造你未看到的事实、禁止危险引导。\n");
         prompt.append("当前消息窗口如下（按时间顺序）：\n");
         appendPrivateMessageLines(prompt, recentMessages);
+        String latestHumanMessage = findLatestPrivateMessageBySender(recentMessages, humanUserId);
+        if (StringUtils.hasText(latestHumanMessage)) {
+            prompt.append("最后一条对方消息：").append(truncate(latestHumanMessage)).append('\n');
+        }
         prompt.append("你是 user#").append(botUserId).append("，对方是 user#").append(humanUserId).append("。\n");
         prompt.append("请仅输出回复正文，不要输出额外标签。");
         return prompt.toString();
+    }
+
+    private void appendPrivateEngagementMode(StringBuilder prompt, String engagementMode, boolean conversationStalled) {
+        String mode = StringUtils.hasText(engagementMode) ? engagementMode.trim().toLowerCase() : "serious";
+        if ("greeting".equals(mode)) {
+            prompt.append("互动模式：greeting。先接住对方招呼，再给一个轻松追问，别一问一答结束。\n");
+        } else if ("banter".equals(mode)) {
+            prompt.append("互动模式：banter。允许一丝玩梗和轻吐槽，但必须给可继续的话头。\n");
+        } else {
+            prompt.append("互动模式：serious。先回应观点，再补一个追问把对话延续下去。\n");
+        }
+        if (conversationStalled) {
+            prompt.append("当前状态：对话有卡壳迹象。请主动切换到可接话题（游戏/日常/吃瓜）并附带一个追问。\n");
+        }
     }
 
     public String buildLobbyPrompt(Long botUserId,
@@ -66,9 +109,14 @@ public class AiPromptBuilderService {
         appendMoodDirective(prompt, moodDirective);
         appendMemoryDigest(prompt, memoryDigest);
         prompt.append("要求：发言控制在1-2句，不刷屏，不写教程式长文，不要硬接每个话题。\n");
+        prompt.append("强约束：优先回应触发用户最近一条消息与当前话题，不要忽略上下文直接起新话题。\n");
         prompt.append("注意：不要冒充系统管理员，不要输出“作为AI”，不要重复复读历史消息。\n");
         prompt.append("最近聊天记录（按时间顺序）：\n");
         appendLobbyMessageLines(prompt, recentMessages);
+        String triggerLatest = findLatestLobbyMessageBySender(recentMessages, triggerUserId);
+        if (StringUtils.hasText(triggerLatest)) {
+            prompt.append("触发用户最近一条：").append(truncate(triggerLatest)).append('\n');
+        }
         prompt.append("你是 user#").append(botUserId).append("，触发消息来自 user#").append(triggerUserId).append("。\n");
         prompt.append("请仅输出一条消息正文。");
         return prompt.toString();
@@ -223,6 +271,34 @@ public class AiPromptBuilderService {
             return "user#" + userId;
         }
         return "user";
+    }
+
+    private String findLatestPrivateMessageBySender(List<WfMessage> messages, Long senderId) {
+        if (messages == null || messages.isEmpty() || senderId == null || senderId <= 0L) {
+            return null;
+        }
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            WfMessage message = messages.get(i);
+            if (message == null || !senderId.equals(message.getSenderId())) {
+                continue;
+            }
+            return messageMediaService.buildConversationPreview(message.getMsgType(), message.getContent());
+        }
+        return null;
+    }
+
+    private String findLatestLobbyMessageBySender(List<WfLobbyMessage> messages, Long senderId) {
+        if (messages == null || messages.isEmpty() || senderId == null || senderId <= 0L) {
+            return null;
+        }
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            WfLobbyMessage message = messages.get(i);
+            if (message == null || !senderId.equals(message.getSenderId())) {
+                continue;
+            }
+            return messageMediaService.buildConversationPreview(message.getMsgType(), message.getContent());
+        }
+        return null;
     }
 
     private String truncate(String content) {

@@ -34,6 +34,9 @@ public class AiTriggerDecisionSupport {
         if (containsAiMention(botUserId, event.getContent())) {
             return true;
         }
+        if (aiLobbyDialogueIntentSupport.hasAdjacentBotReplyContext(event.getSenderId(), botUserId, triggerMessage)) {
+            return true;
+        }
         if (!aiLobbyDialogueIntentSupport.looksLikeLobbyFollowUpIntent(event.getContent())) {
             return false;
         }
@@ -65,6 +68,10 @@ public class AiTriggerDecisionSupport {
             }
         }
         return false;
+    }
+
+    public boolean isLowSignalLobbyMessage(String content) {
+        return aiLobbyDialogueIntentSupport.isLowSignalLobbyText(content);
     }
 
     private boolean isValidUserId(Long userId) {

@@ -1,7 +1,9 @@
 package com.wreckloud.wolfchat.ai.application.client;
 
 /**
- * 文本推理客户端。
+ * 文本推理客户端（底层实现接口）。
+ * <p>
+ * 对论文/架构口径中的 {@link ModelClient} 提供基础能力支撑。
  */
 public interface AiTextClient {
     /**

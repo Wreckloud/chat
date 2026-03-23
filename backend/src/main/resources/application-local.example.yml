@@ -107,18 +107,36 @@ wolfchat:
       max-calls-per-hour: 80
       # 每天最多触发多少次模型调用（所有场景总和）
       max-calls-per-day: 600
+    rhythm:
+      # 按时段自动调节互动节奏
+      enabled: true
+      active-start-hour: 9
+      active-end-hour: 23
+      night-start-hour: 0
+      night-end-hour: 6
+      active-probability-multiplier: 1.12
+      night-probability-multiplier: 0.65
+      active-cooldown-multiplier: 0.85
+      night-cooldown-multiplier: 1.35
+      active-delay-multiplier: 0.85
+      night-delay-multiplier: 1.45
+    relevance:
+      # 回复相关性守卫：识别“答非所问”后触发一次纠偏重试
+      enabled: true
+      # 普通语句重试阈值（0~1，越高越严格）
+      retry-threshold-general: 0.16
+      # 疑问句重试阈值（0~1，建议高于普通阈值）
+      retry-threshold-question: 0.24
 
     lobby:
       # 公共聊天室 AI
       enabled: false
       bot-user-id:
       bot-display-name: "夜狼梗王"
-      # 冷场主动发言开关
-      idle-enabled: true
-      # 连续多少秒无人发言视为冷场
-      idle-trigger-seconds: 90
-      # 冷场时主动发言概率（0~1）
-      idle-speak-probability: 0.05
+      # 紧邻回复识别：用户在AI发言后短时间接话，判定为“可能在对AI说”
+      adjacent-directed-enabled: true
+      adjacent-directed-window-seconds: 75
+      adjacent-directed-max-intervening-messages: 2
       # spicy 档：大厅互动更积极，但仍受守卫限流控制
       cooldown-seconds: 35
       reply-probability: 0.32
@@ -132,6 +150,9 @@ wolfchat:
       # 被@时的更快延迟（仍非秒回）
       mention-min-delay-seconds: 2
       mention-max-delay-seconds: 6
+      # 低信息短句防尬聊：对“嗯/哦/...”这类输入降概率，避免硬接
+      low-signal-guard-enabled: true
+      low-signal-probability-multiplier: 0.35
       system-prompt: "你是 WolfChat 的狼系老网友，不是助手。说话短句、直接、有网感，能调侃、能带刺，但不做人身仇恨攻击；不刷屏，不自称AI。"
 
     private-chat:
@@ -139,13 +160,13 @@ wolfchat:
       enabled: false
       bot-user-id:
       # 私聊更活跃：提高触发率并缩短冷却
-      cooldown-seconds: 18
-      reply-probability: 0.78
-      max-replies-per-hour: 72
+      cooldown-seconds: 14
+      reply-probability: 0.86
+      max-replies-per-hour: 90
       # 单条回复最大字符数
       max-reply-chars: 180
-      min-delay-seconds: 4
-      max-delay-seconds: 12
+      min-delay-seconds: 2
+      max-delay-seconds: 9
       system-prompt: "你在私聊里是有脾气的狼系用户，不是客服。表达直接、句子短、偶尔挖苦和玩梗，别长篇说教，禁止自称AI。"
 
     forum:
@@ -172,5 +193,6 @@ wolfchat:
     follow:
       # 被关注后自动回关
       auto-follow-back-enabled: false
-      min-delay-seconds: 3
-      max-delay-seconds: 15
+      # 拟人化：延迟十几到二十秒后再回关
+      min-delay-seconds: 12
+      max-delay-seconds: 20

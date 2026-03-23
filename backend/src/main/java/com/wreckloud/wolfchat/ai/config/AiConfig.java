@@ -25,6 +25,8 @@ public class AiConfig {
     private Memory memory = new Memory();
     private Role role = new Role();
     private Guard guard = new Guard();
+    private Rhythm rhythm = new Rhythm();
+    private Relevance relevance = new Relevance();
     private Lobby lobby = new Lobby();
     private PrivateChat privateChat = new PrivateChat();
     private Forum forum = new Forum();
@@ -56,13 +58,35 @@ public class AiConfig {
     }
 
     @Data
+    public static class Rhythm {
+        private Boolean enabled;
+        private Integer activeStartHour;
+        private Integer activeEndHour;
+        private Integer nightStartHour;
+        private Integer nightEndHour;
+        private Double activeProbabilityMultiplier;
+        private Double nightProbabilityMultiplier;
+        private Double activeCooldownMultiplier;
+        private Double nightCooldownMultiplier;
+        private Double activeDelayMultiplier;
+        private Double nightDelayMultiplier;
+    }
+
+    @Data
+    public static class Relevance {
+        private Boolean enabled;
+        private Double retryThresholdGeneral;
+        private Double retryThresholdQuestion;
+    }
+
+    @Data
     public static class Lobby {
         private Boolean enabled;
         private Long botUserId;
         private String botDisplayName;
-        private Boolean idleEnabled;
-        private Integer idleTriggerSeconds;
-        private Double idleSpeakProbability;
+        private Boolean adjacentDirectedEnabled;
+        private Integer adjacentDirectedWindowSeconds;
+        private Integer adjacentDirectedMaxInterveningMessages;
         private Integer cooldownSeconds;
         private Double replyProbability;
         private Double mentionReplyProbability;
@@ -72,6 +96,8 @@ public class AiConfig {
         private Integer maxDelaySeconds;
         private Integer mentionMinDelaySeconds;
         private Integer mentionMaxDelaySeconds;
+        private Boolean lowSignalGuardEnabled;
+        private Double lowSignalProbabilityMultiplier;
         private String systemPrompt;
     }
 

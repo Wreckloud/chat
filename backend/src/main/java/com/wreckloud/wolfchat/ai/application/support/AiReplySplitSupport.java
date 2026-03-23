@@ -13,15 +13,16 @@ import java.util.List;
  */
 @Component
 public class AiReplySplitSupport {
-    private static final int PRIVATE_MAX_SEGMENTS = 4;
+    private static final int PRIVATE_MAX_SEGMENTS = 3;
     private static final int PRIVATE_MIN_SEGMENTS = 2;
-    private static final int PRIVATE_MAX_CHARS = 60;
+    private static final int PRIVATE_MAX_CHARS = 42;
+    private static final int PRIVATE_TRIGGER_SPLIT_CHARS = 24;
 
     private static final int LOBBY_MAX_SEGMENTS = 4;
     private static final int LOBBY_MIN_SEGMENTS = 2;
     private static final int LOBBY_MAX_CHARS = 48;
 
-    private static final int MIN_SEGMENT_CHARS = 8;
+    private static final int MIN_SEGMENT_CHARS = 6;
 
     public List<String> splitPrivateReply(String reply) {
         return splitForChat(reply, PRIVATE_MIN_SEGMENTS, PRIVATE_MAX_SEGMENTS, MIN_SEGMENT_CHARS, PRIVATE_MAX_CHARS);
@@ -40,7 +41,7 @@ public class AiReplySplitSupport {
         if (!StringUtils.hasText(normalized)) {
             return List.of();
         }
-        if (normalized.length() <= maxSegmentChars) {
+        if (normalized.length() <= maxSegmentChars && !shouldTryNaturalSplit(normalized, minSegments)) {
             return List.of(normalized);
         }
 
@@ -56,6 +57,26 @@ public class AiReplySplitSupport {
             segments = mergeToMaxSegments(segments, maxSegments);
         }
         return segments.isEmpty() ? List.of(normalized) : segments;
+    }
+
+    private boolean shouldTryNaturalSplit(String normalized, int minSegments) {
+        if (!StringUtils.hasText(normalized)) {
+            return false;
+        }
+        if (normalized.length() < PRIVATE_TRIGGER_SPLIT_CHARS) {
+            return false;
+        }
+        List<String> naturalSegments = splitByPrimaryPunctuation(normalized);
+        int validCount = 0;
+        for (String segment : naturalSegments) {
+            if (StringUtils.hasText(segment) && segment.trim().length() >= MIN_SEGMENT_CHARS) {
+                validCount++;
+                if (validCount >= minSegments) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private String normalizeText(String reply) {
