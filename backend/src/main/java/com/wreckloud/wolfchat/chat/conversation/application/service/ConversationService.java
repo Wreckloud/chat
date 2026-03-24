@@ -297,6 +297,14 @@ public class ConversationService {
         return total;
     }
 
+    public int getUnreadCountInConversation(Long conversationId, Long userId) {
+        if (conversationId == null || conversationId <= 0L || userId == null || userId <= 0L) {
+            return 0;
+        }
+        WfConversation conversation = getConversation(conversationId);
+        return getUnreadCount(conversation, userId);
+    }
+
     private Integer getUnreadCount(WfConversation conversation, Long userId) {
         return isUserA(conversation, userId)
                 ? normalizeCount(conversation.getUserAUnreadCount())

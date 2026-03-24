@@ -116,7 +116,7 @@ public class LobbyService {
             }
             throw ex;
         }
-        if (replyToMessage != null) {
+        if (replyToMessage != null && shouldNotifyLobbyReplyNotice(replyToMessage.getSenderId(), userId)) {
             userNoticeService.notifyLobbyMessageReplied(replyToMessage.getSenderId(), userId);
         }
         applicationEventPublisher.publishEvent(new LobbyMessageSentEvent(
@@ -354,6 +354,17 @@ public class LobbyService {
         mediaCommand.setMediaMimeType(command.getMediaMimeType());
         mediaCommand.setReplyToMessageId(command.getReplyToMessageId());
         return mediaCommand;
+    }
+
+    private boolean shouldNotifyLobbyReplyNotice(Long targetUserId, Long operatorUserId) {
+        if (targetUserId == null || targetUserId <= 0L) {
+            return false;
+        }
+        if (targetUserId.equals(operatorUserId)) {
+            return false;
+        }
+        // 大厅无逐会话已读态，使用在线状态作为“已读代理”：在线时不额外写系统通知。
+        return !userPresenceService.isOnline(targetUserId);
     }
 
 }

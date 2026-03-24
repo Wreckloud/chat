@@ -132,6 +132,18 @@ public class UserPresenceService {
         return count.intValue();
     }
 
+    public boolean isOnline(Long userId) {
+        if (userId == null || userId <= 0L) {
+            return false;
+        }
+        long nowMillis = System.currentTimeMillis();
+        long cutoff = nowMillis - ONLINE_TTL_MILLIS;
+        ZSetOperations<String, String> zSetOps = stringRedisTemplate.opsForZSet();
+        cleanupExpiredOnline(cutoff, zSetOps);
+        Double score = zSetOps.score(ONLINE_ZSET_KEY, String.valueOf(userId));
+        return score != null && score.longValue() >= cutoff;
+    }
+
     public List<PresenceSnapshot> listRecentActiveUsers(int limit) {
         if (limit <= 0) {
             return Collections.emptyList();

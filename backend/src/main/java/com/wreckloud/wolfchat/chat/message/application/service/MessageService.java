@@ -148,7 +148,8 @@ public class MessageService {
         if (!mutualFollow && sentCountBefore == 0) {
             chatSystemNoticeService.sendStrangerRuleNotice(conversationId, userId, STRANGER_SINGLE_SIDE_LIMIT);
         }
-        if (replyToMessage != null) {
+        if (replyToMessage != null
+                && shouldNotifyReplyNotice(conversationId, replyToMessage.getSenderId(), userId)) {
             userNoticeService.notifyChatMessageReplied(
                     replyToMessage.getSenderId(),
                     conversationId,
@@ -373,6 +374,16 @@ public class MessageService {
             return null;
         }
         return messageMapper.selectBySenderAndConversationAndClientMsgId(senderId, conversationId, clientMsgId);
+    }
+
+    private boolean shouldNotifyReplyNotice(Long conversationId, Long targetUserId, Long operatorUserId) {
+        if (targetUserId == null || targetUserId <= 0L) {
+            return false;
+        }
+        if (targetUserId.equals(operatorUserId)) {
+            return false;
+        }
+        return conversationService.getUnreadCountInConversation(conversationId, targetUserId) > 0;
     }
 
     private static class MessagePolicySnapshot {
