@@ -11,9 +11,8 @@
     "condition": true,
     "es6": true,
     "postcss": true,
-    "minified": true,
-    "compileWorklet": false,
     "minified": false,
+    "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,
     "enhance": false,
@@ -35,7 +34,6 @@
       "outputPath": ""
     },
     "disableUseStrict": false,
-    "useCompilerPlugins": false,
     "ignoreDevUnusedFiles": false,
     "ignoreUploadUnusedFiles": false
   },
@@ -50,6 +48,5 @@
     "tabSize": 2
   },
   "appid": "wxabe22929a5ca9473",
-  "editorSetting": {},
   "libVersion": "3.12.0"
 }
