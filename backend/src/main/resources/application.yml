@@ -2,7 +2,7 @@ spring:
   application:
     name: wolf-chat-server
   config:
-    import: classpath:application-local.yml
+    import: optional:classpath:application-local.yml
   servlet:
     multipart:
       # 本地媒体上传（图片/视频/文件）统一入口限制：单文件 160MB，请求总量 170MB
