@@ -19,7 +19,7 @@
     <!-- =======================
          1. 控制台输出（ConsoleAppender）
          ======================= -->
-    <appender name="stdot" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
         <!-- 输出格式 -->
         <layout class="ch.qos.logback.classic.PatternLayout">
             <!--
@@ -55,7 +55,7 @@
     <property name="LOG_FOLDER" value="logs"/>
 
     <!-- 日志文件名称（每天会自动加后缀） -->
-    <property name="LOG_FILE_NAME" value="easychat.log"/>
+    <property name="LOG_FILE_NAME" value="wolfchat.log"/>
 
 
     <!-- =======================
@@ -73,8 +73,8 @@
              按日期生成新的日志文件，每天一个；
              %i 是同一天内按文件大小切分的序号。
              例如：
-                easychat.log.20250101.0
-                easychat.log.20250101.1
+               wolfchat.log.20250101.0
+               wolfchat.log.20250101.1
             -->
             <FileNamePattern>${log.path}/${LOG_FOLDER}/${LOG_FILE_NAME}.%d{yyyyMMdd}.%i</FileNamePattern>
 
@@ -128,7 +128,7 @@
          ======================= -->
     <root level="${log.root.level}">
         <!-- 输出到控制台 -->
-        <appender-ref ref="stdot"/>
+        <appender-ref ref="stdout"/>
         <!-- 输出到文件 -->
         <appender-ref ref="file"/>
     </root>

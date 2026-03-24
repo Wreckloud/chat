@@ -2,11 +2,11 @@
  * API 基础地址配置
  *
  * 单人维护约定：
- * 1) 默认走 localhost，便于本机联调
+ * 1) 默认走线上 HTTPS 地址，便于体验版直连
  * 2) 如需真机/局域网调试，可在控制台执行：
  *    wx.setStorageSync('WOLFCHAT_BASE_URL', 'http://<LAN_IP>:8080/api')
  */
-const DEFAULT_BASE_URL = 'http://127.0.0.1:8080/api'
+const DEFAULT_BASE_URL = 'https://api.wreckloud.com/api'
 const STORAGE_KEY = 'WOLFCHAT_BASE_URL'
 
 function normalizeBaseURL(url) {
