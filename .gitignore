@@ -39,16 +39,17 @@ storage/
 # Database
 *.db
 *.sqlite
-database/*.sql
-!database/README.md
+# Keep SQL scripts in repository for deployment/bootstrap
 
-# Private docs for thesis/notes (keep local only)
-doc/*.md
-!doc/README.md
+# Private docs/materials (keep outside repository)
+doc/
+docs/
+**/README.md
 
 # Environment
 .env
 .env.local
 .env.*
+front/miniprogram/project.private.config.json
 backend/src/main/resources/application-local.yml
 backend/src/main/resources/application-secrets.yml
