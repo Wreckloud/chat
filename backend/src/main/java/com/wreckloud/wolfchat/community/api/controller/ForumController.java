@@ -48,7 +48,7 @@ public class ForumController {
     public Result<ForumThreadPageVO> listFeedThreads(@RequestParam(defaultValue = "recommend") String tab,
                                                       @RequestParam(defaultValue = "1") long page,
                                                       @RequestParam(defaultValue = "20") long size) {
-        Long userId = UserContext.getRequiredUserId();
+        Long userId = UserContext.getUserId();
         return Result.success(forumService.listFeedThreads(userId, page, size, tab));
     }
 
@@ -57,7 +57,7 @@ public class ForumController {
     public Result<ForumThreadPageVO> searchThreads(@RequestParam String keyword,
                                                    @RequestParam(defaultValue = "1") long page,
                                                    @RequestParam(defaultValue = "20") long size) {
-        Long userId = UserContext.getRequiredUserId();
+        Long userId = UserContext.getUserId();
         return Result.success(forumService.listSearchThreads(userId, page, size, keyword));
     }
 
@@ -117,7 +117,7 @@ public class ForumController {
     @Operation(summary = "主题详情", description = "获取主题详情")
     @GetMapping("/threads/{threadId}")
     public Result<ForumThreadDetailVO> getThreadDetail(@PathVariable Long threadId) {
-        Long userId = UserContext.getRequiredUserId();
+        Long userId = UserContext.getUserId();
         return Result.success(forumService.getThreadDetail(userId, threadId));
     }
 
@@ -186,7 +186,7 @@ public class ForumController {
                                                        @RequestParam(defaultValue = "1") long page,
                                                        @RequestParam(defaultValue = "20") long size,
                                                        @RequestParam(defaultValue = "floor") String sort) {
-        Long userId = UserContext.getRequiredUserId();
+        Long userId = UserContext.getUserId();
         return Result.success(forumService.listThreadReplies(userId, threadId, page, size, sort));
     }
 

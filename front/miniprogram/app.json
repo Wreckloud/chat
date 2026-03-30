@@ -1,9 +1,9 @@
 {
   "pages": [
+    "pages/community/community",
     "pages/chat/chat",
     "pages/chat-detail/chat-detail",
     "pages/lobby/lobby",
-    "pages/community/community",
     "pages/me/me",
     "pages/notice/notice",
     "pages/achievement/achievement",

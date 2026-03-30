@@ -77,6 +77,17 @@
   margin-top: 30rpx;
 }
 
+.guest-entry {
+  text-align: center;
+  margin-top: 18rpx;
+}
+
+.guest-entry-link {
+  font-size: 22rpx;
+  color: var(--retro-link-text);
+  text-decoration: underline;
+}
+
 .login-link {
   font-size: 22rpx;
   color: var(--retro-link-text);

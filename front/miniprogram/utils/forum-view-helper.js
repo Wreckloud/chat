@@ -1,14 +1,17 @@
 const { attachDisplayTitle } = require('./title')
+const { normalizeMediaUrl } = require('./media-url')
 
 function mapThread(rawThread, normalizeUser, time) {
   const viewCount = Number(rawThread.viewCount) || 0
   const replyCount = Number(rawThread.replyCount) || 0
   const likeCount = Number(rawThread.likeCount) || 0
   const imageUrls = Array.isArray(rawThread.imageUrls)
-    ? rawThread.imageUrls.filter(item => typeof item === 'string' && item.trim())
+    ? rawThread.imageUrls
+      .map(item => normalizeMediaUrl(item))
+      .filter(item => typeof item === 'string' && item.trim())
     : []
-  const videoUrl = typeof rawThread.videoUrl === 'string' ? rawThread.videoUrl : ''
-  const videoPosterUrl = typeof rawThread.videoPosterUrl === 'string' ? rawThread.videoPosterUrl : ''
+  const videoUrl = normalizeMediaUrl(rawThread.videoUrl)
+  const videoPosterUrl = normalizeMediaUrl(rawThread.videoPosterUrl)
   const hasVideo = !!videoUrl
   const contentPreview = typeof rawThread.contentPreview === 'string' ? rawThread.contentPreview.trim() : ''
   const hasSingleImagePreview = !hasVideo && imageUrls.length === 1
@@ -92,7 +95,7 @@ function mapReply(rawReply, normalizeUser, time, options = {}) {
     ...rawReply,
     replyId,
     likeCount,
-    imageUrl: typeof rawReply.imageUrl === 'string' ? rawReply.imageUrl : '',
+    imageUrl: normalizeMediaUrl(rawReply.imageUrl),
     likedByCurrentUser: rawReply.likedByCurrentUser === true,
     quoteReplyId,
     author,

@@ -81,6 +81,10 @@ public class AiEventListener {
     private static final int DEFAULT_FORUM_MAX_REPLY_CHARS = 220;
     private static final double DEFAULT_MENTION_REPLY_PROBABILITY = 0.85D;
     private static final double DEFAULT_LOW_SIGNAL_PROBABILITY_MULTIPLIER = 0.35D;
+    private static final double DEFAULT_OPEN_TOPIC_LOBBY_PROBABILITY = 0.34D;
+    private static final double DEFAULT_OPEN_TOPIC_FORUM_THREAD_PROBABILITY = 0.42D;
+    private static final double DEFAULT_OPEN_TOPIC_FORUM_REPLY_PROBABILITY = 0.30D;
+    private static final int LOBBY_CONTEXT_SHIFTED_MESSAGE_THRESHOLD = 6;
     private static final double DEFAULT_RELEVANCE_THRESHOLD_GENERAL = 0.16D;
     private static final double DEFAULT_RELEVANCE_THRESHOLD_QUESTION = 0.24D;
 
@@ -221,9 +225,11 @@ public class AiEventListener {
         }
         Long botUserId = aiIdentityService.getForumBotUserId();
         if (!isValidUserId(botUserId) || botUserId.equals(event.getAuthorId())) {
+            log.debug("AI 论坛主题触发跳过: reason=invalid_or_self, botUserId={}, authorId={}", botUserId, event.getAuthorId());
             return;
         }
         if (aiIdentityService.isAiUser(event.getAuthorId())) {
+            log.debug("AI 论坛主题触发跳过: reason=author_is_ai, authorId={}", event.getAuthorId());
             return;
         }
         boolean directedToBot = aiTriggerDecisionSupport.containsAiMention(botUserId, event.getTitle(), event.getContent());
@@ -236,6 +242,7 @@ public class AiEventListener {
         String dedupKey = directedToBot
                 ? FORUM_MENTION_SCENE + ":thread:" + event.getThreadId()
                 : FORUM_SCENE + ":thread:" + event.getThreadId();
+        String triggerContent = buildForumInteractionText(event.getTitle(), event.getContent());
         if (!passForumTriggerGuard(
                 botUserId,
                 directedToBot,
@@ -243,6 +250,8 @@ public class AiEventListener {
                 forumConfig.getMentionReplyProbability(),
                 forumConfig.getReplyProbability(),
                 0.36D,
+                triggerContent,
+                DEFAULT_OPEN_TOPIC_FORUM_THREAD_PROBABILITY,
                 forumConfig.getCooldownSeconds(),
                 String.valueOf(event.getThreadId()),
                 forumConfig.getMaxRepliesPerHour(),
@@ -279,9 +288,11 @@ public class AiEventListener {
         }
         Long botUserId = aiIdentityService.getForumBotUserId();
         if (!isValidUserId(botUserId) || botUserId.equals(event.getAuthorId())) {
+            log.debug("AI 论坛回帖触发跳过: reason=invalid_or_self, botUserId={}, authorId={}", botUserId, event.getAuthorId());
             return;
         }
         if (aiIdentityService.isAiUser(event.getAuthorId())) {
+            log.debug("AI 论坛回帖触发跳过: reason=author_is_ai, authorId={}", event.getAuthorId());
             return;
         }
         WfForumReply quoteReply = event.getQuoteReplyId() == null ? null : wfForumReplyMapper.selectById(event.getQuoteReplyId());
@@ -292,7 +303,7 @@ public class AiEventListener {
         aiInteractionMemoryService.recordInteraction(FORUM_SCENE, botUserId, event.getAuthorId(), event.getContent());
         String dedupKey = directedToBot
                 ? FORUM_MENTION_SCENE + ":reply:" + event.getThreadId() + ":" + event.getAuthorId()
-                : FORUM_SCENE + ":reply:" + event.getThreadId();
+                : FORUM_SCENE + ":reply:" + event.getThreadId() + ":" + event.getAuthorId();
         if (!passForumTriggerGuard(
                 botUserId,
                 directedToBot,
@@ -300,6 +311,8 @@ public class AiEventListener {
                 forumConfig.getMentionReplyProbability(),
                 forumConfig.getReplyToReplyProbability(),
                 0.24D,
+                event.getContent(),
+                DEFAULT_OPEN_TOPIC_FORUM_REPLY_PROBABILITY,
                 forumConfig.getCooldownSeconds(),
                 String.valueOf(event.getThreadId()),
                 forumConfig.getMaxRepliesPerHour(),
@@ -812,6 +825,30 @@ public class AiEventListener {
                 || lower.startsWith("所以");
     }
 
+    private boolean looksLikeOpenTopicText(String content) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        String lower = content.trim().toLowerCase(Locale.ROOT);
+        if (!StringUtils.hasText(lower) || lower.length() < 4) {
+            return false;
+        }
+        return lower.contains("?")
+                || lower.contains("？")
+                || lower.contains("大家")
+                || lower.contains("有人")
+                || lower.contains("你们觉得")
+                || lower.contains("怎么看")
+                || lower.contains("求助")
+                || lower.contains("推荐")
+                || lower.contains("有没有")
+                || lower.contains("怎么")
+                || lower.contains("为什么")
+                || lower.contains("为啥")
+                || lower.contains("聊聊")
+                || lower.contains("讨论");
+    }
+
     private boolean passLobbyTriggerGuard(LobbyMessageSentEvent event,
                                           Long botUserId,
                                           AiConfig.Lobby lobbyConfig,
@@ -832,6 +869,11 @@ public class AiEventListener {
             baseProbability = baseProbability * multiplier;
             log.debug("AI 大厅低信息短句降触发: senderId={}, multiplier={}, adjustedProbability={}",
                     event.getSenderId(), multiplier, baseProbability);
+        }
+        if (!directedToBot && looksLikeOpenTopicText(event.getContent())) {
+            baseProbability = Math.max(baseProbability, DEFAULT_OPEN_TOPIC_LOBBY_PROBABILITY);
+            log.debug("AI 大厅开放话题加权: senderId={}, adjustedProbability={}",
+                    event.getSenderId(), baseProbability);
         }
         double rhythmProbability = aiTimeRhythmSupport.adjustProbability(baseProbability);
         if (!aiTriggerGuardSupport.hitProbability(rhythmProbability, rhythmProbability)) {
@@ -863,6 +905,8 @@ public class AiEventListener {
                                           Double mentionProbability,
                                           Double normalConfiguredProbability,
                                           double normalDefaultProbability,
+                                          String triggerContent,
+                                          double openTopicMinProbability,
                                           Integer cooldownSeconds,
                                           String cooldownTarget,
                                           Integer maxRepliesPerHour,
@@ -873,6 +917,14 @@ public class AiEventListener {
         double defaultProbability = directedToBot ? DEFAULT_MENTION_REPLY_PROBABILITY : normalDefaultProbability;
         Double configuredProbability = directedToBot ? mentionProbability : normalConfiguredProbability;
         double baseProbability = configuredProbability == null ? defaultProbability : configuredProbability;
+        if (directedToBot) {
+            // 点名/直接回复场景尽量接住，减少“喊了不回”体感。
+            baseProbability = 1D;
+        }
+        if (!directedToBot && looksLikeOpenTopicText(triggerContent)) {
+            baseProbability = Math.max(baseProbability, openTopicMinProbability);
+            log.debug("AI 论坛开放话题加权: target={}, adjustedProbability={}", cooldownTarget, baseProbability);
+        }
         double rhythmProbability = aiTimeRhythmSupport.adjustProbability(baseProbability);
         if (!aiTriggerGuardSupport.hitProbability(rhythmProbability, rhythmProbability)) {
             log.debug("AI 论坛触发跳过: reason=probability, directed={}, probability={}", directedToBot, rhythmProbability);
@@ -1054,7 +1106,7 @@ public class AiEventListener {
             if (!botUserId.equals(message.getSenderId())) {
                 messageAfterTrigger++;
             }
-            if (messageAfterTrigger >= 4) {
+            if (messageAfterTrigger >= LOBBY_CONTEXT_SHIFTED_MESSAGE_THRESHOLD) {
                 log.debug("AI 大厅执行时跳过: reason=context_shifted, messageId={}, shiftedMessages={}",
                         event.getMessageId(), messageAfterTrigger);
                 return false;

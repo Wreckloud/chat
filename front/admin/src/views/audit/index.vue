@@ -2,7 +2,7 @@
   <div class="audit-page">
     <div class="page-card table-card">
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="管理员操作日志" name="action">
+        <el-tab-pane label="操作日志" name="action">
           <el-table :data="actionRows" v-loading="loadingActions" stripe>
             <el-table-column prop="actionLogId" label="日志ID" width="90" />
             <el-table-column prop="operatorName" label="操作人" width="120" />

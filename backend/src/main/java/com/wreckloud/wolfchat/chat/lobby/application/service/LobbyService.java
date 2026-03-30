@@ -176,6 +176,43 @@ public class LobbyService {
     }
 
     /**
+     * 管理员撤回大厅消息（不受5分钟和发送者限制）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LobbyMessageVO adminRecallMessage(Long operatorUserId, Long messageId) {
+        if (messageId == null || messageId <= 0L) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息ID不能为空");
+        }
+        userService.getEnabledByIdOrThrow(operatorUserId);
+
+        WfLobbyMessage message = lobbyMessageMapper.selectById(messageId);
+        if (message == null) {
+            throw new BaseException(ErrorCode.PARAM_ERROR, "消息不存在");
+        }
+        if (MessageType.RECALL.equals(message.getMsgType())) {
+            return getMessageById(messageId);
+        }
+
+        message.setMsgType(MessageType.RECALL);
+        message.setContent(RECALL_CONTENT);
+        message.setMediaKey(null);
+        message.setMediaPosterKey(null);
+        message.setMediaWidth(null);
+        message.setMediaHeight(null);
+        message.setMediaSize(null);
+        message.setMediaMimeType(null);
+        message.setReplyToMessageId(null);
+        message.setReplyToSenderId(null);
+        message.setReplyToPreview(null);
+        int updateRows = lobbyMessageMapper.updateById(message);
+        if (updateRows != 1) {
+            throw new BaseException(ErrorCode.DATABASE_ERROR);
+        }
+        WfUser sender = userService.getByIdOrThrow(message.getSenderId());
+        return fillMedia(LobbyMessageConverter.toLobbyMessageVO(message, sender));
+    }
+
+    /**
      * 分页查询大厅消息
      */
     public Page<LobbyMessageVO> listMessages(Long userId, Integer pageNum, Integer pageSize) {

@@ -41,6 +41,14 @@ const routes = [
         }
       },
       {
+        path: 'ai',
+        name: 'AdminAi',
+        component: () => import('@/views/ai/index.vue'),
+        meta: {
+          title: 'AI管控'
+        }
+      },
+      {
         path: 'audit',
         name: 'AdminAudit',
         component: () => import('@/views/audit/index.vue'),

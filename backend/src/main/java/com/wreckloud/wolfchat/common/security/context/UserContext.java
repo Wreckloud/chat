@@ -30,6 +30,13 @@ public class UserContext {
     }
 
     /**
+     * 获取当前行者ID；未登录时返回 null。
+     */
+    public static Long getUserId() {
+        return USER_ID.get();
+    }
+
+    /**
      * 清除上下文
      */
     public static void clear() {

@@ -10,6 +10,8 @@ const service = axios.create({
 
 service.interceptors.request.use(
   (config) => {
+    config.headers['X-Client-Type'] = 'ADMIN_CONSOLE'
+    config.headers['X-Client-Version'] = 'web-admin-v1'
     const token = readToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

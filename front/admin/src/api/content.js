@@ -16,6 +16,14 @@ export function fetchReplyPage(params) {
   })
 }
 
+export function fetchLobbyMessagePage(params) {
+  return request({
+    url: '/admin/forum/lobby/messages',
+    method: 'get',
+    params
+  })
+}
+
 export function updateThreadLock(threadId, locked) {
   return request({
     url: `/admin/forum/threads/${threadId}/lock`,
@@ -51,5 +59,12 @@ export function deleteReply(replyId) {
   return request({
     url: `/admin/forum/replies/${replyId}`,
     method: 'delete'
+  })
+}
+
+export function recallLobbyMessage(messageId) {
+  return request({
+    url: `/admin/forum/lobby/messages/${messageId}/recall`,
+    method: 'put'
   })
 }

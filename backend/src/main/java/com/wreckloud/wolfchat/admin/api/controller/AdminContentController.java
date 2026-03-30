@@ -3,6 +3,7 @@ package com.wreckloud.wolfchat.admin.api.controller;
 import com.wreckloud.wolfchat.admin.api.vo.AdminPageVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminReplyRowVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminThreadRowVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminLobbyMessageRowVO;
 import com.wreckloud.wolfchat.admin.application.service.AdminContentManageService;
 import com.wreckloud.wolfchat.admin.application.service.AdminPermissionService;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
@@ -54,6 +55,16 @@ public class AdminContentController {
         return Result.success(adminContentManageService.listReplyPage(page, size));
     }
 
+    @Operation(summary = "聊天室消息分页列表")
+    @GetMapping("/lobby/messages")
+    public Result<AdminPageVO<AdminLobbyMessageRowVO>> listLobbyMessages(
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "20") long size
+    ) {
+        adminPermissionService.assertAdmin(UserContext.getRequiredUserId());
+        return Result.success(adminContentManageService.listLobbyMessagePage(page, size));
+    }
+
     @Operation(summary = "更新主题锁定状态")
     @PutMapping("/threads/{threadId}/lock")
     public Result<Void> updateThreadLock(@PathVariable Long threadId, @RequestBody @Validated UpdateThreadLockDTO dto) {
@@ -97,5 +108,14 @@ public class AdminContentController {
         adminPermissionService.assertAdmin(operatorUserId);
         adminContentManageService.deleteReply(operatorUserId, replyId);
         return Result.success("删除成功", null);
+    }
+
+    @Operation(summary = "撤回聊天室消息")
+    @PutMapping("/lobby/messages/{messageId}/recall")
+    public Result<Void> recallLobbyMessage(@PathVariable Long messageId) {
+        Long operatorUserId = UserContext.getRequiredUserId();
+        adminPermissionService.assertAdmin(operatorUserId);
+        adminContentManageService.recallLobbyMessage(operatorUserId, messageId);
+        return Result.success("撤回成功", null);
     }
 }

@@ -8,7 +8,6 @@ const { toastError } = require('../../utils/ui')
 const time = require('../../utils/time')
 const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
-const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const pullRefreshHelper = require('../../utils/pull-refresh-helper')
 
 const FEED_TABS = [
@@ -17,6 +16,35 @@ const FEED_TABS = [
   { value: 'friends', label: '好友' },
   { value: 'latest', label: '最新' }
 ]
+
+function ensureLoginForAction(authInstance, actionText) {
+  return new Promise(resolve => {
+    if (authInstance && typeof authInstance.isLoggedIn === 'function' && authInstance.isLoggedIn()) {
+      resolve(true)
+      return
+    }
+    wx.showModal({
+      title: '请先登录',
+      content: actionText ? `${actionText}需要登录，是否前往登录？` : '该操作需要登录，是否前往登录？',
+      confirmText: '去登录',
+      cancelText: '继续浏览',
+      success(res) {
+        if (!res.confirm) {
+          resolve(false)
+          return
+        }
+        if (authInstance && typeof authInstance.requireLogin === 'function') {
+          resolve(authInstance.requireLogin())
+          return
+        }
+        resolve(false)
+      },
+      fail() {
+        resolve(false)
+      }
+    })
+  })
+}
 
 Page({
   data: {
@@ -34,13 +62,9 @@ Page({
   },
 
   onShow() {
-    pageLifecycleHelper.handleProtectedPageShow(auth, {
-      afterShow: () => {
-        this.applyTheme()
-        this.loadThreads(true)
-        this.loadNoticeUnreadCount()
-      }
-    })
+    this.applyTheme()
+    this.loadThreads(true)
+    this.loadNoticeUnreadCount()
   },
 
   async loadThreads(reset = false) {
@@ -125,19 +149,33 @@ Page({
     })
   },
 
-  goCreatePost() {
+  async goCreatePost() {
+    const allowed = await ensureLoginForAction(auth, '发帖')
+    if (!allowed) {
+      return
+    }
     wx.navigateTo({
       url: '/pages/post-create/post-create'
     })
   },
 
-  goNotice() {
+  async goNotice() {
+    const allowed = await ensureLoginForAction(auth, '查看系统通知')
+    if (!allowed) {
+      return
+    }
     wx.navigateTo({
       url: '/pages/notice/notice'
     })
   },
 
   async loadNoticeUnreadCount() {
+    if (!auth.isLoggedIn()) {
+      this.setData({
+        noticeUnreadCount: 0
+      })
+      return
+    }
     try {
       const res = await request.get('/notices/unread-count')
       const unreadCount = Number(res && res.data) || 0

@@ -31,7 +31,7 @@ public class JwtInterceptor implements HandlerInterceptor {
         // 获取 token
         String token = getTokenFromRequest(request);
         if (!StringUtils.hasText(token)) {
-            throw new BaseException(ErrorCode.UNAUTHORIZED);
+            return true;
         }
 
         // 验证 token

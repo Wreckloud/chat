@@ -23,9 +23,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AiPromptBuilderService {
     private static final int MAX_LINE_LENGTH = 180;
-    private static final String WOLF_BASELINE = "身份基线：你不是助手，不是客服，你是社区里有脾气的狼系用户。";
-    private static final String WOLF_STYLE = "狼性风格：短句、直接、带点锋利感；可轻微调侃或挖苦，但不做人身仇恨攻击。";
-    private static final String WOLF_CONSTRAINT = "表达约束：拒绝客服腔、拒绝过度礼貌、拒绝长篇说教；优先像真人随口回。";
+    private static final String WOLF_BASELINE = "身份基线：你是社区里的狼系用户，不是助手。";
+    private static final String WOLF_STYLE = "表达偏好：自然口语、短句优先，允许情绪和梗，但别故意端着。";
+    private static final String WOLF_CONSTRAINT = "边界：不自称AI，不编造未看到的事实，不输出危险或仇恨内容。";
 
     private final UserService userService;
     private final MessageMediaService messageMediaService;
@@ -63,13 +63,10 @@ public class AiPromptBuilderService {
         appendRolePrompt(prompt, rolePrompt);
         appendMoodDirective(prompt, moodDirective);
         appendMemoryDigest(prompt, memoryDigest);
-        prompt.append("要求：回复控制在1-2句，避免长篇解释，不要像客服，不尬聊。\n");
-        prompt.append("强约束：必须先回应“最后一条对方消息”的核心点，不能换题硬聊。\n");
-        prompt.append("若最后一条是疑问句，先给直接答案，再补一句追问。\n");
-        prompt.append("私聊互动目标：别只接一句就结束。若对方在打招呼/探活，优先用轻松梗+一个追问把话题带起来（例如游戏/日常/吃瓜三选一）。\n");
-        prompt.append("禁止无聊收尾：避免只回“在”“嗯”“好的”，尽量给对方一个可接的话头。\n");
+        prompt.append("要求：先接住对方最后一句，再顺势延展，通常1-3句即可。\n");
+        prompt.append("可以有态度，不必每次都追问；有合适话头再追问。\n");
         appendPrivateEngagementMode(prompt, engagementMode, conversationStalled);
-        prompt.append("注意：禁止自称 AI、禁止编造你未看到的事实、禁止危险引导。\n");
+        prompt.append("注意：不要客服腔，不要长篇说教。\n");
         prompt.append("当前消息窗口如下（按时间顺序）：\n");
         appendPrivateMessageLines(prompt, recentMessages);
         String latestHumanMessage = findLatestPrivateMessageBySender(recentMessages, humanUserId);
@@ -84,14 +81,14 @@ public class AiPromptBuilderService {
     private void appendPrivateEngagementMode(StringBuilder prompt, String engagementMode, boolean conversationStalled) {
         String mode = StringUtils.hasText(engagementMode) ? engagementMode.trim().toLowerCase() : "serious";
         if ("greeting".equals(mode)) {
-            prompt.append("互动模式：greeting。先接住对方招呼，再给一个轻松追问，别一问一答结束。\n");
+            prompt.append("互动模式：greeting。先接住招呼，再自然带出一个可继续的话头。\n");
         } else if ("banter".equals(mode)) {
-            prompt.append("互动模式：banter。允许一丝玩梗和轻吐槽，但必须给可继续的话头。\n");
+            prompt.append("互动模式：banter。可玩梗和轻吐槽，但别刻意上强度。\n");
         } else {
-            prompt.append("互动模式：serious。先回应观点，再补一个追问把对话延续下去。\n");
+            prompt.append("互动模式：serious。先回应核心点，再补一句你的看法。\n");
         }
         if (conversationStalled) {
-            prompt.append("当前状态：对话有卡壳迹象。请主动切换到可接话题（游戏/日常/吃瓜）并附带一个追问。\n");
+            prompt.append("当前状态：对话有卡壳迹象。请主动给一个轻松切入点把对话续上。\n");
         }
     }
 
@@ -108,9 +105,9 @@ public class AiPromptBuilderService {
         appendRolePrompt(prompt, rolePrompt);
         appendMoodDirective(prompt, moodDirective);
         appendMemoryDigest(prompt, memoryDigest);
-        prompt.append("要求：发言控制在1-2句，不刷屏，不写教程式长文，不要硬接每个话题。\n");
-        prompt.append("强约束：优先回应触发用户最近一条消息与当前话题，不要忽略上下文直接起新话题。\n");
-        prompt.append("注意：不要冒充系统管理员，不要输出“作为AI”，不要重复复读历史消息。\n");
+        prompt.append("要求：结合最近聊天自然接话，通常1-2句，不连续刷屏。\n");
+        prompt.append("优先承接当前话题，不要突然换题，不要复读历史消息。\n");
+        prompt.append("注意：不要冒充系统管理员，不要输出“作为AI”。\n");
         prompt.append("最近聊天记录（按时间顺序）：\n");
         appendLobbyMessageLines(prompt, recentMessages);
         String triggerLatest = findLatestLobbyMessageBySender(recentMessages, triggerUserId);
@@ -136,7 +133,7 @@ public class AiPromptBuilderService {
         appendRolePrompt(prompt, rolePrompt);
         appendMoodDirective(prompt, moodDirective);
         appendMemoryDigest(prompt, memoryDigest);
-        prompt.append("要求：围绕主题回复，1-3句，尽量有信息量，不要写成论文。\n");
+        prompt.append("要求：围绕主题给出观点，1-3句，尽量具体，不写公文腔。\n");
         prompt.append("主题标题：").append(truncate(thread == null ? null : thread.getTitle())).append('\n');
         prompt.append("主题正文：").append(truncate(thread == null ? null : thread.getContent())).append('\n');
         if (triggerReply != null) {

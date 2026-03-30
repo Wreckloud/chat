@@ -53,7 +53,7 @@ Page({
   onLoad(options) {
     if (auth.isLoggedIn()) {
       wx.switchTab({
-        url: '/pages/chat/chat'
+        url: '/pages/community/community'
       })
       return
     }
@@ -239,7 +239,7 @@ Page({
       this.saveAuthSession(res.data)
       setTimeout(() => {
         wx.switchTab({
-          url: '/pages/chat/chat'
+          url: '/pages/community/community'
         })
       }, 800)
     } catch (error) {
@@ -252,7 +252,15 @@ Page({
 
   handleConfirmRegister() {
     wx.switchTab({
-      url: '/pages/chat/chat'
+      url: '/pages/community/community'
+    })
+  },
+
+  goCommunity() {
+    // 以游客身份进入社区时，清理可能残留的历史登录态，避免被误判为 token 失效。
+    auth.logout()
+    wx.switchTab({
+      url: '/pages/community/community'
     })
   },
 

@@ -133,6 +133,9 @@
           <text class="login-link" bindtap="goResetPassword">{{copy.login.forgotPassword}}</text>
           <text class="login-link" bindtap="switchToRegister">{{copy.login.switchToRegister}}</text>
         </view>
+        <view class="guest-entry">
+          <text class="guest-entry-link" bindtap="goCommunity">先去社区看看（免登录）</text>
+        </view>
       </view>
     </view>
   </view>

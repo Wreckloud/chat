@@ -22,6 +22,9 @@
         <el-menu-item index="/content">
           <span>内容治理</span>
         </el-menu-item>
+        <el-menu-item index="/ai">
+          <span>AI管控</span>
+        </el-menu-item>
         <el-menu-item index="/audit">
           <span>审计日志</span>
         </el-menu-item>

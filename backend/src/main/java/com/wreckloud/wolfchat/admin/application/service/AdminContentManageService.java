@@ -8,6 +8,13 @@ import com.wreckloud.wolfchat.account.domain.entity.WfUser;
 import com.wreckloud.wolfchat.admin.api.vo.AdminPageVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminReplyRowVO;
 import com.wreckloud.wolfchat.admin.api.vo.AdminThreadRowVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminLobbyMessageRowVO;
+import com.wreckloud.wolfchat.chat.lobby.api.vo.LobbyMessageVO;
+import com.wreckloud.wolfchat.chat.lobby.application.service.LobbyService;
+import com.wreckloud.wolfchat.chat.lobby.domain.entity.WfLobbyMessage;
+import com.wreckloud.wolfchat.chat.lobby.infra.mapper.WfLobbyMessageMapper;
+import com.wreckloud.wolfchat.chat.message.application.service.ChatMessagePushService;
+import com.wreckloud.wolfchat.chat.message.domain.enums.MessageType;
 import com.wreckloud.wolfchat.common.excption.BaseException;
 import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.community.application.service.ForumContentMaintenanceService;
@@ -43,9 +50,12 @@ public class AdminContentManageService {
 
     private final WfForumThreadMapper wfForumThreadMapper;
     private final WfForumReplyMapper wfForumReplyMapper;
+    private final WfLobbyMessageMapper wfLobbyMessageMapper;
     private final ForumContentMaintenanceService forumContentMaintenanceService;
     private final ForumModerationLogService forumModerationLogService;
     private final UserService userService;
+    private final LobbyService lobbyService;
+    private final ChatMessagePushService chatMessagePushService;
 
     public AdminPageVO<AdminThreadRowVO> listThreadPage(long page, long size) {
         validatePage(page, size);
@@ -111,6 +121,37 @@ public class AdminContentManageService {
             rowVO.setContent(reply.getContent());
             rowVO.setLikeCount(reply.getLikeCount());
             rowVO.setCreateTime(reply.getCreateTime());
+            list.add(rowVO);
+        }
+        return AdminPageVO.of(result.getCurrent(), result.getSize(), result.getTotal(), list);
+    }
+
+    public AdminPageVO<AdminLobbyMessageRowVO> listLobbyMessagePage(long page, long size) {
+        validatePage(page, size);
+        LambdaQueryWrapper<WfLobbyMessage> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(WfLobbyMessage::getCreateTime)
+                .orderByDesc(WfLobbyMessage::getId);
+
+        Page<WfLobbyMessage> result = wfLobbyMessageMapper.selectPage(new Page<>(page, size), queryWrapper);
+        List<WfLobbyMessage> records = result.getRecords();
+        if (records.isEmpty()) {
+            return AdminPageVO.of(result.getCurrent(), result.getSize(), result.getTotal(), Collections.emptyList());
+        }
+
+        Map<Long, WfUser> userMap = loadUserMapByIds(records.stream()
+                .map(WfLobbyMessage::getSenderId)
+                .collect(Collectors.toSet()));
+
+        List<AdminLobbyMessageRowVO> list = new ArrayList<>(records.size());
+        for (WfLobbyMessage message : records) {
+            AdminLobbyMessageRowVO rowVO = new AdminLobbyMessageRowVO();
+            rowVO.setMessageId(message.getId());
+            rowVO.setSenderNickname(resolveNickname(userMap.get(message.getSenderId()), message.getSenderId()));
+            rowVO.setMsgType(message.getMsgType());
+            rowVO.setContent(message.getContent());
+            rowVO.setMediaKey(message.getMediaKey());
+            rowVO.setRecalled(MessageType.RECALL.equals(message.getMsgType()));
+            rowVO.setCreateTime(message.getCreateTime());
             list.add(rowVO);
         }
         return AdminPageVO.of(result.getCurrent(), result.getSize(), result.getTotal(), list);
@@ -230,6 +271,18 @@ public class AdminContentManageService {
                 ForumModerationLogConstants.TARGET_REPLY,
                 replyId,
                 ForumModerationLogConstants.ACTION_DELETE_REPLY,
+                ForumModerationLogConstants.REASON_ADMIN_OPERATION
+        );
+    }
+
+    public void recallLobbyMessage(Long operatorUserId, Long messageId) {
+        LobbyMessageVO recalled = lobbyService.adminRecallMessage(operatorUserId, messageId);
+        chatMessagePushService.pushLobbyMessageToAll(recalled);
+        forumModerationLogService.record(
+                operatorUserId,
+                ForumModerationLogConstants.TARGET_LOBBY_MESSAGE,
+                messageId,
+                ForumModerationLogConstants.ACTION_RECALL_LOBBY_MESSAGE,
                 ForumModerationLogConstants.REASON_ADMIN_OPERATION
         );
     }

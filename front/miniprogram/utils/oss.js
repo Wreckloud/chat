@@ -103,11 +103,24 @@ function getVideoInfo(filePath) {
 
 function getFileInfo(filePath) {
   return new Promise((resolve, reject) => {
-    wx.getFileInfo({
-      filePath,
-      success: resolve,
-      fail: reject
-    })
+    const fs = (typeof wx.getFileSystemManager === 'function') ? wx.getFileSystemManager() : null
+    if (fs && typeof fs.getFileInfo === 'function') {
+      fs.getFileInfo({
+        filePath,
+        success: resolve,
+        fail: reject
+      })
+      return
+    }
+    if (typeof wx.getFileInfo === 'function') {
+      wx.getFileInfo({
+        filePath,
+        success: resolve,
+        fail: reject
+      })
+      return
+    }
+    reject(new Error('当前环境不支持读取文件信息'))
   })
 }
 
@@ -196,13 +209,18 @@ function resolveVideoPosterTempFilePath(tempFile) {
 
 async function uploadVideoPosterOrThrow(posterTempFilePath, policyPath) {
   if (!posterTempFilePath) {
-    throw new Error('未获取到视频封面，请重新选择视频')
+    return ''
   }
-  const uploadResult = await uploadImageByPolicy(
-    policyPath,
-    { tempFilePath: posterTempFilePath }
-  )
-  return uploadResult.policy.objectKey
+  try {
+    const uploadResult = await uploadImageByPolicy(
+      policyPath,
+      { tempFilePath: posterTempFilePath }
+    )
+    return uploadResult.policy.objectKey
+  } catch (error) {
+    // 封面上传失败不阻断视频主链路，避免“视频已选中但无法发送”。
+    return ''
+  }
 }
 
 async function resolveImageUploadMeta(tempFile) {

@@ -120,6 +120,18 @@ function buildCommonImPageMethods(options) {
       if (typeof this.handleTapReplyQuote === 'function') {
         this.handleTapReplyQuote(e)
       }
+    },
+
+    onMessageVideoLoadedMetadata(e) {
+      if (typeof this.handleMessageVideoLoadedMetadata === 'function') {
+        this.handleMessageVideoLoadedMetadata(e)
+      }
+    },
+
+    onMessageVideoError(e) {
+      if (typeof this.handleMessageVideoError === 'function') {
+        this.handleMessageVideoError(e)
+      }
     }
   }
 }

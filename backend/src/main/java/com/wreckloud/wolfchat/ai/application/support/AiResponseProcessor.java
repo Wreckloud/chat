@@ -130,27 +130,27 @@ public class AiResponseProcessor {
         String mode = StringUtils.hasText(engagementMode) ? engagementMode.trim().toLowerCase() : "serious";
         if (conversationStalled) {
             if (!containsQuestion(reply)) {
-                return "别冷场，咱换个轻松点的。你现在更想聊游戏、日常还是八卦？";
+                return "这句我接住了，继续说下你最在意哪点。";
             }
             return reply;
         }
         if ("banter".equals(mode)) {
             if (isLowSignalReply(reply) || !containsQuestion(reply)) {
-                return "你这句有点东西，我先记一笔。那你最离谱的一次经历是啥？";
+                return "你这句挺狠。再展开两句？";
             }
             return reply;
         }
         if (isGreetingOrCheckIn(latestUserMessage)) {
             if (isLowSignalReply(reply)) {
-                return "在呢，刚冒头。你现在想聊游戏、日常还是吃瓜？";
+                return "在。今天想聊啥？";
             }
             if (!containsQuestion(reply) && reply.length() <= 26) {
-                return reply + " 你这会儿最想聊哪块？";
+                return reply + " 你现在在忙什么？";
             }
             return reply;
         }
         if (isLowSignalReply(reply)) {
-            return reply + " 继续说说，你现在最在意哪点？";
+            return reply + " 继续说，我在听。";
         }
         return reply;
     }
@@ -224,18 +224,18 @@ public class AiResponseProcessor {
                                              String reply,
                                              String latestUserMessage,
                                              String engagementMode) {
-        double base = SCENE_PRIVATE.equals(scene) ? 0.34D : (SCENE_LOBBY.equals(scene) ? 0.22D : 0.14D);
+        double base = SCENE_PRIVATE.equals(scene) ? 0.14D : (SCENE_LOBBY.equals(scene) ? 0.06D : 0.02D);
         String mode = StringUtils.hasText(engagementMode) ? engagementMode.trim().toLowerCase() : "serious";
         if ("banter".equals(mode)) {
-            base += 0.18D;
+            base += 0.06D;
         }
         if (containsQuestion(reply) || containsQuestion(latestUserMessage)) {
-            base += 0.08D;
+            base += 0.03D;
         }
         if (looksLikeCheerfulTone(reply, latestUserMessage)) {
-            base += 0.08D;
+            base += 0.03D;
         }
-        return Math.max(0D, Math.min(base, 0.72D));
+        return Math.max(0D, Math.min(base, 0.35D));
     }
 
     private String pickKaomojiByContext(String reply, String latestUserMessage, String engagementMode) {
@@ -349,4 +349,3 @@ public class AiResponseProcessor {
         return "我在，刚看完你这句。你想先从哪点聊起？";
     }
 }
-

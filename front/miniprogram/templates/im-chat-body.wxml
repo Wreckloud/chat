@@ -154,7 +154,7 @@
               <text
                 wx:elif="{{lineItem.msgType === 'TEXT'}}"
                 class="im-text"
-                selectable="{{true}}">{{lineItem.content}}</text>
+                user-select="{{true}}">{{lineItem.content}}</text>
               <text wx:else class="im-media-missing">[媒体不可用]</text>
               <text wx:if="{{lineItem.deliveryFailed && blockItem.isSelf}}" class="im-send-failed">发送失败</text>
             </view>

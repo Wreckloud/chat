@@ -6,3 +6,11 @@ export function fetchDashboardOverview() {
     method: 'get'
   })
 }
+
+export function fetchDashboardTrend(params) {
+  return request({
+    url: '/admin/dashboard/trend',
+    method: 'get',
+    params
+  })
+}

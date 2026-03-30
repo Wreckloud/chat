@@ -31,6 +31,9 @@ public class LoginRecordService {
     private static final String CLIENT_TYPE_HEADER = "X-Client-Type";
     private static final String CLIENT_VERSION_HEADER = "X-Client-Version";
     private static final String USER_AGENT_HEADER = "User-Agent";
+    private static final String ADMIN_CONSOLE_CLIENT_TYPE = "ADMIN_CONSOLE";
+    private static final String WEB_BROWSER_CLIENT_TYPE = "WEB_BROWSER";
+    private static final String WECHAT_CLIENT_TYPE = "WECHAT_MINIPROGRAM";
     private static final String UNKNOWN_CLIENT_TYPE = "UNKNOWN";
 
     private final WfLoginRecordMapper wfLoginRecordMapper;
@@ -65,6 +68,21 @@ public class LoginRecordService {
         String clientType = resolveHeader(request, CLIENT_TYPE_HEADER);
         if (StringUtils.hasText(clientType)) {
             return clientType;
+        }
+        if (request != null) {
+            String requestUri = request.getRequestURI();
+            if (StringUtils.hasText(requestUri) && requestUri.startsWith("/api/admin/")) {
+                return ADMIN_CONSOLE_CLIENT_TYPE;
+            }
+        }
+        String userAgent = resolveHeader(request, USER_AGENT_HEADER);
+        if (StringUtils.hasText(userAgent)) {
+            if (userAgent.contains("MicroMessenger")) {
+                return WECHAT_CLIENT_TYPE;
+            }
+            if (userAgent.contains("Mozilla")) {
+                return WEB_BROWSER_CLIENT_TYPE;
+            }
         }
         return UNKNOWN_CLIENT_TYPE;
     }

@@ -57,6 +57,44 @@
               @size-change="onReplySizeChange" />
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="聊天室治理" name="lobby">
+          <el-table :data="lobbyRows" v-loading="loadingLobbyMessages" stripe>
+            <el-table-column prop="messageId" label="消息ID" width="90" />
+            <el-table-column prop="senderNickname" label="发送者" width="130" />
+            <el-table-column prop="msgType" label="类型" width="120" />
+            <el-table-column label="内容" min-width="280">
+              <template #default="{ row }">
+                <span v-if="row.msgType === 'TEXT'">{{ row.content || '-' }}</span>
+                <span v-else-if="row.msgType === 'RECALL'" class="recalled-text">该消息已撤回</span>
+                <span v-else>{{ row.content || row.mediaKey || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="时间" min-width="160" />
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  size="small"
+                  type="danger"
+                  :disabled="row.recalled === true"
+                  @click="recallLobby(row)">
+                  {{ row.recalled ? '已撤回' : '撤回' }}
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="pager-wrap">
+            <el-pagination
+              background
+              layout="total, prev, pager, next, sizes"
+              :total="lobbyPager.total"
+              :current-page="lobbyPager.page"
+              :page-size="lobbyPager.size"
+              :page-sizes="[10, 20, 50]"
+              @current-change="onLobbyPageChange"
+              @size-change="onLobbySizeChange" />
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </div>
   </div>
@@ -68,24 +106,33 @@ import { ElMessage } from 'element-plus'
 import {
   fetchThreadPage,
   fetchReplyPage,
+  fetchLobbyMessagePage,
   updateThreadLock,
   updateThreadSticky,
   updateThreadEssence,
   deleteThread,
-  deleteReply
+  deleteReply,
+  recallLobbyMessage
 } from '@/api/content'
 
 const activeTab = ref('thread')
 const loadingThreads = ref(false)
 const loadingReplies = ref(false)
+const loadingLobbyMessages = ref(false)
 const threadRows = ref([])
 const replyRows = ref([])
+const lobbyRows = ref([])
 const threadPager = reactive({
   page: 1,
   size: 20,
   total: 0
 })
 const replyPager = reactive({
+  page: 1,
+  size: 20,
+  total: 0
+})
+const lobbyPager = reactive({
   page: 1,
   size: 20,
   total: 0
@@ -114,6 +161,19 @@ async function loadReplies() {
     ElMessage.error(error?.message || '加载回复失败')
   } finally {
     loadingReplies.value = false
+  }
+}
+
+async function loadLobbyMessages() {
+  loadingLobbyMessages.value = true
+  try {
+    const data = await fetchLobbyMessagePage({ page: lobbyPager.page, size: lobbyPager.size })
+    lobbyRows.value = data?.list || []
+    lobbyPager.total = Number(data?.total || 0)
+  } catch (error) {
+    ElMessage.error(error?.message || '加载聊天室消息失败')
+  } finally {
+    loadingLobbyMessages.value = false
   }
 }
 
@@ -176,6 +236,19 @@ async function removeReply(row) {
   }
 }
 
+async function recallLobby(row) {
+  if (row.recalled === true) {
+    return
+  }
+  try {
+    await recallLobbyMessage(row.messageId)
+    ElMessage.success('撤回成功')
+    loadLobbyMessages()
+  } catch (error) {
+    ElMessage.error(error?.message || '撤回失败')
+  }
+}
+
 function onThreadPageChange(page) {
   threadPager.page = page
   loadThreads()
@@ -198,12 +271,27 @@ function onReplySizeChange(size) {
   loadReplies()
 }
 
+function onLobbyPageChange(page) {
+  lobbyPager.page = page
+  loadLobbyMessages()
+}
+
+function onLobbySizeChange(size) {
+  lobbyPager.size = size
+  lobbyPager.page = 1
+  loadLobbyMessages()
+}
+
 watch(activeTab, (tab) => {
   if (tab === 'thread') {
     loadThreads()
     return
   }
-  loadReplies()
+  if (tab === 'reply') {
+    loadReplies()
+    return
+  }
+  loadLobbyMessages()
 })
 
 onMounted(() => {
@@ -226,5 +314,9 @@ onMounted(() => {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.recalled-text {
+  color: #7a7f8a;
 }
 </style>

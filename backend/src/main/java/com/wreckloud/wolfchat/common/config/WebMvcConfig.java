@@ -27,6 +27,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/admin/auth/login",
                         // 管理端静态页面放行
                         "/admin-console/**",
+                        // Web 版小程序静态页面放行
+                        "/mini-web/**",
                         // 媒体上传/读取放行（通过上传令牌与签名链接控制）
                         "/media/upload",
                         "/media/object",
@@ -35,7 +37,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/doc.html/**",
                         "/swagger-ui/**",
                         "/swagger-resources/**",
-                        "/webjars/**"
+                        "/webjars/**",
+                        // WebSocket 协议文档放行
+                        "/ws-docs/**"
                 );
     }
 }

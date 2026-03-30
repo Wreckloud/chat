@@ -21,8 +21,27 @@ Component({
 
   lifetimes: {
     attached() {
-      const info = wx.getSystemInfoSync()
-      const actionWidthPx = (info.windowWidth * ACTION_WIDTH_RPX) / 750
+      let windowWidth = 375
+      if (typeof wx.getWindowInfo === 'function') {
+        try {
+          const winInfo = wx.getWindowInfo()
+          if (winInfo && Number(winInfo.windowWidth) > 0) {
+            windowWidth = Number(winInfo.windowWidth)
+          }
+        } catch (error) {
+          // ignore
+        }
+      } else if (typeof wx.getSystemInfoSync === 'function') {
+        try {
+          const info = wx.getSystemInfoSync()
+          if (info && Number(info.windowWidth) > 0) {
+            windowWidth = Number(info.windowWidth)
+          }
+        } catch (error) {
+          // ignore
+        }
+      }
+      const actionWidthPx = (windowWidth * ACTION_WIDTH_RPX) / 750
       this.setData({ actionWidthPx }, () => {
         this.syncMaxOffset(this.properties.right)
       })

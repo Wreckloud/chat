@@ -66,7 +66,9 @@ function request(options) {
           if (code === 0) {
             resolve(responseData)
           } else {
-            if (AUTH_ERROR_CODES.includes(code)) {
+            // 仅在本地存在登录态时，才触发“登录失效”处理；
+            // 游客访问受限接口不应被强制跳转登录页。
+            if (AUTH_ERROR_CODES.includes(code) && auth.isLoggedIn()) {
               auth.handleAuthExpired()
             }
             reject(createRequestError(responseData.message || '请求失败', {

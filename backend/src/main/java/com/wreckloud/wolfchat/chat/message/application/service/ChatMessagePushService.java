@@ -83,6 +83,19 @@ public class ChatMessagePushService {
         wsSessionManager.sendToAll(JSON.toJSONString(response), senderUserId);
     }
 
+    /**
+     * 推送大厅消息给所有在线用户（不排除发送者）。
+     */
+    public void pushLobbyMessageToAll(LobbyMessageVO messageVO) {
+        if (messageVO == null) {
+            return;
+        }
+        WsResponse response = new WsResponse();
+        response.setType(WsType.LOBBY_MESSAGE);
+        response.setData(messageVO);
+        wsSessionManager.sendToAll(JSON.toJSONString(response), null);
+    }
+
     private MessageVO buildMessageVO(WfMessage message) {
         WfUser sender = null;
         if (message.getSenderId() != null && message.getSenderId() > 0L) {
@@ -92,4 +105,3 @@ public class ChatMessagePushService {
         return messageMediaService.fillMedia(messageVO);
     }
 }
-

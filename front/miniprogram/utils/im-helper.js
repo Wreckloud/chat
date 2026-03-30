@@ -1,6 +1,7 @@
 const time = require('./time')
 const imLayoutHelper = require('./im-layout-helper')
 const imRequestHelper = require('./im-request-helper')
+const { normalizeMediaUrl } = require('./media-url')
 
 const DEFAULT_MESSAGE_MERGE_GAP_MS = 5 * 60 * 1000
 const IMAGE_MAX_WIDTH_RPX = 320
@@ -341,7 +342,7 @@ function createMessageRow(message, indexToken, currentUserId = 0, messageLookup 
   const isUploadPlaceholder = msgType === 'VIDEO' && (uploading || uploadFailed)
   const deliveryFailed = uploadFailed || (Number.isFinite(deliveryStatus) && deliveryStatus === DELIVERY_STATUS_FAILED)
   const textContent = typeof message.content === 'string' ? message.content : ''
-  const mediaUrl = message.mediaUrl || ''
+  const mediaUrl = normalizeMediaUrl(message.mediaUrl)
   const linkUrl = extractStandaloneLink(textContent)
   let copyContent = textContent
   if (msgType === 'IMAGE' || msgType === 'VIDEO' || msgType === 'FILE') {
@@ -361,7 +362,7 @@ function createMessageRow(message, indexToken, currentUserId = 0, messageLookup 
     linkUrl,
     copyContent: String(copyContent || ''),
     mediaUrl,
-    mediaPosterUrl: message.mediaPosterUrl || '',
+    mediaPosterUrl: normalizeMediaUrl(message.mediaPosterUrl),
     mediaWidth: message.mediaWidth || 0,
     mediaHeight: message.mediaHeight || 0,
     mediaSize: Number(message.mediaSize) || 0,

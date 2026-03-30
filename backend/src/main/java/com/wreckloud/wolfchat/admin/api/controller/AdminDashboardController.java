@@ -1,6 +1,7 @@
 package com.wreckloud.wolfchat.admin.api.controller;
 
 import com.wreckloud.wolfchat.admin.api.vo.AdminDashboardOverviewVO;
+import com.wreckloud.wolfchat.admin.api.vo.AdminDashboardTrendVO;
 import com.wreckloud.wolfchat.admin.application.service.AdminDashboardService;
 import com.wreckloud.wolfchat.admin.application.service.AdminPermissionService;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -28,5 +30,12 @@ public class AdminDashboardController {
     public Result<AdminDashboardOverviewVO> getOverview() {
         adminPermissionService.assertAdmin(UserContext.getRequiredUserId());
         return Result.success(adminDashboardService.getOverview());
+    }
+
+    @Operation(summary = "控制台趋势")
+    @GetMapping("/trend")
+    public Result<AdminDashboardTrendVO> getTrend(@RequestParam(defaultValue = "7") int days) {
+        adminPermissionService.assertAdmin(UserContext.getRequiredUserId());
+        return Result.success(adminDashboardService.getTrend(days));
     }
 }

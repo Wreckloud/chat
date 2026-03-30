@@ -11,7 +11,6 @@ const { applyPageTheme } = require('../../utils/page-theme')
 const forumViewHelper = require('../../utils/forum-view-helper')
 const imHelper = require('../../utils/im-helper')
 const replyMentionHelper = require('../../utils/reply-mention-helper')
-const pageLifecycleHelper = require('../../utils/page-lifecycle-helper')
 const postReplyLayoutHelper = require('../../utils/post-reply-layout-helper')
 const { COMMON_KAOMOJI_LIST, appendKaomojiWithSpace } = require('../../utils/kaomoji')
 
@@ -237,6 +236,35 @@ function confirmAction(options) {
   })
 }
 
+function ensureLoginForAction(authInstance, actionText) {
+  return new Promise(resolve => {
+    if (authInstance && typeof authInstance.isLoggedIn === 'function' && authInstance.isLoggedIn()) {
+      resolve(true)
+      return
+    }
+    wx.showModal({
+      title: '请先登录',
+      content: actionText ? `${actionText}需要登录，是否前往登录？` : '该操作需要登录，是否前往登录？',
+      confirmText: '去登录',
+      cancelText: '继续浏览',
+      success(res) {
+        if (!res.confirm) {
+          resolve(false)
+          return
+        }
+        if (authInstance && typeof authInstance.requireLogin === 'function') {
+          resolve(authInstance.requireLogin())
+          return
+        }
+        resolve(false)
+      },
+      fail() {
+        resolve(false)
+      }
+    })
+  })
+}
+
 function normalizeImageTempFile(file) {
   if (!file || !file.tempFilePath) {
     return null
@@ -294,33 +322,30 @@ Page({
   },
 
   onLoad(options) {
-    pageLifecycleHelper.handleProtectedPageLoad(auth, {
-      beforeInit: () => {
-        const threadId = Number(options.threadId)
-        if (!threadId) {
-          toastError('参数错误')
-          return false
-        }
-        const userInfo = auth.getUserInfo()
-        this.setData({
-          threadId,
-          currentUserId: userInfo && userInfo.userId ? userInfo.userId : null
-        })
-        return true
-      },
-      afterInit: () => {
-        this.loadPage()
-      }
+    const threadId = Number(options.threadId)
+    if (!threadId) {
+      toastError('参数错误')
+      return
+    }
+    const userInfo = auth.getUserInfo()
+    this.setData({
+      threadId,
+      currentUserId: userInfo && userInfo.userId ? userInfo.userId : null
     })
+    this.loadPage()
   },
 
   onShow() {
-    pageLifecycleHelper.handleProtectedPageShow(auth, {
-      afterShow: () => {
-        this.applyTheme()
-        postReplyLayoutHelper.measureReplyDockHeight(this)
+    const userInfo = auth.getUserInfo()
+    const currentUserId = userInfo && userInfo.userId ? userInfo.userId : null
+    if (currentUserId !== this.data.currentUserId) {
+      this.setData({ currentUserId })
+      if (this.data.threadId) {
+        this.loadPage()
       }
-    })
+    }
+    this.applyTheme()
+    postReplyLayoutHelper.measureReplyDockHeight(this)
   },
 
   onReady() {
@@ -441,7 +466,11 @@ Page({
     })
   },
 
-  chooseReplyTarget(e) {
+  async chooseReplyTarget(e) {
+    const allowed = await ensureLoginForAction(auth, '回复帖子')
+    if (!allowed) {
+      return
+    }
     const replyId = Number(e.currentTarget.dataset.replyId)
     if (!replyId) {
       return
@@ -648,7 +677,11 @@ Page({
     postReplyLayoutHelper.onReplyBlur(this)
   },
 
-  onReplySubmitTap() {
+  async onReplySubmitTap() {
+    const allowed = await ensureLoginForAction(auth, '回复帖子')
+    if (!allowed) {
+      return
+    }
     if (!this.resolveCanReplySubmit(this.data.replyContent, this.data.replyImage, this.data.replySubmitting, this.data.thread)) {
       return
     }
@@ -694,6 +727,10 @@ Page({
   },
 
   async chooseReplyImage() {
+    const allowed = await ensureLoginForAction(auth, '上传回复图片')
+    if (!allowed) {
+      return
+    }
     if (this.data.replySubmitting) {
       return
     }
@@ -813,6 +850,10 @@ Page({
   },
 
   async handleToggleThreadLike() {
+    const allowed = await ensureLoginForAction(auth, '点赞帖子')
+    if (!allowed) {
+      return
+    }
     const thread = this.data.thread
     if (!thread || this.data.threadLikeLoading) return
 
@@ -838,6 +879,10 @@ Page({
   },
 
   async handleToggleReplyLike(e) {
+    const allowed = await ensureLoginForAction(auth, '点赞回复')
+    if (!allowed) {
+      return
+    }
     const replyId = Number(e.currentTarget.dataset.id)
     if (!replyId) return
 
