@@ -51,24 +51,36 @@ const LOGIN_PAGE_COPY = {
 
 const PASSWORD_PAGE_COPY = {
   headerTitle: '修改密码',
-  headerSubtitle: '修改后需要重新登录',
+  headerSubtitle: '需先完成邮箱验证码校验',
   fields: {
+    emailLabel: '认证邮箱',
     oldLabel: '原密码',
     oldPlaceholder: '请输入当前密码',
     newLabel: '新密码',
     newPlaceholder: '请输入新密码（至少6位）',
     confirmLabel: '确认',
-    confirmPlaceholder: '请再次输入新密码'
+    confirmPlaceholder: '请再次输入新密码',
+    codeLabel: '邮箱验证码',
+    codePlaceholder: '请输入6位验证码'
+  },
+  actions: {
+    sendCode: '发送验证码'
   },
   submitButton: '确认修改',
   validation: {
+    emailUnavailable: '请先绑定并认证邮箱后再修改密码',
     oldRequired: '请输入原密码',
     newRequired: '请输入新密码',
     newMinLength: '新密码至少6位',
     confirmRequired: '请确认新密码',
-    newMismatch: '两次输入的新密码不一致'
+    newMismatch: '两次输入的新密码不一致',
+    codeRequired: '请输入邮箱验证码',
+    codeInvalid: '验证码应为6位数字'
   },
   toast: {
+    sendCodeSuccess: '验证码已发送，请查收邮件',
+    sendCodeFail: '验证码发送失败',
+    loadFail: '账号信息加载失败',
     success: '密码已修改，请重新登录',
     fail: '修改失败'
   }

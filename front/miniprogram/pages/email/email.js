@@ -65,7 +65,7 @@ Page({
   },
 
   async handleSendVerifyLink() {
-    if (this.data.submitting) return
+    if (this.data.submitting || this._sendingVerifyLink) return
     if (!this.data.canSendLink) return
 
     const copy = this.data.copy
@@ -79,6 +79,7 @@ Page({
       return
     }
 
+    this._sendingVerifyLink = true
     this.setData({ submitting: true })
     try {
       await request.post('/users/email-link/send', {
@@ -88,6 +89,7 @@ Page({
     } catch (error) {
       toastError(error, copy.toast.sendFail)
     } finally {
+      this._sendingVerifyLink = false
       this.setData({ submitting: false })
     }
   },
