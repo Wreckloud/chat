@@ -14,6 +14,8 @@ import com.wreckloud.wolfchat.account.application.service.AuthService;
 import com.wreckloud.wolfchat.account.application.service.UserAchievementService;
 import com.wreckloud.wolfchat.account.application.service.UserHomeService;
 import com.wreckloud.wolfchat.account.application.service.UserService;
+import com.wreckloud.wolfchat.common.excption.BaseException;
+import com.wreckloud.wolfchat.common.excption.ErrorCode;
 import com.wreckloud.wolfchat.common.security.context.UserContext;
 import com.wreckloud.wolfchat.common.web.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -118,8 +120,25 @@ public class UserController {
     @PutMapping("/password")
     public Result<Void> changePassword(@RequestBody @Validated ChangePasswordDTO dto) {
         Long userId = UserContext.getRequiredUserId();
-        authService.changePassword(userId, dto.getOldLoginKey(), dto.getNewLoginKey(), dto.getConfirmLoginKey());
+        authService.changePassword(
+                userId,
+                dto.getOldLoginKey(),
+                dto.getNewLoginKey(),
+                dto.getConfirmLoginKey(),
+                dto.getEmailCode()
+        );
         return Result.success("密码修改成功", null);
+    }
+
+    /**
+     * 发送改密验证码
+     */
+    @Operation(summary = "发送改密验证码", description = "发送修改密码所需邮箱验证码（需要登录）")
+    @PostMapping("/password/change-code/send")
+    public Result<Void> sendPasswordChangeCode() {
+        Long userId = UserContext.getRequiredUserId();
+        authService.sendPasswordChangeCode(userId);
+        return Result.success("验证码已发送", null);
     }
 
     /**
@@ -129,8 +148,16 @@ public class UserController {
     @PostMapping("/email-link/send")
     public Result<Void> sendBindEmailVerifyLink(@RequestBody @Validated SendBindEmailLinkDTO dto) {
         Long userId = UserContext.getRequiredUserId();
-        authService.sendBindEmailVerifyLink(userId, dto.getEmail());
-        return Result.success("认证链接已发送", null);
+        try {
+            authService.sendBindEmailVerifyLink(userId, dto.getEmail());
+            return Result.success("认证链接已发送", null);
+        } catch (BaseException e) {
+            // 幂等兜底：60秒内重复触发直接返回成功，避免“已收到邮件但前端提示失败”。
+            if (ErrorCode.EMAIL_SEND_TOO_FREQUENT.getCode().equals(e.getCode())) {
+                return Result.success("认证链接已发送，请稍候查收", null);
+            }
+            throw e;
+        }
     }
 
     /**

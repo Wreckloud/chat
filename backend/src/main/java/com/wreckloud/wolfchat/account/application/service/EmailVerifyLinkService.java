@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -90,6 +91,20 @@ public class EmailVerifyLinkService {
             throw e;
         }
         log.info("邮箱认证链接发送成功: userId={}, email={}", userId, normalizedEmail);
+    }
+
+    /**
+     * 注册成功后的异步邮箱认证链接发送。
+     * 异步失败只记录日志，不影响注册主流程。
+     */
+    @Async("wolfchatAsyncExecutor")
+    public void sendBindVerifyLinkAsync(Long userId, String email) {
+        try {
+            sendBindVerifyLink(userId, email);
+        } catch (Exception e) {
+            String maskedEmail = StringUtils.hasText(email) ? email.trim().toLowerCase(Locale.ROOT) : "";
+            log.warn("异步发送邮箱认证链接失败: userId={}, email={}", userId, maskedEmail, e);
+        }
     }
 
     /**

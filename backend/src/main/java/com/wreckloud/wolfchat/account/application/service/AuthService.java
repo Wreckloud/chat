@@ -52,6 +52,7 @@ public class AuthService {
     private final UserService userService;
     private final UserAchievementService userAchievementService;
     private final UserAuthService userAuthService;
+    private final PasswordChangeCodeService passwordChangeCodeService;
     private final SessionUserService sessionUserService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
@@ -92,14 +93,19 @@ public class AuthService {
         userAuthService.createWolfNoPasswordAuth(user.getId(), wolfNo, credentialHash);
         if (normalizedEmail != null) {
             userAuthService.createEmailPasswordAuth(user.getId(), normalizedEmail, credentialHash, false);
-            emailVerifyLinkService.sendBindVerifyLink(user.getId(), normalizedEmail);
         }
 
         wolfNoService.updateUserIdByWolfNo(wolfNo, user.getId());
         userAchievementService.grantRegisterAchievement(user.getId());
 
+        LoginVO loginVO = buildLoginVO(userService.getByIdOrThrow(user.getId()));
+        if (normalizedEmail != null) {
+            // 认证邮件改为异步发送，避免外部邮件服务抖动影响注册主链路。
+            emailVerifyLinkService.sendBindVerifyLinkAsync(user.getId(), normalizedEmail);
+        }
+
         log.info("行者注册成功: userId={}", user.getId());
-        return buildLoginVO(userService.getByIdOrThrow(user.getId()));
+        return loginVO;
     }
 
     /**
@@ -217,15 +223,16 @@ public class AuthService {
     }
 
     /**
-     * 修改登录密码
+     * 修改登录密码（邮箱验证码版本）
      *
      * @param userId 当前登录行者ID
      * @param oldLoginKey 原密码（明文）
      * @param newLoginKey 新密码（明文）
      * @param confirmLoginKey 确认密码（明文）
+     * @param emailCode 改密邮箱验证码（6位）
      */
     @Transactional(rollbackFor = Exception.class)
-    public void changePassword(Long userId, String oldLoginKey, String newLoginKey, String confirmLoginKey) {
+    public void changePassword(Long userId, String oldLoginKey, String newLoginKey, String confirmLoginKey, String emailCode) {
         String normalizedOldLoginKey = normalizeLoginKey(oldLoginKey);
         String normalizedNewLoginKey = normalizeLoginKey(newLoginKey);
         String normalizedConfirmLoginKey = normalizeLoginKey(confirmLoginKey);
@@ -237,11 +244,22 @@ public class AuthService {
         if (!normalizedNewLoginKey.equals(normalizedConfirmLoginKey)) {
             throw new BaseException(ErrorCode.NEW_LOGIN_KEY_NOT_MATCH);
         }
+        WfUserAuth verifiedEmailAuth = getVerifiedEmailAuthByUserIdOrThrow(userId);
+        passwordChangeCodeService.verifyAndConsumeCode(userId, verifiedEmailAuth.getAuthIdentifier(), emailCode);
 
         userAuthService.updateAllPasswordCredentialByUserId(userId, encodeLoginKey(normalizedNewLoginKey));
         sessionUserService.invalidateUserCache(userId);
 
         log.info("行者修改密码成功: userId={}", userId);
+    }
+
+    /**
+     * 发送改密邮箱验证码
+     */
+    public void sendPasswordChangeCode(Long userId) {
+        userService.getEnabledByIdOrThrow(userId);
+        WfUserAuth verifiedEmailAuth = getVerifiedEmailAuthByUserIdOrThrow(userId);
+        passwordChangeCodeService.sendChangeCode(userId, verifiedEmailAuth.getAuthIdentifier());
     }
 
     /**
@@ -325,6 +343,17 @@ public class AuthService {
         if (existing != null && !existing.getUserId().equals(currentUserId)) {
             throw new BaseException(ErrorCode.EMAIL_ALREADY_USED);
         }
+    }
+
+    private WfUserAuth getVerifiedEmailAuthByUserIdOrThrow(Long userId) {
+        WfUserAuth emailAuth = userAuthService.findAnyEmailAuthByUserId(userId);
+        if (emailAuth == null || !StringUtils.hasText(emailAuth.getAuthIdentifier()) || !Boolean.TRUE.equals(emailAuth.getEnabled())) {
+            throw new BaseException(ErrorCode.EMAIL_NOT_BOUND);
+        }
+        if (!Boolean.TRUE.equals(emailAuth.getVerified())) {
+            throw new BaseException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+        return emailAuth;
     }
 
     private boolean isEmailAccount(String account) {

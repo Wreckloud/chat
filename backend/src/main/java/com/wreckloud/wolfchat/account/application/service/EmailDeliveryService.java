@@ -41,6 +41,18 @@ public class EmailDeliveryService {
         sendMail("重置密码链接", email, subject, content, resetLink);
     }
 
+    public void sendPasswordChangeCode(String email, String code, int expireMinutes) {
+        String subject = buildSubject("修改密码验证码");
+        String content = "你好，\n\n"
+                + "你正在进行密码修改，本次验证码为："
+                + code
+                + "（"
+                + expireMinutes
+                + " 分钟内有效）。\n\n"
+                + "如果这不是你的操作，请忽略本邮件。";
+        sendMail("改密验证码", email, subject, content, code);
+    }
+
     private void sendMail(String scene, String email, String subject, String content, String link) {
         if (!Boolean.TRUE.equals(emailDeliveryConfig.getEnabled())) {
             log.info("{}(开发模式): email={}, link={}", scene, email, link);

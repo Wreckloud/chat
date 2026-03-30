@@ -37,6 +37,8 @@ public enum ErrorCode {
     PASSWORD_RESET_LINK_INVALID(2019, "重置密码链接无效或已失效"),
     ADMIN_FORBIDDEN(2020, "无管理端访问权限"),
     LOGIN_TOO_MANY_ATTEMPTS(2021, "登录尝试过于频繁，请稍后再试"),
+    PASSWORD_CHANGE_CODE_INVALID(2022, "改密验证码无效或已过期"),
+    PASSWORD_CHANGE_CODE_LOCKED(2023, "验证码错误次数过多，请重新发送"),
 
     // 业务错误码 3000-3999
     WOLF_NO_ALLOCATE_FAILED(3001, "狼藉号分配失败"),
