@@ -62,22 +62,25 @@ function ensureUploadPlaceholderDraft(page, clientMsgId, tempFile = {}) {
   if (!page.uploadPlaceholderDraftMap) {
     page.uploadPlaceholderDraftMap = {}
   }
-  if (!page.uploadPlaceholderDraftMap[clientMsgId]) {
-    const currentUser = page.currentUser || {}
-    page.uploadPlaceholderDraftMap[clientMsgId] = {
-      createTime: new Date(),
-      senderId: Number(page.currentUserId) || 0,
-      senderWolfNo: String(currentUser.wolfNo || ''),
-      senderNickname: String(currentUser.nickname || ''),
-      senderAvatar: String(currentUser.avatar || ''),
-      senderEquippedTitleName: String(currentUser.equippedTitleName || ''),
-      senderEquippedTitleColor: String(currentUser.equippedTitleColor || ''),
-      mediaWidth: Number(tempFile.width) || 0,
-      mediaHeight: Number(tempFile.height) || 0,
-      mediaSize: Number(tempFile.size) || 0
-    }
+  const currentUser = page.currentUser || {}
+  const existing = page.uploadPlaceholderDraftMap[clientMsgId] || {}
+  const nextDraft = {
+    createTime: existing.createTime || new Date(),
+    senderId: Number(existing.senderId || page.currentUserId) || 0,
+    senderWolfNo: String(existing.senderWolfNo || currentUser.wolfNo || ''),
+    senderNickname: String(existing.senderNickname || currentUser.nickname || ''),
+    senderAvatar: String(existing.senderAvatar || currentUser.avatar || ''),
+    senderEquippedTitleName: String(existing.senderEquippedTitleName || currentUser.equippedTitleName || ''),
+    senderEquippedTitleColor: String(existing.senderEquippedTitleColor || currentUser.equippedTitleColor || ''),
+    mediaWidth: Number(existing.mediaWidth || tempFile.width) || 0,
+    mediaHeight: Number(existing.mediaHeight || tempFile.height) || 0,
+    mediaSize: Number(existing.mediaSize || tempFile.size) || 0,
+    mediaDuration: Number(existing.mediaDuration || tempFile.duration) || 0,
+    tempFilePath: String(existing.tempFilePath || tempFile.tempFilePath || ''),
+    thumbTempFilePath: String(existing.thumbTempFilePath || tempFile.thumbTempFilePath || '')
   }
-  return page.uploadPlaceholderDraftMap[clientMsgId]
+  page.uploadPlaceholderDraftMap[clientMsgId] = nextDraft
+  return nextDraft
 }
 
 function clearUploadPlaceholderDraft(page, clientMsgId) {
@@ -309,91 +312,7 @@ async function chooseVideoFromAlbum(page, deps) {
     if (!tempFile || !tempFile.tempFilePath) {
       return
     }
-    const clientMsgId = createUploadClientMsgId('v')
-    upsertVideoUploadPlaceholder(page, {
-      clientMsgId,
-      tempFile,
-      uploadProgress: 0,
-      uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
-    })
-    emitUploadProgress(page, {
-      clientMsgId,
-      uploadProgress: 0,
-      uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
-    })
-
-    // 视频上传改为异步进行，避免阻塞输入与继续编辑。
-    let lastBucket = getProgressSendBucket(0)
-    deps.uploadVideo(tempFile, {
-      onProgress: (progress) => {
-        if (page.pageUnloaded) {
-          return
-        }
-        const currentProgress = clampProgress(progress)
-        upsertVideoUploadPlaceholder(page, {
-          clientMsgId,
-          uploadProgress: currentProgress,
-          uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
-        })
-        const currentBucket = getProgressSendBucket(currentProgress)
-        if (currentBucket === lastBucket && currentProgress < 100) {
-          return
-        }
-        lastBucket = currentBucket
-        emitUploadProgress(page, {
-          clientMsgId,
-          uploadProgress: currentProgress,
-          uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
-        })
-      }
-    })
-      .then(async (media) => {
-        if (page.pageUnloaded) {
-          return
-        }
-        upsertVideoUploadPlaceholder(page, {
-          clientMsgId,
-          uploadProgress: 100,
-          uploadStatus: MEDIA_UPLOAD_STATUS_SENDING
-        })
-        emitUploadProgress(page, {
-          clientMsgId,
-          uploadProgress: 100,
-          uploadStatus: MEDIA_UPLOAD_STATUS_SENDING
-        })
-        await waitForPendingSendDrain(page)
-        await page.sendWsMessageWithAck(
-          buildBaseSendPayload(page, 'VIDEO', {
-            mediaKey: media.mediaKey,
-            mediaPosterKey: media.mediaPosterKey,
-            mediaWidth: media.mediaWidth,
-            mediaHeight: media.mediaHeight,
-            mediaSize: media.mediaSize,
-            mediaMimeType: media.mediaMimeType
-          }),
-          { clientMsgId }
-        )
-        clearUploadPlaceholderDraft(page, clientMsgId)
-      })
-      .catch((error) => {
-        if (page.pageUnloaded) {
-          return
-        }
-        const failureMessage = resolveUploadFailureMessage(error, '视频上传失败')
-        upsertVideoUploadPlaceholder(page, {
-          clientMsgId,
-          uploadProgress: 100,
-          uploadStatus: MEDIA_UPLOAD_STATUS_FAILED,
-          uploadErrorMessage: failureMessage
-        })
-        emitUploadProgress(page, {
-          clientMsgId,
-          uploadProgress: 100,
-          uploadStatus: MEDIA_UPLOAD_STATUS_FAILED
-        })
-        toastError(error, failureMessage)
-        clearUploadPlaceholderDraft(page, clientMsgId)
-      })
+    startVideoUploadTask(page, deps, tempFile, { clientMsgId: createUploadClientMsgId('v') })
   } catch (error) {
     if (page.pageUnloaded) {
       return
@@ -403,6 +322,123 @@ async function chooseVideoFromAlbum(page, deps) {
     }
     toastError(error, '视频上传失败')
   }
+}
+
+function startVideoUploadTask(page, deps, tempFile, options = {}) {
+  if (!page || !deps || typeof deps.uploadVideo !== 'function' || !tempFile || !tempFile.tempFilePath) {
+    return ''
+  }
+  const clientMsgId = String(options.clientMsgId || '').trim() || createUploadClientMsgId('v')
+  upsertVideoUploadPlaceholder(page, {
+    clientMsgId,
+    tempFile,
+    uploadProgress: 0,
+    uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
+  })
+  emitUploadProgress(page, {
+    clientMsgId,
+    uploadProgress: 0,
+    uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
+  })
+
+  // 视频上传改为异步进行，避免阻塞输入与继续编辑。
+  let lastBucket = getProgressSendBucket(0)
+  deps.uploadVideo(tempFile, {
+    onProgress: (progress) => {
+      if (page.pageUnloaded) {
+        return
+      }
+      const currentProgress = clampProgress(progress)
+      upsertVideoUploadPlaceholder(page, {
+        clientMsgId,
+        tempFile,
+        uploadProgress: currentProgress,
+        uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
+      })
+      const currentBucket = getProgressSendBucket(currentProgress)
+      if (currentBucket === lastBucket && currentProgress < 100) {
+        return
+      }
+      lastBucket = currentBucket
+      emitUploadProgress(page, {
+        clientMsgId,
+        uploadProgress: currentProgress,
+        uploadStatus: MEDIA_UPLOAD_STATUS_UPLOADING
+      })
+    }
+  })
+    .then(async (media) => {
+      if (page.pageUnloaded) {
+        return
+      }
+      upsertVideoUploadPlaceholder(page, {
+        clientMsgId,
+        tempFile,
+        uploadProgress: 100,
+        uploadStatus: MEDIA_UPLOAD_STATUS_SENDING
+      })
+      emitUploadProgress(page, {
+        clientMsgId,
+        uploadProgress: 100,
+        uploadStatus: MEDIA_UPLOAD_STATUS_SENDING
+      })
+      await waitForPendingSendDrain(page)
+      await page.sendWsMessageWithAck(
+        buildBaseSendPayload(page, 'VIDEO', {
+          mediaKey: media.mediaKey,
+          mediaPosterKey: media.mediaPosterKey,
+          mediaWidth: media.mediaWidth,
+          mediaHeight: media.mediaHeight,
+          mediaSize: media.mediaSize,
+          mediaMimeType: media.mediaMimeType
+        }),
+        { clientMsgId }
+      )
+      clearUploadPlaceholderDraft(page, clientMsgId)
+    })
+    .catch((error) => {
+      if (page.pageUnloaded) {
+        return
+      }
+      const failureMessage = resolveUploadFailureMessage(error, '视频上传失败')
+      upsertVideoUploadPlaceholder(page, {
+        clientMsgId,
+        tempFile,
+        uploadProgress: 100,
+        uploadStatus: MEDIA_UPLOAD_STATUS_FAILED,
+        uploadErrorMessage: failureMessage
+      })
+      emitUploadProgress(page, {
+        clientMsgId,
+        uploadProgress: 100,
+        uploadStatus: MEDIA_UPLOAD_STATUS_FAILED
+      })
+      toastError(error, failureMessage)
+    })
+
+  return clientMsgId
+}
+
+async function retryFailedVideoUpload(page, deps, clientMsgId) {
+  const normalizedClientMsgId = String(clientMsgId || '').trim()
+  if (!normalizedClientMsgId) {
+    throw new Error('无可重发的视频记录')
+  }
+  const draftMap = page && page.uploadPlaceholderDraftMap ? page.uploadPlaceholderDraftMap : null
+  const draft = draftMap ? draftMap[normalizedClientMsgId] : null
+  const tempFilePath = draft ? String(draft.tempFilePath || '').trim() : ''
+  if (!tempFilePath) {
+    throw new Error('原视频文件已失效，请重新选择')
+  }
+  const tempFile = {
+    tempFilePath,
+    width: Number(draft.mediaWidth) || 0,
+    height: Number(draft.mediaHeight) || 0,
+    size: Number(draft.mediaSize) || 0,
+    duration: Number(draft.mediaDuration) || 0,
+    thumbTempFilePath: String(draft.thumbTempFilePath || '')
+  }
+  startVideoUploadTask(page, deps, tempFile, { clientMsgId: normalizedClientMsgId })
 }
 
 async function chooseFileForShare(page, deps) {
@@ -567,5 +603,6 @@ module.exports = {
   onTapLink,
   onTapFile,
   onMoreActionTap,
-  applyUploadProgressPayload
+  applyUploadProgressPayload,
+  retryFailedVideoUpload
 }

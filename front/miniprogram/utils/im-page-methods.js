@@ -94,6 +94,18 @@ function buildCommonImPageMethods(options) {
       }
     },
 
+    onResendFailedMessage(e) {
+      if (typeof this.handleResendFailedMessage === 'function') {
+        this.handleResendFailedMessage(e)
+      }
+    },
+
+    onDeleteFailedMessage(e) {
+      if (typeof this.handleDeleteFailedMessage === 'function') {
+        this.handleDeleteFailedMessage(e)
+      }
+    },
+
     onClearReplyDraft() {
       if (typeof this.clearReplyDraft === 'function') {
         this.clearReplyDraft()

@@ -25,6 +25,7 @@ public class AiPromptBuilderService {
     private static final int MAX_LINE_LENGTH = 180;
     private static final String WOLF_BASELINE = "身份基线：你是社区里的狼系用户，不是助手。";
     private static final String WOLF_STYLE = "表达偏好：自然口语、短句优先，允许情绪和梗，但别故意端着。";
+    private static final String WOLF_FEEDBACK = "反馈原则：默认先肯定亮点，再给可执行建议；禁止贬低、嘲笑或打击对方。";
     private static final String WOLF_CONSTRAINT = "边界：不自称AI，不编造未看到的事实，不输出危险或仇恨内容。";
 
     private final UserService userService;
@@ -65,6 +66,7 @@ public class AiPromptBuilderService {
         appendMemoryDigest(prompt, memoryDigest);
         prompt.append("要求：先接住对方最后一句，再顺势延展，通常1-3句即可。\n");
         prompt.append("可以有态度，不必每次都追问；有合适话头再追问。\n");
+        prompt.append("优先让对方感到被理解，再表达你的观点。\n");
         appendPrivateEngagementMode(prompt, engagementMode, conversationStalled);
         prompt.append("注意：不要客服腔，不要长篇说教。\n");
         prompt.append("当前消息窗口如下（按时间顺序）：\n");
@@ -107,6 +109,7 @@ public class AiPromptBuilderService {
         appendMemoryDigest(prompt, memoryDigest);
         prompt.append("要求：结合最近聊天自然接话，通常1-2句，不连续刷屏。\n");
         prompt.append("优先承接当前话题，不要突然换题，不要复读历史消息。\n");
+        prompt.append("互动里允许玩梗，但避免打压别人，先接住再补观点。\n");
         prompt.append("注意：不要冒充系统管理员，不要输出“作为AI”。\n");
         prompt.append("最近聊天记录（按时间顺序）：\n");
         appendLobbyMessageLines(prompt, recentMessages);
@@ -134,6 +137,7 @@ public class AiPromptBuilderService {
         appendMoodDirective(prompt, moodDirective);
         appendMemoryDigest(prompt, memoryDigest);
         prompt.append("要求：围绕主题给出观点，1-3句，尽量具体，不写公文腔。\n");
+        prompt.append("评价他人作品或观点时，先肯定一处亮点，再给改进建议。\n");
         prompt.append("主题标题：").append(truncate(thread == null ? null : thread.getTitle())).append('\n');
         prompt.append("主题正文：").append(truncate(thread == null ? null : thread.getContent())).append('\n');
         if (triggerReply != null) {
@@ -149,6 +153,7 @@ public class AiPromptBuilderService {
     private void appendWolfBaseline(StringBuilder prompt, String scene) {
         prompt.append(WOLF_BASELINE).append('\n');
         prompt.append(WOLF_STYLE).append('\n');
+        prompt.append(WOLF_FEEDBACK).append('\n');
         prompt.append(WOLF_CONSTRAINT).append('\n');
         if ("private".equals(scene)) {
             prompt.append("私聊细则：可以更贴近对方语气，偶尔冷幽默，但别装懂和灌鸡汤。\n");
@@ -159,7 +164,7 @@ public class AiPromptBuilderService {
             return;
         }
         if ("forum-reply".equals(scene)) {
-            prompt.append("回帖细则：观点明确、就事论事，允许带刺，但别偏题骂街。\n");
+            prompt.append("回帖细则：观点明确、就事论事，可以犀利但必须尊重，不做打击式评价。\n");
             return;
         }
     }

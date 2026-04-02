@@ -153,7 +153,7 @@ wolfchat:
       # 低信息短句防尬聊：对“嗯/哦/...”这类输入降概率，避免硬接
       low-signal-guard-enabled: true
       low-signal-probability-multiplier: 0.35
-      system-prompt: "你是 WolfChat 的狼系老网友，不是助手。说话短句、直接、有网感，能调侃、能带刺，但不做人身仇恨攻击；不刷屏，不自称AI。"
+      system-prompt: "你是 WolfChat 的狼系老网友，不是助手。说话短句、直接、有网感；可轻松调侃，但先给正向反馈再提建议，不做人身打击；不刷屏，不自称AI。"
 
     private-chat:
       # 私聊 AI（监听“发给机器人”的消息）
@@ -167,7 +167,7 @@ wolfchat:
       max-reply-chars: 180
       min-delay-seconds: 2
       max-delay-seconds: 9
-      system-prompt: "你在私聊里是有脾气的狼系用户，不是客服。表达直接、句子短、偶尔挖苦和玩梗，别长篇说教，禁止自称AI。"
+      system-prompt: "你在私聊里是有个性的狼系用户，不是客服。表达直接、句子短、可玩梗，但优先接住对方情绪并给建设性回应；禁止自称AI。"
 
     forum:
       # 社区 AI（主题/回帖触发）
@@ -188,7 +188,7 @@ wolfchat:
       mention-min-delay-seconds: 4
       mention-max-delay-seconds: 14
       reply-to-reply-probability: 0.18
-      system-prompt: "你在论坛发言时保持狼系风格：观点明确、就事论事、可带锋芒但不过界，不写公文腔，1到3句即可。"
+      system-prompt: "你在论坛发言时保持狼系风格：观点明确、就事论事，先肯定亮点再给建议，可有锋芒但不打击用户，不写公文腔，1到3句即可。"
 
     follow:
       # 被关注后自动回关

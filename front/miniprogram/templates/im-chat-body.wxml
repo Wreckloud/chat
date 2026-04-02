@@ -78,6 +78,7 @@
               id="im-msg-{{lineItem.messageId}}"
               class="im-line {{highlightMessageId == lineItem.messageId ? 'is-highlighted' : ''}}"
               data-message-id="{{lineItem.messageId}}"
+              data-client-msg-id="{{lineItem.clientMsgId}}"
               data-msg-type="{{lineItem.msgType}}"
               data-message-content="{{lineItem.content}}"
               data-sender-id="{{blockItem.senderId}}"
@@ -120,6 +121,10 @@
                     style="width: {{lineItem.uploadProgress}}%;"></view>
                 </view>
                 <text class="im-upload-placeholder-tip">{{lineItem.content}}</text>
+                <view wx:if="{{lineItem.uploadFailed && blockItem.isSelf}}" class="im-failed-action-row">
+                  <text class="im-failed-action" data-message-id="{{lineItem.messageId}}" data-client-msg-id="{{lineItem.clientMsgId}}" catchtap="onResendFailedMessage">重新发送</text>
+                  <text class="im-failed-action is-danger" data-message-id="{{lineItem.messageId}}" data-client-msg-id="{{lineItem.clientMsgId}}" catchtap="onDeleteFailedMessage">删除</text>
+                </view>
               </view>
               <video
                 wx:elif="{{lineItem.msgType === 'VIDEO' && lineItem.mediaUrl}}"
@@ -156,7 +161,22 @@
                 class="im-text"
                 user-select="{{true}}">{{lineItem.content}}</text>
               <text wx:else class="im-media-missing">[媒体不可用]</text>
-              <text wx:if="{{lineItem.deliveryFailed && blockItem.isSelf}}" class="im-send-failed">发送失败</text>
+              <view
+                wx:if="{{lineItem.deliveryFailed && blockItem.isSelf && !(lineItem.msgType === 'VIDEO' && lineItem.isUploadPlaceholder)}}"
+                class="im-send-failed-card">
+                <view class="im-upload-placeholder-head">
+                  <text class="im-upload-placeholder-title">{{lineItem.msgType === 'IMAGE' ? '图片发送失败' : (lineItem.msgType === 'VIDEO' ? '视频发送失败' : (lineItem.msgType === 'FILE' ? '文件发送失败' : '消息发送失败'))}}</text>
+                  <text class="im-upload-placeholder-percent">100%</text>
+                </view>
+                <view class="im-upload-progress-track">
+                  <view class="im-upload-progress-fill is-failed" style="width: 100%;"></view>
+                </view>
+                <text class="im-upload-placeholder-tip">{{lineItem.failTipText || '网络异常，请稍后重试'}}</text>
+                <view class="im-failed-action-row">
+                  <text class="im-failed-action" data-message-id="{{lineItem.messageId}}" data-client-msg-id="{{lineItem.clientMsgId}}" catchtap="onResendFailedMessage">重新发送</text>
+                  <text class="im-failed-action is-danger" data-message-id="{{lineItem.messageId}}" data-client-msg-id="{{lineItem.clientMsgId}}" catchtap="onDeleteFailedMessage">删除</text>
+                </view>
+              </view>
             </view>
           </view>
         </view>

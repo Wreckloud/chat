@@ -342,6 +342,10 @@ function createMessageRow(message, indexToken, currentUserId = 0, messageLookup 
   const isUploadPlaceholder = msgType === 'VIDEO' && (uploading || uploadFailed)
   const deliveryFailed = uploadFailed || (Number.isFinite(deliveryStatus) && deliveryStatus === DELIVERY_STATUS_FAILED)
   const textContent = typeof message.content === 'string' ? message.content : ''
+  const uploadErrorMessage = String(message.uploadErrorMessage || '').trim()
+  const failTipText = uploadFailed
+    ? (uploadErrorMessage || String(textContent || '').trim() || '网络异常，请稍后重试')
+    : (String(message.deliveryFailReason || '').trim() || '网络异常，请稍后重试')
   const mediaUrl = normalizeMediaUrl(message.mediaUrl)
   const linkUrl = extractStandaloneLink(textContent)
   let copyContent = textContent
@@ -355,6 +359,7 @@ function createMessageRow(message, indexToken, currentUserId = 0, messageLookup 
   return {
     key: `m_${message.messageId || indexToken}`,
     messageId: message.messageId,
+    clientMsgId: String(message.clientMsgId || ''),
     createTime: message.createTime || '',
     msgType,
     recalled: msgType === 'RECALL',
@@ -371,6 +376,7 @@ function createMessageRow(message, indexToken, currentUserId = 0, messageLookup 
     uploadStatus,
     isUploadPlaceholder,
     uploadFailed,
+    failTipText,
     deliveryStatus: Number.isFinite(deliveryStatus) ? deliveryStatus : 0,
     deliveryFailed,
     imageRenderStyle: buildImageRenderStyle(message.mediaWidth, message.mediaHeight),

@@ -303,12 +303,26 @@ public class AiRoleService {
 
     private String mergePrompt(String basePrompt, String variantPrompt) {
         if (!StringUtils.hasText(basePrompt)) {
-            return normalizeText(variantPrompt);
+            return normalizePromptTone(normalizeText(variantPrompt));
         }
         if (!StringUtils.hasText(variantPrompt)) {
-            return normalizeText(basePrompt);
+            return normalizePromptTone(normalizeText(basePrompt));
         }
-        return basePrompt.trim() + " " + variantPrompt.trim();
+        return normalizePromptTone(basePrompt.trim() + " " + variantPrompt.trim());
+    }
+
+    private String normalizePromptTone(String prompt) {
+        if (!StringUtils.hasText(prompt)) {
+            return prompt;
+        }
+        return prompt
+                .replace("带刺", "有个性")
+                .replace("阴阳怪气", "轻松幽默")
+                .replace("挖苦", "克制表达")
+                .replace("嘲讽", "点到为止")
+                .replace("压迫感", "坚定感")
+                .replace("嘴上不饶人", "表达利落")
+                .replace("锋利吐槽", "简洁点评");
     }
 
     @Getter
@@ -322,8 +336,8 @@ public class AiRoleService {
         TAUNT_WOLF(
                 "taunt-wolf",
                 "毒狼",
-                "人格带刺，嘴上不饶人，擅长调侃和轻微阴阳。",
-                "网感强，允许轻度嘲讽和反问，但不做人身仇恨攻击。"
+                "人格锋利但不伤人，擅长幽默调侃，偏好给出具体建议。",
+                "网感强，允许轻松反问和玩梗，但避免讽刺、挖苦和打击用户。"
         ),
         NIGHT_WOLF(
                 "night-wolf",

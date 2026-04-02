@@ -12,6 +12,7 @@ const imPageHelper = require('../../utils/im-page-helper')
 const imUserHelper = require('../../utils/im-user-helper')
 const imWsHelper = require('../../utils/im-ws-helper')
 const imMessageHelper = require('../../utils/im-message-helper')
+const failedMessageHelper = require('../../utils/im-failed-message-helper')
 const imConfig = require('../../utils/im-config')
 const chatPolicyHelper = require('../../utils/chat-policy-helper')
 const replyMentionHelper = require('../../utils/reply-mention-helper')
@@ -311,6 +312,78 @@ Page({
         }
       }
     })
+  },
+
+  async handleResendFailedMessage(e) {
+    const identity = failedMessageHelper.resolveIdentityFromEvent(e)
+    if (!identity) {
+      return
+    }
+    const message = failedMessageHelper.findMessageByIdentity(this.data.messages, identity)
+    if (!failedMessageHelper.isDeliveryFailedMessage(message)) {
+      return
+    }
+
+    const msgType = String(message.msgType || '').toUpperCase()
+    const uploadStatus = String(message.uploadStatus || '').toUpperCase()
+    const isFailedUploadPlaceholder = msgType === 'VIDEO'
+      && uploadStatus === 'FAILED'
+      && !String(message.mediaKey || '').trim()
+      && Boolean(identity.clientMsgId)
+    if (isFailedUploadPlaceholder) {
+      try {
+        await imSendHelper.retryFailedVideoUpload(this, { uploadVideo: uploadChatVideo }, identity.clientMsgId)
+      } catch (error) {
+        toastError(error, '重发失败')
+      }
+      return
+    }
+
+    if (this.data.sending || this.pendingRequest) {
+      toastError('正在发送，请稍后重试')
+      return
+    }
+
+    const payload = failedMessageHelper.buildResendPayload(this, message)
+    if (!payload) {
+      toastError('该失败消息暂不支持重发')
+      return
+    }
+
+    this.setData({ sending: true })
+    try {
+      await this.sendWsMessageWithAck(payload)
+      failedMessageHelper.removeMessageFromPage(
+        this,
+        identity,
+        (messages) => this.buildMessageBlocks(messages)
+      )
+    } catch (error) {
+      toastError(error, '重发失败')
+    } finally {
+      if (!this.pageUnloaded) {
+        this.setData({ sending: false })
+      }
+    }
+  },
+
+  handleDeleteFailedMessage(e) {
+    const identity = failedMessageHelper.resolveIdentityFromEvent(e)
+    if (!identity) {
+      return
+    }
+    const message = failedMessageHelper.findMessageByIdentity(this.data.messages, identity)
+    if (!failedMessageHelper.isDeliveryFailedMessage(message)) {
+      return
+    }
+    failedMessageHelper.removeMessageFromPage(
+      this,
+      identity,
+      (messages) => this.buildMessageBlocks(messages)
+    )
+    if (identity.clientMsgId && this.uploadPlaceholderDraftMap) {
+      delete this.uploadPlaceholderDraftMap[identity.clientMsgId]
+    }
   },
 
   startReplyDraft(dataset) {

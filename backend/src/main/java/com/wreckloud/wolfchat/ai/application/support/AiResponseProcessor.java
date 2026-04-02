@@ -24,6 +24,33 @@ public class AiResponseProcessor {
             "您好，",
             "您好!"
     };
+    private static final String[] HARSH_PHRASES = {
+            "查户口",
+            "闭嘴",
+            "滚",
+            "废物",
+            "蠢",
+            "你不行",
+            "你太菜"
+    };
+    private static final String[] FORUM_NEGATIVE_PHRASES = {
+            "压不住",
+            "不太行",
+            "太丑",
+            "翻车",
+            "不搭",
+            "一般般",
+            "不够好"
+    };
+    private static final String[] FORUM_POSITIVE_HINTS = {
+            "不错",
+            "可以",
+            "亮点",
+            "有想法",
+            "挺好",
+            "很稳",
+            "有感觉"
+    };
     private static final String[] ALL_KAOMOJI = {
             "(^_^)", "(￣▽￣)", "(≧▽≦)", "(=ﾟωﾟ)ﾉ", "(๑•̀ㅂ•́)و✧", "(｀・ω・´)",
             "(￣^￣)ゞ", "(¬_¬)", "(￣ー￣)", "(⊙_⊙)", "(´･_･`)", "(；′⌒`)",
@@ -71,7 +98,8 @@ public class AiResponseProcessor {
     }
 
     public String processForumReply(String rawReply, Integer configuredMaxChars, int defaultMaxChars) {
-        String normalized = processByScene(rawReply, configuredMaxChars, defaultMaxChars, "这个点我认同一半。");
+        String normalized = processByScene(rawReply, configuredMaxChars, defaultMaxChars, "这个方向有亮点，可以再细化一下。");
+        normalized = softenForumReply(normalized);
         return maybeAttachKaomoji(SCENE_FORUM, normalized, null, "serious");
     }
 
@@ -93,6 +121,11 @@ public class AiResponseProcessor {
                 return fallbackReply;
             }
         }
+        for (String phrase : HARSH_PHRASES) {
+            if (lower.contains(phrase)) {
+                return fallbackReply;
+            }
+        }
 
         normalized = normalized
                 .replace("首先，", "")
@@ -109,6 +142,21 @@ public class AiResponseProcessor {
             return normalized;
         }
         return normalized.substring(0, maxChars).trim();
+    }
+
+    private String softenForumReply(String reply) {
+        if (!StringUtils.hasText(reply)) {
+            return "这个方向有亮点，可以再细化一下。";
+        }
+        String normalized = reply.trim();
+        String lower = normalized.toLowerCase();
+        if (!containsAny(lower, FORUM_NEGATIVE_PHRASES)) {
+            return normalized;
+        }
+        if (containsAny(lower, FORUM_POSITIVE_HINTS)) {
+            return normalized;
+        }
+        return "整体方向有亮点，可以在细节上再微调一下，会更稳。";
     }
 
     private int resolveMaxReplyChars(Integer configuredMaxChars, int defaultMaxChars) {
@@ -136,7 +184,7 @@ public class AiResponseProcessor {
         }
         if ("banter".equals(mode)) {
             if (isLowSignalReply(reply) || !containsQuestion(reply)) {
-                return "你这句挺狠。再展开两句？";
+                return "你这句我接住了。再展开两句？";
             }
             return reply;
         }
@@ -192,6 +240,18 @@ public class AiResponseProcessor {
                 || "哦".equals(lower)
                 || "好的".equals(lower)
                 || "行".equals(lower);
+    }
+
+    private boolean containsAny(String source, String[] keywords) {
+        if (!StringUtils.hasText(source) || keywords == null || keywords.length == 0) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (StringUtils.hasText(keyword) && source.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String maybeAttachKaomoji(String scene,
